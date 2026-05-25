@@ -1,0 +1,147 @@
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px;
+  height: 100%;
+}
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+
+  svg {
+    width: 40px;
+    height: auto;
+  }
+}
+
+.errorContainer {
+  padding: 16px;
+  background-color: rgba(var(--error), 0.1);
+  border-left: 4px solid var(--error);
+  border-radius: 4px;
+
+  p {
+    margin: 0;
+    color: var(--error-dark);
+    font-size: 14px;
+  }
+}
+
+.emptyContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+}
+
+.versionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.versionItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  position: relative;
+
+  &:first-child {
+    padding: 0 0 16px;
+  }
+}
+
+.versionIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.verticalLine {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: calc(100% + 32px);
+  background-color: var(--light-gray);
+}
+
+.versionBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: var(--white);
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 1;
+
+  .versionText {
+    line-height: 1;
+  }
+}
+
+.versionItem .versionBadgeDraft {
+  background-color: var(--dark-gray);
+}
+
+.versionContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusBadge {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background-color: var(--light-bg);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: var(--light-bg-2);
+  }
+
+  svg {
+    width: 6px;
+    height: 8px;
+
+    path {
+      fill: var(--text);
+    }
+  }
+}

@@ -1,0 +1,121 @@
+import { AvailableBlock } from "@/app/template-designer/types";
+import { DEFAULT_COLUMN_WIDTHS } from "../constants";
+
+export const availableBlocks: AvailableBlock[] = [
+  {
+    id: "section",
+    type: "section",
+    label: "Section",
+    description: "Group content with optional title",
+    isContainer: true,
+    defaultContent: "",
+    defaultProperties: {
+      title: "",
+      paddingVertical: "16px",
+      paddingHorizontal: "16px",
+      bordered: true,
+    },
+  },
+  {
+    id: "rich-text",
+    type: "richText",
+    label: "Rich Text",
+    description: "Edit HTML content with data bindings",
+    defaultContent: "RichText content here...",
+    defaultProperties: {},
+  },
+  {
+    id: "grid",
+    type: "grid",
+    label: "Grid",
+    description: "Flexible multi-column layout",
+    defaultContent: "",
+    defaultProperties: {
+      columns: 2,
+      gap: "0",
+      columnWidths: DEFAULT_COLUMN_WIDTHS[2],
+    },
+  },
+  {
+    id: "table",
+    type: "table",
+    label: "Table",
+    description: "Display list data in rows and columns",
+    defaultContent: "",
+    defaultProperties: {
+      list: "",
+      zebraRows: false,
+      showBorders: true,
+      columns: [],
+      columnWidths: [],
+      headerStyle: "",
+      rowCellStyle: "",
+    },
+  },
+  {
+    id: "loop",
+    type: "loop",
+    label: "Loop",
+    description: "Repeat content for each item in a list",
+    isContainer: true,
+    defaultContent: "",
+    defaultProperties: {
+      variable: "item",
+      list: "",
+    },
+  },
+  {
+    id: "if",
+    type: "if",
+    label: "If",
+    description: "Show/Hide content based on logic",
+    isContainer: true,
+    defaultContent: "",
+    defaultProperties: {
+      condition: "",
+    },
+  },
+  {
+    id: "image",
+    type: "image",
+    label: "Image",
+    description: "Display an image via URL or variable",
+    defaultContent: "",
+    defaultProperties: {
+      src: "",
+      alt: "",
+      width: "100px",
+      alignment: "L",
+    },
+  },
+  {
+    id: "spacer",
+    type: "spacer",
+    label: "Spacer",
+    description: "Add vertical space",
+    defaultContent: "",
+    defaultProperties: {
+      height: "15px",
+    },
+  },
+  {
+    id: "divider",
+    type: "divider",
+    label: "Divider",
+    description: "Add a horizontal line divider",
+    defaultContent: "",
+    defaultProperties: {
+      thickness: "1px",
+      color: "#e0e0e0",
+      width: 100,
+    },
+  },
+  {
+    id: "pageBreak",
+    type: "pageBreak",
+    label: "Page Break",
+    description: "Insert a page break for printing",
+    defaultContent: "",
+    defaultProperties: {},
+  },
+];

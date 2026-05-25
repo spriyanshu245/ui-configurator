@@ -1,0 +1,14 @@
+.SubSectionComponent {
+  padding: 10px;
+  .subSectionLabel {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+}
+
+.SubSectionContainer {
+  width: 100%;
+}

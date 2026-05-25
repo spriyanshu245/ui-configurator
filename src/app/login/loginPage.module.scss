@@ -1,0 +1,75 @@
+@use "../../app/styles/shared.module.scss";
+
+.loginPageContainer {
+  display: flex;
+  height: 96vh;
+  margin: 12px;
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+    margin: 0;
+    height: fit-content;
+  }
+
+  .column {
+    flex-basis: 50%;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .leftPanel {
+    display: flex;
+    flex-direction: column;
+  }
+  .rightPanel {
+    padding: 3rem;
+    display: flex;
+    align-items: center;
+  }
+  .backToLogin {
+    cursor: pointer;
+    color: var(--rahi-cp-rich-black);
+    display: flex;
+    align-items: center;
+    gap: var(--rahi-cp-padding-small);
+    margin-bottom: var(--rahi-cp-padding-large);
+    background: none;
+    border: none;
+    span {
+      line-height: 140%;
+      font-weight: 600;
+      font-size: var(--rahi-cp-font-size-base);
+    }
+    svg {
+      line-height: 140%;
+      font-size: var(--rahi-cp-font-size-extra-large);
+    }
+  }
+
+  .formContainer {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease-in-out;
+    position: relative;
+
+    @media screen and (max-width: 768px) {
+      max-width: 500px;
+    }
+
+    h3 {
+      color: var(--rahi-cp-rich-black);
+      font-family: var(--rahi-cp-font-family);
+      font-size: 30px;
+      font-style: normal;
+      font-weight: 600;
+      line-height: 140%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .column {
+      flex-basis: 100%;
+      padding: 20px;
+    }
+  }
+}

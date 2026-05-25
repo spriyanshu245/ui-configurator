@@ -1,0 +1,70 @@
+.jsonTextAreaContainer {
+  width: 100%;
+  position: relative;
+
+  &.expanded {
+    z-index: 10;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70vw;
+    height: 60vh;
+    margin: 0;
+    border: 2px solid var(--primary);
+    box-sizing: border-box;
+    clip-path: none !important;
+    background-color: var(--background);
+    animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1);
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .jsonTextArea {
+      z-index: 10;
+      height: 100%;
+      resize: none;
+    }
+  }
+  .jsonTextArea {
+    position: relative;
+    width: 100%;
+    white-space: pre;
+    color: var(--text);
+    background: var(--background);
+    border: 1px solid var(--background-4);
+    padding: 8px;
+    border-radius: 4px;
+    line-height: 1.4;
+    font-size: 12px;
+    font-family: var(--font-family);
+    resize: vertical;
+    transition: height 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--background-6);
+    }
+  }
+
+  .buttonGroup {
+    position: absolute;
+    z-index: 10;
+    right: 8px;
+    top: 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  .jsonError {
+    color: var(--error);
+    margin: 0;
+    font-size: 12px;
+  }
+}

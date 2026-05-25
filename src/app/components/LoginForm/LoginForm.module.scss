@@ -1,0 +1,82 @@
+
+
+.subtitle {
+  display: block;
+  color: #666;
+  font-size: 16px;
+  margin: 8px 0 24px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.forgotPassword {
+  text-align: right;
+  margin-top: 8px;
+  .forgotPasswordBtn {
+    background: none;
+    border: none;
+    color: #114671;
+    font-size: 14px;
+    &:hover {
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  }
+}
+
+.submitButton {
+  margin: 20px 0;
+  background-color: #00a79d;
+  color: white;
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:disabled {
+    background-color: #7a8088;
+    cursor: not-allowed;
+  }
+
+  &:hover {
+    background-color: #006f6b;
+  }
+}
+
+.noAccount {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: #666;
+  .signUp {
+    .signUpBtn {
+      color: #006f6b;
+      font-size: 14px;
+      text-decoration: none;
+      background: none;
+      border: none;
+
+      &:hover {
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.loginWrapper {
+  display: flex;
+  width: 100%;
+  max-width: 1024px;
+  min-height: 600px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

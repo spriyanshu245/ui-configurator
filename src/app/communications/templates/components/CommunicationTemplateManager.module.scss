@@ -1,0 +1,395 @@
+.panes {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.75fr) minmax(420px, 1.1fr) minmax(480px, 1.25fr);
+  gap: 20px;
+  height: calc(100vh - var(--header-height) - 30px);
+  height: calc(100dvh - var(--header-height) - 30px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.paneHeader {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--padding-small);
+  min-height: 42px;
+}
+
+.paneTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--padding-small);
+  width: 100%;
+}
+
+.paneTitle {
+  min-width: 0;
+  color: var(--text);
+  font-size: var(--font-size-large);
+  font-weight: 700;
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border: 1px solid var(--background-4);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+}
+
+.list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 14px 10px 14px 14px;
+  border: 1px solid var(--background-4);
+  border-radius: 8px;
+  background: var(--background-2);
+  background-clip: padding-box;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.list::-webkit-scrollbar-track {
+  margin: 8px 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: var(--background-4);
+  background-clip: content-box;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--background-6);
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--background-4);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    opacity 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 2px 8px var(--shadow-light);
+}
+
+.card.selected {
+  border-color: var(--primary);
+  background: var(--cyan-green-2);
+}
+
+.card.selected .cardTitle {
+  color: var(--primary-dark);
+}
+
+.optionsFading .card {
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.optionsFading .openingCard {
+  opacity: 1;
+}
+
+.optionsFading .openingCard .cardContent {
+  opacity: 0.34;
+}
+
+.cardContent {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cardTitle {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardSubtitle {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  background: var(--background);
+  border: 1px solid var(--background-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-medium);
+  font-weight: 400;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.primaryBadge {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--background);
+  font-weight: 500;
+}
+
+.iconButton,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--background-4);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.iconButton svg {
+  width: 4px;
+  height: 16px;
+}
+
+.iconButton svg path {
+  fill: var(--text-secondary);
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary-transparent-bg);
+  outline: none;
+}
+
+.iconButton:hover svg path,
+.iconButton:focus-visible svg path {
+  fill: var(--primary-dark);
+}
+
+.primaryButton {
+  flex: 0 0 auto;
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.primaryButton svg {
+  width: 12px;
+  height: auto;
+}
+
+.primaryButton svg path {
+  fill: var(--white);
+}
+
+.primaryButton:disabled {
+  border-color: var(--background-4);
+  background: var(--background-4);
+  cursor: not-allowed;
+}
+
+.actionMenu {
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.actionLoader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.actionLoader svg {
+  width: 18px;
+  height: 18px;
+}
+
+.actionMenuList {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 3;
+  display: flex;
+  min-width: 156px;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--background-4);
+  border-radius: 8px;
+  background: var(--background);
+  box-shadow: 0 8px 20px var(--shadow-hover);
+}
+
+.actionMenuItem {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--font-size-medium);
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.actionMenuItem:hover,
+.actionMenuItem:focus-visible {
+  background: var(--primary-transparent-bg);
+  color: var(--primary-dark);
+  outline: none;
+}
+
+.actionMenuItem:disabled {
+  color: var(--text-placeholder);
+  cursor: not-allowed;
+}
+
+.actionMenuItem:disabled:hover {
+  background: transparent;
+  color: var(--text-placeholder);
+}
+
+.danger {
+  color: var(--error);
+}
+
+.danger:hover,
+.danger:focus-visible {
+  background: rgba(191, 67, 66, 0.08);
+  color: var(--error);
+}
+
+.empty,
+.loading,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: var(--padding-base);
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  text-align: center;
+}
+
+.error {
+  color: var(--error);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding-base);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-medium);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--background-4);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text);
+  font-size: var(--font-size-base);
+  padding: 10px 12px;
+  outline-color: var(--primary);
+}
+
+.field textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.formError {
+  color: var(--error);
+  font-size: var(--font-size-medium);
+}
+
+@media (max-width: 1280px) {
+  .panes {
+    grid-template-columns: minmax(260px, 0.85fr) minmax(340px, 1fr) minmax(380px, 1.1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .panes {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  .pane {
+    min-height: 0;
+  }
+}

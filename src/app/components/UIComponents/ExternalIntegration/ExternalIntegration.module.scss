@@ -1,0 +1,45 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-1);
+  border-radius: 12px;
+  border-color: var(--dark-gray-2);
+  background: linear-gradient(180deg, var(--background-2), var(--background-3));
+  min-height: 160px;
+  width: 100%;
+  max-width: 320px;
+}
+.icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-1);
+}
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.meta {
+  font-size: 12px;
+  color: var(--text-3);
+}

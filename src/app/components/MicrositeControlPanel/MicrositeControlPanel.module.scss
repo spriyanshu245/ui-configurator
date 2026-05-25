@@ -1,0 +1,97 @@
+.controlPanelContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  position: fixed;
+  width: inherit;
+  z-index: 2;
+  top: var(--header-height);
+  height: var(--control-panel-height);
+  background-color: var(--background-2);
+  border-bottom: 1px solid var(--background-3);
+
+  .innerPanel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    &.leftPanel {
+      overflow-x: auto;
+    }
+
+    &.rightPanel {
+      justify-content: flex-end;
+      padding-right: 20px;
+    }
+
+    .dropdownOverlay {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      width: 100%;
+      height: 90vh;
+      z-index: 10;
+    }
+
+    .closeIcon>svg {
+      height: 10px !important;
+    }
+  }
+}
+
+.optionsDropdown {
+  position: relative;
+}
+
+.pageHistoryIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 12px;
+    height: 12px;
+
+    path {
+      fill: var(--text);
+    }
+  }
+}
+
+.pageHistoryIconNext {
+  transform: rotate(180deg);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  border: 1px solid var(--background-3);
+  background-color: var(--background);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  border-radius: 8px;
+
+  .dropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0 8px;
+    cursor: pointer;
+    background: none;
+    border: none;
+
+    .itemText {
+      flex-grow: 1;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+  }
+}

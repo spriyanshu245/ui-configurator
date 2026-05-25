@@ -1,0 +1,220 @@
+.treeNode {
+  border-left: 2px solid var(--light-gray);
+  margin-left: 18px;
+  padding-left: 8px;
+
+  &.root {
+    border-left: none;
+    margin-left: 0;
+    padding-left: 0;
+  }
+}
+
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+
+  &:hover {
+    background-color: rgba(var(--primary-dark-rgb), 0.05);
+  }
+
+  &.selected {
+    background-color: rgba(var(--primary-dark-rgb), 0.1);
+  }
+
+  &.highlighted {
+    animation: highlightPulse 2s ease-out;
+  }
+}
+
+@keyframes highlightPulse {
+  0% {
+    background-color: var(--cyan-green-2);
+    border-color: var(--cyan-green-4);
+  }
+  50% {
+    background-color: var(--cyan-green-2);
+    border-color: var(--cyan-green-4);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.expandIcon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+  color: var(--text-secondary);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
+
+  &.placeholder {
+    visibility: hidden;
+  }
+}
+
+.nodeIcon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.nodeLabel {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.component {
+    color: var(--text-secondary);
+  }
+}
+
+.namePillGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+
+  .componentTypePill {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background-color: var(--primary);
+    color: var(--white);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+
+    &.tabs {
+      background-color: var(--access-control-tabs-bg);
+    }
+
+    &.tab {
+      background-color: var(--access-control-tab-bg);
+    }
+
+    &.form {
+      background-color: var(--access-control-form-bg);
+    }
+
+    &.cta,
+    &.button_v2 {
+      background-color: var(--access-control-cta-bg);
+    }
+
+    &.table {
+      background-color: var(--access-control-table-bg);
+    }
+
+    &.input_table {
+      background-color: var(--access-control-input-table-bg);
+    }
+  }
+}
+
+.newBadge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--white);
+  border: 1px solid var(--cyan-green-4);
+  color: var(--primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.nodeType {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: var(--white);
+  border: 1px solid var(--background-5);
+  color: var(--dark-gray-4);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.defaultTabDropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 0 12px;
+
+  label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  > div {
+    min-width: 200px;
+  }
+}
+
+.controlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controlItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+
+  label {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+  }
+
+  &:has(input:disabled) label {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.children {
+  margin-top: 4px;
+
+  &.hidden {
+    display: none;
+  }
+}

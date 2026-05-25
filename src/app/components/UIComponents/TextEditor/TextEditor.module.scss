@@ -1,0 +1,415 @@
+.textEditorContainer {
+  width: 100%;
+  position: relative;
+
+  &.expanded {
+    z-index: 10;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70vw;
+    height: 60vh;
+    margin: 0;
+    border: 2px solid var(--primary);
+    box-sizing: border-box;
+    clip-path: none !important;
+    background-color: var(--background);
+    animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1);
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .editorWrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      background-color: var(--background-2);
+      border-bottom: 1px solid var(--background-4);
+    }
+
+    .textEditor {
+      z-index: 10;
+      flex: 1;
+      height: auto;
+      resize: none;
+      overflow-y: auto;
+    }
+  }
+
+  .editorWrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  .textEditor {
+    position: relative;
+    width: 100%;
+    min-height: 120px;
+    white-space: pre-wrap;
+    color: var(--text);
+    background: var(--background);
+    border: 1px solid var(--background-4);
+    padding: 8px;
+    border-radius: 4px;
+    line-height: 1.4;
+    font-size: 12px;
+    font-family: var(--font-family);
+    resize: vertical;
+    transition: height 0.2s ease;
+    overflow-y: auto;
+
+    &:focus {
+      outline: none;
+      border-color: var(--background-6);
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        color: var(--primary-dark);
+        background-color: var(--background-2);
+      }
+    }
+
+    ul,
+    ol {
+      margin: 8px 0;
+      padding-left: 24px;
+      list-style-position: outside;
+    }
+
+    ul {
+      list-style-type: disc;
+    }
+
+    ol {
+      list-style-type: decimal;
+    }
+
+    li {
+      margin: 4px 0;
+      padding-left: 4px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font-family);
+      line-height: 1.4;
+
+      &::marker {
+        color: var(--text);
+      }
+    }
+
+    ul ul,
+    ol ul {
+      list-style-type: circle;
+      margin: 4px 0;
+    }
+
+    ul ul ul,
+    ol ul ul {
+      list-style-type: square;
+    }
+
+    ol ol,
+    ul ol {
+      list-style-type: lower-alpha;
+      margin: 4px 0;
+    }
+
+    ol ol ol,
+    ul ol ol {
+      list-style-type: lower-roman;
+    }
+
+    p {
+      margin: 8px 0;
+      line-height: 1.4;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 12px 0 8px 0;
+      font-weight: 600;
+      line-height: 1.3;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+
+    h1 {
+      font-size: 20px;
+    }
+
+    h2 {
+      font-size: 16px;
+    }
+
+    h3 {
+      font-size: 14px;
+    }
+
+    hr {
+      margin: 16px 0;
+      border: none;
+      border-top: 1px solid var(--background-4);
+    }
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .toolbarGroup {
+    display: flex;
+    gap: 4px;
+    padding-right: 12px;
+    border-right: 1px solid var(--background-4);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  .button {
+    padding: 6px 10px;
+    border: 1px solid var(--background-4);
+    border-radius: 4px;
+    background-color: var(--background);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: var(--text);
+
+    &:hover {
+      background-color: var(--background-2);
+      border-color: var(--background-6);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+
+    &.active {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: var(--background);
+
+      &:hover {
+        background-color: var(--primary-dark);
+        border-color: var(--primary-dark);
+      }
+    }
+  }
+
+  .buttonGroup {
+    position: absolute;
+    z-index: 10;
+    right: 8px;
+    top: 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  .maximizeButton {
+    padding: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .linkTooltip {
+    position: absolute;
+    z-index: 1000;
+    background-color: var(--background);
+    border: 1px solid var(--background-4);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    min-width: 300px;
+    animation: tooltipFadeIn 0.2s ease;
+
+    @keyframes tooltipFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+
+  .linkActionsTop {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--background-4);
+  }
+
+  .linkIconButton {
+    padding: 4px;
+    background-color: var(--background-2);
+    border: 1px solid var(--background-4);
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background-color: var(--background-3);
+      border-color: var(--background-6);
+      color: var(--primary);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .errorMessage {
+    margin: 0 0 8px 0;
+    padding: 6px 8px;
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 4px;
+    color: #ef4444;
+    font-size: 11px;
+    line-height: 1.4;
+    animation: errorSlideIn 0.2s ease;
+
+    @keyframes errorSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+
+  .editorErrorMessage {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 8px 16px;
+    background-color: rgba(239, 68, 68, 0.95);
+    border: 1px solid rgba(239, 68, 68, 1);
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    animation: errorSlideUp 0.3s ease;
+
+    @keyframes errorSlideUp {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+  }
+
+  .linkInputWrapper {
+    margin-bottom: 10px;
+
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+  }
+
+  .inputLabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+    opacity: 0.7;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .linkInput {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--background-4);
+    border-radius: 4px;
+    background-color: var(--background-2);
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font-family);
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    &::placeholder {
+      color: var(--text);
+      opacity: 0.5;
+    }
+  }
+}

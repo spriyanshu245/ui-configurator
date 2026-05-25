@@ -1,0 +1,31 @@
+.placeholder {
+  color: var(--input-placeholder-color);
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--padding-small);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--primary);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-weight: 500;
+  color: var(--input-text-color);
+  margin-right: 4px;
+  gap: 4px;
+
+  .deleteIcon {
+    background: none;
+    border: none;
+    color: var(--input-text-color);
+    font-size: 10px;
+    cursor: pointer;
+  }
+}
+
+.label {
+  font-size: 10px;
+}

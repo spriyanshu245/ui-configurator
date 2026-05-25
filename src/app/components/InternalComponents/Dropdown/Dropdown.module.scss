@@ -1,0 +1,32 @@
+.dropdownContainer {
+  position: absolute;
+  top: 95%;
+  background-color: #fff;
+  padding: 15px;
+  width: 300px;
+  border: 1px solid var(--background-2);
+  z-index: 15;
+  border-radius: 4px;
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .title {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .closeButton {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--background-3);
+      cursor: pointer;
+    }
+  }
+  .body {
+    margin-top: 10px;
+  }
+}

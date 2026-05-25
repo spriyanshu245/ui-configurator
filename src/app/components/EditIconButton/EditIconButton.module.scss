@@ -1,0 +1,14 @@
+.editIcon {
+      display: flex;
+      align-items: center;
+      svg {
+        width: auto;
+        height: 9px;
+        margin-left: 5px;
+        visibility: hidden;
+        path {
+          fill: var(--text-secondary);
+          transition: fill 0.2s;
+        }
+      }
+}

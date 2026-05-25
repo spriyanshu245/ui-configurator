@@ -1,0 +1,85 @@
+.previewWindow {
+  $previewHeadingContainerHeight: 25px;
+  .previewHeadingContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--light-gray-3);
+    padding: 5px 10px;
+    height: $previewHeadingContainerHeight;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999999;
+    .previewHeading {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--white);
+    }
+
+    .previewControls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+
+      .button {
+        cursor: pointer;
+        border: none;
+        background: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s;
+        svg {
+          width: 12px;
+          height: auto;
+          path {
+            fill: var(--white);
+          }
+        }
+
+        &.svgHeight svg {
+          height: 12px;
+          width: auto;
+        }
+
+        &:hover {
+          background-color: var(--text-secondary);
+        }
+
+        &.active {
+          background-color: var(--text-secondary);
+          svg {
+            path {
+              fill: var(--white);
+            }
+          }
+        }
+      }
+    }
+  }
+  .rendererContainer {
+    margin: $previewHeadingContainerHeight 0 10px;
+    margin-top: ($previewHeadingContainerHeight + 10px);
+    margin-left: auto;
+    margin-right: auto;
+    max-height: calc(100vh - ($previewHeadingContainerHeight + 20px));
+    overflow-y: auto;
+    border: 1px solid var(--light-gray-3);
+
+    &.mobile {
+      width: 450px;
+      border-radius: 5px;
+    }
+
+    &.desktop {
+      width: 98%;
+      border-radius: 2px;
+    }
+  }
+}

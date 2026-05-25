@@ -1,0 +1,77 @@
+.markdownGuideContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.markdownGuideSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.markdownGuideDescription {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.markdownGuideCodeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--background-2);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.markdownGuideCodeLabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.markdownGuideCode {
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+  font-size: 11px;
+  color: var(--primary-dark);
+  background: none;
+  padding: 0;
+  white-space: pre;
+}
+
+.markdownGuideTipSection {
+  background-color: var(--background-2);
+  border-radius: 6px;
+  padding: 12px;
+
+  h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px 0;
+  }
+}
+
+.markdownGuideTipList {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+}

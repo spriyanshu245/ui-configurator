@@ -1,0 +1,23 @@
+.formGroup {
+  margin-bottom: 10px;
+
+  .radioGroupContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+
+    .radio {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+
+      label {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        gap: 4px;
+      }
+    }
+  }
+}

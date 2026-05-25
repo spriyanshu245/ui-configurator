@@ -1,0 +1,67 @@
+.columns {
+  .columnHeader {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+}
+
+.selectCursor {
+  cursor: pointer;
+}
+
+.conditionContainer {
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px;
+  position: relative;
+  margin: 8px 0;
+
+  .conditionheader {
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+.deleteCondition {
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  svg {
+    width: 10px;
+    height: auto;
+    path {
+      fill: var(--text-secondary);
+      transition: fill 0.2s;
+    }
+  }
+
+  &:hover {
+    svg {
+      path {
+        fill: var(--error);
+      }
+    }
+  }
+  &.removeDisabled {
+    cursor: default;
+    svg {
+      path {
+        fill: var(--background-6);
+      }
+    }
+  }
+}
+
+.existingPageContainer {
+  padding: var(--padding-medium);
+  .dropdownlabel {
+    font-weight: bold;
+    font-size: var(--font-size-h4);
+    margin-bottom: var(--padding-medium);
+  }
+}
+
+

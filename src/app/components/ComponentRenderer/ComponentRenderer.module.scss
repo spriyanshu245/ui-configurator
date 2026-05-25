@@ -1,0 +1,244 @@
+.componentWrapper {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition:
+    border 0.2s,
+    background-color 0.2s;
+  user-select: none;
+  align-self: stretch;
+
+  &:not(.preview) {
+    * {
+      user-select: none;
+    }
+  }
+
+  .formComponentWrapper {
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  .componentTypeContainer {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    .componentIcon {
+      border: 1px solid var(--background-4);
+      background-color: var(--background);
+      width: 25px;
+      min-width: 25px;
+      height: 25px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .iconSvgContainer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        svg {
+          width: 10px;
+          height: auto;
+        }
+      }
+    }
+
+    .componentType {
+      padding-left: 5px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .editIcon {
+      display: flex;
+      align-items: center;
+      svg {
+        width: auto;
+        height: 9px;
+        margin-left: 5px;
+        visibility: hidden;
+        path {
+          fill: var(--text-secondary);
+          transition: fill 0.2s;
+        }
+      }
+    }
+  }
+
+  &:has(.componentWrapper) {
+    border-color: var(--background-2);
+    .componentTypeContainer {
+      &:hover {
+        .componentType {
+          color: var(--text);
+        }
+
+        .editIcon {
+          svg {
+            visibility: visible;
+          }
+        }
+      }
+    }
+  }
+
+  &:hover {
+    &:not(.preview) {
+      cursor: pointer;
+      * {
+        cursor: pointer;
+      }
+    }
+    &:not(:has(.componentWrapper)) {
+      border-color: var(--primary);
+
+      .componentTypeContainer {
+        .componentType {
+          color: var(--text);
+        }
+        .editIcon {
+          svg {
+            visibility: visible;
+          }
+        }
+      }
+    }
+    &:has(.componentWrapper) {
+      border-color: var(--primary);
+    }
+  }
+
+  &.active {
+    &:not(:has(.componentWrapper)) {
+      border-color: var(--primary);
+      background-color: var(--primary-transparent-bg);
+
+      .componentTypeContainer {
+        .componentType {
+          color: var(--text);
+          font-weight: 700;
+        }
+        .editIcon {
+          svg {
+            visibility: visible;
+          }
+        }
+      }
+    }
+    &:has(.componentWrapper) {
+      &.componentGroup {
+        border-color: var(--primary);
+        background-color: var(--primary-transparent-bg);
+        > .componentTypeContainer {
+          .componentType {
+            color: var(--text-secondary);
+          }
+
+          .editIcon {
+            svg {
+              visibility: visible;
+            }
+          }
+        }
+
+        .componentWrapper {
+          border-color: var(--background-2);
+          background-color: var(--background);
+        }
+      }
+    }
+  }
+
+  &.preview {
+    background-color: transparent;
+    border-color: transparent;
+    cursor: default;
+    padding: 0;
+    margin: 5px 0;
+
+    &:hover {
+      border-color: transparent;
+      &:not(:has(.componentWrapper)) {
+        border-color: transparent;
+      }
+    }
+  }
+
+  &.dragging {
+    opacity: 0.3 !important;
+    cursor: grabbing;
+    * {
+      opacity: 0.3 !important;
+    }
+    .imageComponent {
+      width: 300px;
+      height: auto;
+    }
+  }
+}
+
+.heading {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.typograph {
+  font-size: 16px;
+}
+
+.imageComponent {
+  width: 100%;
+  height: auto;
+}
+
+.imagePlaceholder {
+  svg {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: cover;
+    object-position: center center;
+    border-radius: 10px;
+    rect {
+      fill: var(--background-3);
+    }
+    path {
+      fill: var(--background-5);
+    }
+  }
+}
+
+.formGroup {
+  .formGroupLabel {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  input[type="checkbox"] {
+    margin-right: 8px;
+  }
+
+  .checkbox {
+    margin-top: 8px;
+  }
+
+  select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+.button {
+  padding: 15px 25px;
+  background-color: var(--background-4);
+  color: var(--text-secondary);
+  font-weight: 700;
+  border: none;
+  border-radius: 5px;
+}

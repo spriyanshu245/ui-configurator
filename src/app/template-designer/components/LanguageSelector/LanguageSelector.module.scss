@@ -1,0 +1,242 @@
+.languageSelector {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--background);
+  border: 1px solid var(--cyan-green-4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 80px;
+
+  &:hover:not(:disabled) {
+    border-color: var(--cyan-green-5);
+  }
+
+  &.open {
+    border-color: var(--primary);
+  }
+
+  &.translating {
+    cursor: not-allowed;
+  }
+
+  .translatingState {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .loaderIcon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .translatingText {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.currentLang {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.chevronIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+
+  svg {
+    width: 10px;
+    height: 10px;
+
+    path {
+      fill: var(--primary);
+    }
+  }
+}
+
+.trigger.open .chevronIcon {
+  transform: rotate(180deg);
+}
+
+.menu {
+  background-color: var(--background);
+  border: 1px solid var(--background-3);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: var(--background-3);
+  margin: 4px 0;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 12px;
+  color: var(--text);
+
+  &:hover {
+    background-color: var(--background-2);
+  }
+
+  &.active {
+    background-color: var(--cyan-green-2);
+    color: var(--primary);
+  }
+}
+
+.langName {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.defaultBadge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  background-color: var(--primary);
+  color: var(--white);
+  border-radius: 8px;
+}
+
+.statusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 10px;
+    height: auto;
+  }
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+
+  svg {
+    width: 10px;
+    height: auto;
+
+    path {
+      fill: var(--text-secondary);
+      transition: fill 0.15s ease;
+    }
+  }
+
+  &:hover:not(.disabled) {
+    background-color: rgba(var(--error), 0.1);
+
+    svg path {
+      fill: var(--error);
+    }
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+}
+
+.addLanguageItem {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+
+  .chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+
+    svg {
+      width: 10px;
+      height: 10px;
+
+      path {
+        fill: var(--primary);
+      }
+    }
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.subMenu {
+  background-color: var(--background);
+  border-top: 1px solid var(--background-3);
+  margin-top: 4px;
+}
+
+.subMenuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 12px;
+
+  &:hover {
+    background-color: var(--background-3);
+  }
+}
+
+.langNative {
+  color: var(--text);
+}
+
+.langLabel {
+  color: var(--text-secondary);
+  font-size: 11px;
+}

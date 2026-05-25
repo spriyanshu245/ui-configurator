@@ -1,0 +1,136 @@
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-right: 5px;
+}
+
+.required {
+  color: red;
+  margin-left: 4px;
+}
+
+.selectContainer {
+  position: relative;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.selectBox {
+  padding: 6px 10px;
+  font-size: 14px;
+  min-height: 34px;
+  border: 1px solid var(--background-4);
+  border-radius: 4px;
+  color: var(--text);
+  resize: none;
+  white-space: break-spaces;
+  overflow: hidden;
+}
+
+.selectBox:hover {
+  border-color: #4d4b4b;
+}
+
+.selectBox.open {
+  border: 2px solid #464444;
+}
+
+.selectBox.error {
+  border-color: rgb(246, 2, 2);
+}
+
+.selectedItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.selectedItem {
+  color: var(--text-secondary);
+  font-size: 12px;
+  background-color: var(--background-3);
+  font-weight: 500;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow-x: scroll;
+}
+
+.removeButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.placeholder {
+  color: #aaa;
+}
+
+.dropdown {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 200px;
+  min-height: 24px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    cursor: pointer;
+    padding: 8px;
+    background: transparent;
+    font-size: 12px;
+    width: fit-content;
+}
+
+.option:hover {
+  background-color: #f0f0f0;
+}
+.searchInput,
+.searchInput:hover,
+.searchInput:focus,
+.searchInput:focus-visible,
+.searchInput:focus-within {
+  border: none;
+  outline: none;
+  height: 20px;
+}
+.customValuePrompt{
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-right: 5px;
+  padding: 8px;
+}
+.option.selected {
+  background-color: var(--background-3);
+  color: var(--text-secondary);
+}
+
+.errorMessage {
+  color: red;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}

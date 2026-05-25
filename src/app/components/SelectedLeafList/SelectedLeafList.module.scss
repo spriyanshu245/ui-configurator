@@ -1,0 +1,78 @@
+.selectedPanel {
+  margin: 20px;
+
+  .flexBtwn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    p {
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+
+  .selectedBox {
+    background: var(--light-bg);
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+
+    p {
+      font-size: 12px;
+    }
+  }
+}
+
+.selectedList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  .selectedItem {
+    white-space: nowrap;
+    justify-content: space-between;
+    background: #fff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    color: var(--dark-gray-3);
+    position: relative;
+    align-self: baseline;
+    font-size: 12px;
+    .removeBtn {
+      color: #fff;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 50%;
+      cursor: pointer;
+      background-color: var(--primary);
+      height: 12px;
+      width: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      top: -6px;
+      right: -4px;
+
+      svg {
+        height: 5px;
+        width: 5px;
+        position: absolute;
+      }
+    }
+  }
+}
+
+.clearAllBtn {
+  margin-bottom: 6px;
+  padding: 8px;
+  background: var(--background-5);
+  color: var(--dark-gray-4);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}

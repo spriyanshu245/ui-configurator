@@ -1,0 +1,297 @@
+pipeline {
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        NEXUS_VERSION = "nexus3"
+        NEXUS_URL = 'https://nexus.rahi.co'
+        NEXUS_REPO = 'rahi-npm-artifacts'
+        SONAR_SERVER = 'https://sonarqube.rahi.co'
+        FAILURE_CASUE = null
+        DEFAULT_BRANCH = 'main'
+        NPM_TOKEN = credentials('npm-token')
+        DOCKER_IMAGE_NAME = 'ui-configurator'
+        DOCKER_IMAGE_TAG = '0.25.0'
+        NEXUS_DOCKER_REPO = 'http://10.0.0.160:8083'
+        NPM_CACHE_DIR = "${WORKSPACE}/.npm-cache"
+        npm_config_cache = "${NPM_CACHE_DIR}"
+        NPM_CONFIG_ANALYTICS = 'false'
+        NPM_CONFIG_FUND = 'false'
+        NEXT_TELEMETRY_DISABLED = '1'
+    }
+    tools{
+        nodejs 'NodeJS-20' 
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                script {
+        
+                    def branchName = env.BRANCH_NAME ?: DEFAULT_BRANCH
+                    def pattern = /^(main|v0\.\d+\.0)$/
+
+                    if (branchName ==~ pattern) {
+                        echo "Building branch: ${branchName}"
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${branchName}"]],
+                            userRemoteConfigs: [[
+                                credentialsId: 'Gitlab_user',
+                                url: 'http://gitlab.rahi.co/config-management/ui-configurator.git'
+                            ]]
+                        ])
+                    } else {
+                        error "Branch '${branchName}' does not match the allowed pattern. Allowed: 'main' or '0.x.0'"
+                    }
+                }
+            }
+
+        }
+        
+        stage('Install Dependencies - NPM Install') {
+            steps {
+                sh 'rm -rf package-lock.json'
+                sh 'rm -rf node_modules'
+                sh 'rm -rf .next'
+                sh 'npm cache clean --force'
+                sh "npm install"
+            }
+        }
+
+        stage('NPM Vulnerability Check') {
+            steps {
+                script {
+                    echo "Running NPM Vulnerability Check"
+
+                    if (sh(script: "npm audit --omit=dev --audit-level=high", returnStatus: true) != 0) {
+                        FAILURE_CAUSE = "NPM Vulnerability Found"
+                        error "High severity vulnerabilities found! Failing pipeline."
+                    }
+                    echo "No high severity vulnerabilities found."
+                }
+            }
+        }
+		
+		stage ('Build - NPM Run Build'){
+            steps {
+                sh "npm run build"
+
+            }
+        }
+        
+        stage ('Test and coverage'){
+            steps {
+                sh "npm run test:coverage"
+
+            }
+        }
+  
+        stage('SonarQube Analysis') {
+            environment {
+                scannerHome = tool 'SonarScanner';
+                SONAR_TOKEN = credentials('sonar_user')
+            }
+            steps {
+              withSonarQubeEnv('SonarQube') {
+                sh "${scannerHome}/bin/sonar-scanner -Dsonar.login=${SONAR_TOKEN}"
+              }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    timeout(time: 5, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            FAILURE_CASUE = "QualityGate Failed"
+                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Publish NPM package') {
+            steps{
+                script{
+                    writeFile file: '.npmrc', text: """
+                        registry=${NEXUS_URL}/repository/${NEXUS_REPO}/
+                        always-auth=true
+                        //nexus.rahi.co/repository/${NEXUS_REPO}/:_auth="${env.NPM_TOKEN}"
+                    """
+                }
+                //sh 'npm version patch'
+                sh 'npm publish --access=restricted --registry=${NEXUS_URL}/repository/${NEXUS_REPO}/'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t 10.0.0.160:8083/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
+                }
+            }
+        }
+
+        stage('Scan Docker Image') {
+            steps {
+                script {
+                    sh """
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 1 \
+                        --ignorefile .trivyignore \
+                        --format template \
+                        --template "@/var/lib/jenkins/trivy/contrib/custom_template.tpl" \
+                        -o docker-image-vulnerability-report.html \
+                        10.0.0.160:8083/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Log in to Nexus
+                    withCredentials([usernamePassword(credentialsId: 'nexus-user-credentials', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        // Create a custom settings.xml with credentials
+                        writeFile file: 'settings.xml', text: """
+                            <settings>
+                                <servers>
+                                    <server>
+                                        <id>nexus</id>
+                                        <username>${NEXUS_USERNAME}</username>
+                                        <password>${NEXUS_PASSWORD}</password>
+                                    </server>
+                                </servers>
+                            </settings>
+                        """
+                        sh '''
+                            echo "${NEXUS_PASSWORD}" | docker login ${NEXUS_DOCKER_REPO} --username ${NEXUS_USERNAME} --password-stdin
+                        '''
+                        // Push the image
+                        sh "docker push 10.0.0.160:8083/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+             archiveArtifacts artifacts: 'docker-image-vulnerability-report.html', fingerprint: true
+
+                publishHTML(target: [
+                reportName: 'Docker Image Vulnerability Report',
+                reportDir: '.',
+                reportFiles: 'docker-image-vulnerability-report.html',
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true
+                ])           
+
+          }
+    success {
+        echo 'Pipeline completed successfully!'
+        script {
+            def committerEmail = sh(
+                script: "git log -1 --pretty=format:'%ae'",
+                returnStdout: true
+            ).trim()
+            def teamsWebhookUrl = 'https://rahitechno.webhook.office.com/webhookb2/4b9b70fe-e679-42ae-bd0d-598cb455a41e@2342f2b2-10ee-42ca-b748-466b2109aa3f/IncomingWebhook/d6bd7c6d4ddb43e986c370bca568008d/787446f7-259c-403f-9d5d-34513a49a167/V2K4yQ8LJhlaBXPc-F0HMYfFlgUsgD4GZLhqQrlED2-Ho1' // Replace this
+            def message = """
+            {
+                "@type": "MessageCard",
+                "@context": "http://schema.org/extensions",
+                "summary": "Build Succeeded: ${env.JOB_NAME}",
+                "themeColor": "00FF00",
+                "title": "Jenkins Pipeline Succeeded - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                "sections": [{
+                    "activityTitle": "Pipeline Success Notification",
+                    "facts": [
+                        {"name": "Job", "value": "${env.JOB_NAME}"},
+                        {"name": "Build Number", "value": "${env.BUILD_NUMBER}"},
+                        {"name": "Status", "value": "${currentBuild.result}"},
+                        {"name": "URL", "value": "${env.BUILD_URL}"},
+                        {"name": "Committer", "value": "${committerEmail}"}
+                    ],
+                    "markdown": true
+                }]
+            }
+            """
+            sh """
+                curl -H 'Content-Type: application/json' -d '${message}' '${teamsWebhookUrl}'
+            """
+        }    
+        cleanWs()
+    }
+    failure {
+        script {
+            def committerEmail = sh(
+                script: "git log -1 --pretty=format:'%ae'",
+                returnStdout: true
+            ).trim()
+            
+            def sonarReportUrl = "${SONAR_SERVER}/dashboard?id=ui-configurator"
+            if (FAILURE_CASUE == "QualityGate Failed") {
+                emailext(
+                    subject: "SonarQube Quality Gate Failed - ${currentBuild.fullDisplayName}",
+                    body: """
+                        <p>Hi,</p>
+                        <p>The Jenkins build for the project <strong>${env.JOB_NAME}</strong> has failed due to SonarQube quality gate failure.</p>
+                        <p><a href="${sonarReportUrl}">Click here to view the SonarQube report</a></p>
+                        <p>Build URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                        <p>Regards,<br>Jenkins</p>
+                    """,
+                    to: "${committerEmail}, technology-team@rahitechnologies.com",
+                    mimeType: 'text/html'
+                )
+            } else {
+                emailext(
+                    subject: "Pipeline Failed - ${currentBuild.fullDisplayName}",
+                    body: """
+                        <p>Hi,</p>
+                        <p>The Jenkins build for <strong>${env.JOB_NAME}</strong> has failed.</p>
+                        <p>Error: ${currentBuild.result}</p>
+                        <p>Build URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                        <p>Regards,<br>Jenkins</p>
+                    """,
+                    to: "${committerEmail}, technology-team@rahitechnologies.com",
+                    mimeType: 'text/html'
+                )
+            }
+
+            // ✅ Microsoft Teams Notification
+            def teamsWebhookUrl = 'https://rahitechno.webhook.office.com/webhookb2/4b9b70fe-e679-42ae-bd0d-598cb455a41e@2342f2b2-10ee-42ca-b748-466b2109aa3f/IncomingWebhook/d6bd7c6d4ddb43e986c370bca568008d/787446f7-259c-403f-9d5d-34513a49a167/V2K4yQ8LJhlaBXPc-F0HMYfFlgUsgD4GZLhqQrlED2-Ho1' // Replace this
+            def message = """
+            {
+                "@type": "MessageCard",
+                "@context": "http://schema.org/extensions",
+                "summary": "Build Failed: ${env.JOB_NAME}",
+                "themeColor": "FF0000",
+                "title": "Jenkins Pipeline Failed - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                "sections": [{
+                    "activityTitle": "Pipeline Failure Notification",
+                    "facts": [
+                        {"name": "Job", "value": "${env.JOB_NAME}"},
+                        {"name": "Build Number", "value": "${env.BUILD_NUMBER}"},
+                        {"name": "Status", "value": "${currentBuild.result}"},
+                        {"name": "URL", "value": "${env.BUILD_URL}"},
+                        {"name": "Committer", "value": "${committerEmail}"}
+                    ],
+                    "markdown": true
+                }]
+            }
+            """
+            sh """
+                curl -H 'Content-Type: application/json' -d '${message}' '${teamsWebhookUrl}'
+            """
+        }
+        cleanWs()
+    }
+}
+}

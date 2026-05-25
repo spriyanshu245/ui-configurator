@@ -1,0 +1,187 @@
+.sourceBanner {
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sectionDescription {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.advancedToggle {
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--primary), 0.18);
+  border-radius: 999px;
+  background-color: rgba(var(--primary), 0.05);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(var(--primary), 0.1);
+    border-color: rgba(var(--primary), 0.26);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.advancedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.advancedDescription {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.mappingList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mappingRow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--background-4);
+  border-radius: 8px;
+  background-color: var(--background-2);
+}
+
+.mappingCardTitle {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mappingCodeChip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.mappingCodePrefix {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background-color: var(--primary-transparent-bg);
+  color: var(--primary-dark);
+  overflow-wrap: anywhere;
+}
+
+.mappingCodeSuffix {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background-color: rgba(var(--primary), 0.08);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.targetCodePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.targetCodePreviewLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.targetCodePrefix {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--background-4);
+  border-radius: 6px;
+  background-color: var(--background-2);
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.targetCodeSuffixInput {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--cyan-green-3);
+  border-radius: 6px;
+  outline: none;
+  background-color: var(--white);
+  font-size: 12px;
+  color: var(--text);
+
+  &:focus {
+    border-color: var(--cyan-green-6);
+    box-shadow: 0 0 0 1px var(--cyan-green-6);
+  }
+}
+
+.helperText {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.errorText {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--error);
+}
+
+.progressText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.progressPanel {
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--primary), 0.18);
+  border-radius: 10px;
+  background-color: var(--background);
+}
+
+.progressWarning {
+  margin: 25px 0 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}

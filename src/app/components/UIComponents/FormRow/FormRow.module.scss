@@ -1,0 +1,7 @@
+.formRow {
+  display: grid;
+  align-items: start;
+  .item {
+    overflow-x: hidden;
+  }
+}

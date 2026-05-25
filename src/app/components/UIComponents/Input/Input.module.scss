@@ -1,0 +1,36 @@
+.formGroup {
+  .formGroupLabel {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .inputContainer {
+    border: 1px solid var(--background-4);
+    background-color: var(--background);
+    display: flex;
+    .iconContainer {
+      padding: 4px;
+      height: inherit;
+      display: flex;
+      align-items: center;
+      background-color: var(--background-4);
+      .inputIcon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+    .input {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      background-color: var(--background);
+      color: var(--text);
+      font-size: 12px;
+      pointer-events: none;
+      &::placeholder {
+        color: var(--background-6);
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+.addKeyContainer {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.addKeyToggle {
+  background-color: var(--background-2);
+  border: 1px solid var(--background-4);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dark-gray-3);
+  cursor: pointer;
+  width: 100%;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+  }
+}
+
+.addKeySection {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  align-items: flex-start;
+}
+
+.addKeyTextarea {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--background-6);
+  border-radius: 4px;
+  font-size: 12px;
+  resize: none;
+  overflow-y: auto;
+  font-family: inherit;
+
+  &:focus {
+    outline: 1px solid var(--primary);
+    outline-offset: 0;
+  }
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+}

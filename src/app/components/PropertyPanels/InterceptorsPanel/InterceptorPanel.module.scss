@@ -1,0 +1,145 @@
+.interceptors {
+  .interceptorRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .row {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--background-3);
+      border-radius: 5px;
+      transition: border-color 0.2s ease;
+      padding: 8px 10px 8px 10px;
+      position: relative;
+
+      &.error {
+        border-color: var(--error);
+      }
+
+      &:hover {
+        border-color: var(--background-6);
+      }
+
+      .interceptorDetails {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+
+        .topContent {
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+
+          .labelInput {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 500;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-align: left;
+          }
+
+          .actions {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+
+            .chevron {
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              svg {
+                width: 11px;
+                height: auto;
+                transition: transform 0.2s;
+                transform-origin: center center;
+                path {
+                  fill: var(--text-secondary);
+                  transition: fill 0.2s;
+                }
+              }
+
+              &:hover {
+                svg {
+                  path {
+                    fill: var(--primary);
+                  }
+                }
+              }
+
+              &.isOpen {
+                h3 {
+                  color: var(--primary);
+                }
+                svg {
+                  path {
+                    fill: var(--primary);
+                  }
+                  transform: rotate(180deg);
+                }
+              }
+            }
+
+            .removeIcon {
+              cursor: pointer;
+              background-color: transparent;
+              border: none;
+              svg {
+                width: 10px;
+                height: auto;
+                path {
+                  fill: var(--text-secondary);
+                  transition: fill 0.2s;
+                }
+              }
+
+              &:hover {
+                svg {
+                  path {
+                    fill: var(--error);
+                  }
+                }
+              }
+              &.removeDisabled {
+                cursor: default;
+                svg {
+                  path {
+                    fill: var(--background-6);
+                  }
+                }
+              }
+            }
+          }
+        }
+        .bottomContent {
+          display: flex;
+          flex-direction: column;
+          padding-right: 4px;
+
+          textArea {
+            min-height: 80px;
+          }
+        }
+      }
+    }
+  }
+
+  .addInterceptor {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+    padding: 4px 8px;
+    text-align: left;
+    color: var(--background-6);
+    cursor: pointer;
+  }
+}

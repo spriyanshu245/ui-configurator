@@ -1,0 +1,49 @@
+.userNotification {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: var(--background-2);
+  position: absolute;
+  z-index: 1000;
+  top: 5px;
+  right: 40px;
+  max-width: 300px;
+
+  span {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+
+  svg {
+    margin-right: 5px;
+    width: 15px;
+    min-width: 15px;
+    height: auto;
+  }
+
+  &.error {
+    background-color: var(--error);
+    span {
+      color: var(--white);
+    }
+
+    svg path {
+      fill: var(--white);
+    }
+  }
+
+  &.success {
+    background-color: var(--primary-dark);
+
+    span {
+      color: var(--white);
+    }
+
+    svg path {
+      fill: var(--white);
+    }
+  }
+}

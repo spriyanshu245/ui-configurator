@@ -1,0 +1,25 @@
+.iconButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .iconButton:hover {
+    opacity: 0.8;
+  }
+  
+  .iconButtonText {
+    margin-left: 8px;
+    font-size: 14px;
+    color: inherit;
+  }
+  
+  .iconButton:focus {
+    outline: none;
+  }
+  

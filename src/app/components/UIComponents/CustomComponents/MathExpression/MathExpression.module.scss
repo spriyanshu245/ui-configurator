@@ -1,0 +1,62 @@
+.formGroup {
+  width: 100%;
+  .formGroupLabel {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .inputContainer {
+    border: 1px solid var(--background-4);
+    background-color: var(--background);
+    display: flex;
+    .input {
+      width: 100%;
+      min-height: 30px;
+      padding: 8px;
+      border: none;
+      background-color: var(--background);
+      color: var(--text);
+      font-size: 12px;
+      &::placeholder {
+        color: var(--background-6);
+      }
+    }
+  }
+
+  .selectDropdown {
+    z-index: 999;
+    width: 100%;
+    margin: 0;
+    padding: 2px;
+    background-color: var(--background);
+    border: 1px solid var(--background-4);
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+
+    @mixin selectOption($bgColor: "") {
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      background: $bgColor;
+
+      &:hover {
+        background-color: var(--background-3);
+      }
+    }
+
+    .selectOptionDark {
+      @include selectOption(var(--background-3));
+    }
+
+    .selectOptionLight {
+      @include selectOption("");
+    }
+  }
+
+  .errorMessage {
+    color: var(--error);
+    font-size: 12px;
+    position: fixed;
+  }
+}

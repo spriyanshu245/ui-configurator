@@ -1,0 +1,84 @@
+.toast {
+  position: fixed;
+  top: 5px;
+  right: 5px;
+  background-color: var(--rahi-cp-white);
+  color: var(--rahi-cp-rich-black);
+  border: 1px solid var(--rahi-cp-background-20);
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content {
+  flex: 1;
+  font-size: 14px;
+}
+
+.progressBarContainer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  width: 100%;
+  background-color: var(--rahi-cp-background-3);
+}
+
+.progressBar {
+  height: 100%;
+  background-color: var(--rahi-cp-secondary);
+  transition: width 0.1s linear;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--rahi-cp-rich-black);
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+}
+
+.success {
+  border-color: var(--rahi-cp-success);
+  .progressBar {
+    background-color: var(--rahi-cp-success);
+  }
+}
+
+.error {
+  border-color: var(--rahi-cp-error);
+
+  .progressBar {
+    background-color: var(--rahi-cp-error);
+  }
+}
+
+.info {
+  border-color: var(--rahi-cp-primary);
+}
+
+.warning {
+  border-color: var(--rahi-cp-warning);
+}

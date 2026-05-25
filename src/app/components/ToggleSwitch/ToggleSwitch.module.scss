@@ -1,0 +1,93 @@
+
+$toggle-width: 50px;
+$toggle-height: 28px;
+$toggle-medium-width: 30px;
+$toggle-medium-height: 17px;
+$toggle-small-width: 22px;
+$toggle-small-height: 13px;
+$slider-border-radius: 50%;
+$slider-color: var(--background-5);
+$slider-active-color: var(--primary);
+$slider-handle-color: white;
+$transition-duration: 0.4s;
+
+@mixin toggle-switch($width, $height, $translateX) {
+  position: relative;
+  display: inline-block;
+  width: $width;
+  height: $height;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: $slider-color;
+    transition: $transition-duration;
+    border-radius: $height;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: $height * 0.8;
+      width: $height * 0.8;
+      left: calc(($height - ($height * 0.8)) / 2);
+      bottom: calc(($height - ($height * 0.8)) / 2);
+      background: $slider-handle-color;
+      transition: $transition-duration;
+      border-radius: $slider-border-radius;
+    }
+  }
+
+  input:checked + .slider {
+    background-color: $slider-active-color;
+  }
+
+  input:focus + .slider {
+    box-shadow: 0 0 1px $slider-active-color;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX($translateX);
+  }
+
+  input:disabled:checked + .slider {
+    background-color: $slider-color;
+  }
+}
+
+.toggleSwitchContainer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  .label {
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--text-secondary);
+  }
+
+  input:disabled + .label {
+    color: var(--background-6);
+  }
+
+  .switch {
+    @include toggle-switch($toggle-width, $toggle-height, 22px);
+  }
+
+  .switchMedium {
+    @include toggle-switch($toggle-medium-width, $toggle-medium-height, 13px);
+  }
+
+  .switchSmall {
+    @include toggle-switch($toggle-small-width, $toggle-small-height, 9px);
+  }
+}

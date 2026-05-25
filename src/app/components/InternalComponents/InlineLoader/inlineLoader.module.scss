@@ -1,0 +1,12 @@
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  transform-origin: 50% 50%;
+  stroke: url(#BlueRadialGradient);
+  fill: none;
+  animation: spin 0.5s infinite linear;
+}

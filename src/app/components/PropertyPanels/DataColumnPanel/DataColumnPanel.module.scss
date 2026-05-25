@@ -1,0 +1,32 @@
+.columns {
+  .columnHeader {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .filterProperties {
+    margin-bottom: 10px;
+  }
+  .buttonStyle {
+    padding: 8px 20px !important;
+  }
+}
+
+.flexContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  width: 100% !important;
+
+  &.noWrap {
+    flex-wrap: nowrap;
+  }
+}
+
+.btnPadding {
+  padding: 8px 12px;
+}
+
+.inputWidth {
+  width: 100%;
+}

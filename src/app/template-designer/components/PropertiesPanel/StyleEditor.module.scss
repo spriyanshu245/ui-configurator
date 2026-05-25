@@ -1,0 +1,183 @@
+.styleEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .entriesList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    padding-right: 4px;
+    overflow-y: auto;
+  }
+
+  .entryRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--background-4);
+    border-radius: 6px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &.highlighted {
+      border-color: var(--secondary-dark);
+      background-color: var(--cyan-green-2);
+    }
+
+    .entryHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .entryLabel {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .propertyInputWrapper {
+      position: relative;
+
+      .propertyInput {
+        width: 100%;
+        padding: 6px 8px;
+        font-size: 12px;
+        font-family: monospace;
+        color: var(--text);
+        background-color: var(--background);
+        border: 1px solid var(--background-3);
+        border-radius: 4px;
+        outline: none;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+          border-color: var(--primary);
+        }
+
+        &::placeholder {
+          color: var(--text-secondary);
+        }
+      }
+
+      .suggestionsDropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 4px;
+        background-color: var(--background);
+        border: 1px solid var(--background-3);
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        max-height: 200px;
+        overflow-y: auto;
+
+        .suggestionItem {
+          width: 100%;
+          padding: 8px 10px;
+          font-size: 12px;
+          color: var(--text);
+          background: none;
+          border: none;
+          text-align: left;
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+
+          &:hover,
+          &.highlighted {
+            background-color: var(--background-2);
+          }
+
+          &.highlighted {
+            background-color: var(--primary-transparent-bg);
+          }
+        }
+      }
+    }
+
+    .valueRow {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .valueInput {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text);
+      background-color: var(--background);
+      border: 1px solid var(--background-3);
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s ease;
+
+      &:focus {
+        border-color: var(--primary);
+      }
+
+      &::placeholder {
+        color: var(--text-secondary);
+      }
+    }
+
+    .removeButton {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+
+      svg {
+        width: 10px;
+        height: auto;
+
+        path {
+          fill: var(--text-secondary);
+          transition: fill 0.2s ease;
+        }
+      }
+
+      &:hover {
+        background-color: var(--background-3);
+
+        svg path {
+          fill: var(--error);
+        }
+      }
+    }
+  }
+
+  .addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    background-color: var(--background);
+    border: 1px dashed var(--background-4);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background-color: var(--background-2);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+  }
+}

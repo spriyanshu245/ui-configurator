@@ -1,0 +1,51 @@
+.progressContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progressLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.progressDetail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.progressTrack {
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: none;
+  background-color: var(--background-3);
+}
+
+.progressTrack::-webkit-progress-bar {
+  background-color: var(--background-3);
+  border-radius: inherit;
+}
+
+.progressTrack::-webkit-progress-value {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+  transition: width 0.2s ease;
+}
+
+.progressTrack::-moz-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+}

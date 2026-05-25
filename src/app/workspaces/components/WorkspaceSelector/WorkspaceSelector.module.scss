@@ -1,0 +1,509 @@
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selectorSection {
+  margin-top: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+}
+
+.collapsedChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--cyan-green-5);
+  border-radius: 6px;
+  background-color: var(--background);
+  animation: dropdownIn 0.15s ease-out both;
+
+  .collapsedName {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .collapsedCode {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.2;
+  }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.searchArea {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.searchInput {
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  transition:
+    width 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
+
+  &.open {
+    width: 180px;
+    opacity: 1;
+  }
+
+  input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--background-3);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text);
+    background-color: var(--white);
+    outline: none;
+    font-family: inherit;
+
+    &:focus {
+      border-color: var(--primary);
+    }
+
+    &::placeholder {
+      color: var(--dark-gray-2);
+    }
+  }
+}
+
+.searchToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--background-3);
+  border-radius: 6px;
+  background: var(--white);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+
+  svg {
+    width: 12px;
+    height: auto;
+  }
+
+  &:hover {
+    border-color: var(--primary);
+    background-color: var(--cyan-green-1);
+  }
+}
+
+.expandToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--background-3);
+  border-radius: 6px;
+  background: var(--white);
+  cursor: pointer;
+  transition:
+    border-color 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+
+  svg {
+    width: 10px;
+    height: auto;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+
+    path {
+      fill: var(--dark-gray-4);
+    }
+  }
+
+  &:hover {
+    border-color: var(--primary);
+    background-color: var(--cyan-green-1);
+  }
+
+  &.expanded svg {
+    transform: rotate(180deg);
+  }
+}
+
+// Chip strip
+
+.chipStripWrapper {
+  position: relative;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &.expanded {
+    max-height: 220px;
+    opacity: 1;
+    overflow-x: auto;
+    overflow-y: auto;
+    transition:
+      max-height 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+      opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    margin-top: 10px;
+  }
+
+  &.fadeRight::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    background: linear-gradient(to right, transparent, var(--background));
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.chipStrip {
+  display: flex;
+  gap: 12px;
+  padding: 4px 2px 12px;
+  // No overflow — wrapper handles scrolling so absolute dropdowns aren't clipped
+}
+
+// Create chip
+
+.createChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-width: fit-content;
+  border: 2px dashed var(--cyan-green-4);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s,
+    transform 0.3s;
+  white-space: nowrap;
+
+  svg {
+    width: 12px;
+    height: auto;
+
+    path {
+      fill: var(--primary);
+    }
+  }
+
+  &:hover {
+    border-color: var(--primary);
+    background-color: var(--cyan-green-2);
+    transform: translateY(-2px);
+  }
+}
+
+// Workspace chip
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  min-width: fit-content;
+  border: 1px solid var(--cyan-green-3);
+  border-radius: 10px;
+  background-color: var(--white);
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s,
+    box-shadow 0.3s,
+    transform 0.3s;
+  position: relative;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--primary);
+    background-color: var(--cyan-green-1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--primary-dark-rgb), 0.1);
+
+    .menuTrigger {
+      opacity: 1;
+    }
+  }
+
+  &.selected {
+    background-color: var(--primary);
+    border-color: var(--primary-dark);
+    box-shadow: 0 4px 16px rgba(var(--primary-dark-rgb), 0.25);
+    transform: translateY(-2px);
+
+    .chipName {
+      color: var(--white);
+    }
+
+    .chipCode {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .menuTrigger svg path {
+      fill: var(--white);
+    }
+
+    &:hover {
+      background-color: var(--primary-dark);
+    }
+  }
+}
+
+.chipContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chipName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.chipCode {
+  font-size: 11px;
+  color: var(--dark-gray-3);
+  line-height: 1.2;
+}
+
+// Three-dot menu
+
+.menuTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
+  padding: 0;
+
+  svg {
+    // viewBox is 128x512 — fix height, let width auto-scale
+    height: 14px;
+    width: auto;
+
+    path {
+      fill: var(--dark-gray-4);
+    }
+  }
+
+  &:hover {
+    background-color: rgba(var(--primary-dark-rgb), 0.1);
+  }
+}
+
+.menuDropdown {
+  animation: dropdownIn 0.15s ease-out both;
+  position: fixed;
+  min-width: 150px;
+  background: var(--white);
+  border: 1px solid var(--background-3);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  padding: 4px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  svg {
+    width: 14px;
+    height: auto;
+
+    path {
+      fill: var(--dark-gray-4);
+    }
+  }
+
+  &:hover {
+    background-color: var(--cyan-green-1);
+  }
+
+  &.danger {
+    color: var(--error);
+
+    svg path {
+      fill: var(--error);
+    }
+
+    &:hover {
+      background-color: rgba(192, 57, 43, 0.08);
+    }
+  }
+}
+
+.noResults {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--dark-gray-3);
+  white-space: nowrap;
+}
+
+// Inline create chip
+
+.inlineCreateChip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  min-width: 240px;
+  border: 2px dashed var(--primary);
+  border-radius: 10px;
+  background-color: var(--cyan-green-1);
+  animation: dropdownIn 0.15s ease-out both;
+}
+
+.inlineCreateFields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inlineInput {
+  padding: 6px 10px;
+  border: 1px solid var(--background-3);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background-color: var(--white);
+  outline: none;
+  width: 100%;
+
+  &:focus {
+    border-color: var(--primary);
+  }
+
+  &::placeholder {
+    color: var(--dark-gray-2);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.inlineCodeInput {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inlineError {
+  font-size: 11px;
+  color: var(--error);
+  line-height: 1.3;
+}
+
+.inlineCreateActions {
+  display: flex;
+  gap: 6px;
+}
+
+.inlineAction {
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.inlineSave {
+  background-color: var(--primary);
+  color: var(--white);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+  }
+}
+
+.inlineCancel {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--background-3);
+
+  &:hover:not(:disabled) {
+    background-color: var(--background-2);
+  }
+}

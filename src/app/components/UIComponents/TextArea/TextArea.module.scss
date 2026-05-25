@@ -1,0 +1,23 @@
+.formGroup {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.textAreaContainer {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  width: 100%;
+}
+
+.textArea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.75rem;
+  border: 1px solid var(--background-4);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  pointer-events: none;
+}

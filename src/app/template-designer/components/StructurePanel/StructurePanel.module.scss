@@ -1,0 +1,286 @@
+.structurePanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--background-3);
+
+  .templateHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px;
+    background-color: var(--background);
+    border-bottom: 1px solid var(--background-3);
+    min-height: 40px;
+    max-height: 40px;
+    height: 40px;
+  }
+
+  .controlBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 4px 6px;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--background-3);
+
+    .controlButton {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.15s ease;
+
+      svg {
+        width: 14px;
+        height: auto;
+
+        path {
+          fill: var(--text-secondary);
+        }
+      }
+
+      &:hover {
+        background-color: var(--cyan-green-2);
+
+        svg path {
+          fill: var(--primary);
+        }
+      }
+
+      &:active {
+        background-color: none;
+      }
+    }
+  }
+
+  .templateName {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      opacity 0.15s ease,
+      border-color 0.15s ease;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    margin: 0 6px;
+
+    .duplicateBtn {
+      opacity: 0;
+      visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition:
+        background-color 0.15s ease,
+        opacity 0.15s ease,
+        visibility 0.15s ease;
+
+      svg {
+        width: 12px;
+        height: auto;
+
+        path {
+          fill: var(--text-secondary);
+        }
+      }
+
+      &:hover {
+        background-color: var(--primary);
+
+        svg path {
+          fill: var(--white);
+        }
+      }
+    }
+
+    &:hover {
+      background-color: var(--background-2);
+
+      .duplicateBtn {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    &.selected {
+      background-color: var(--cyan-green-2);
+
+      .label {
+        color: var(--primary-dark);
+        font-weight: 600;
+      }
+
+      .typeTag {
+        background-color: var(--white);
+      }
+    }
+
+    &.dragging {
+      opacity: 0.5;
+    }
+
+    &.dropInside {
+      border-color: var(--primary);
+      background-color: var(--primary-transparent-bg);
+    }
+  }
+
+  .dropIndicator {
+    height: 2px;
+    background-color: var(--primary);
+    margin: 2px 4px;
+    border-radius: 1px;
+  }
+
+  .expandBtn {
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+
+    svg {
+      fill: var(--primary);
+    }
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
+  }
+
+  .arrow {
+    font-size: 8px;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
+  }
+
+  .spacer {
+    width: 16px;
+  }
+
+  .bullet {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .bulletPoint {
+      width: 4px;
+      height: 4px;
+      background-color: var(--text-secondary);
+      border-radius: 50%;
+    }
+  }
+
+  .icon {
+    font-size: 12px;
+  }
+
+  .label {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .typeTag {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: var(--background-3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: auto;
+  }
+
+  .children {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .addRowBtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: var(--background-2);
+    }
+
+    span {
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    svg {
+      width: 10px;
+      height: auto;
+      path {
+        fill: var(--primary);
+      }
+    }
+  }
+}

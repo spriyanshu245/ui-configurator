@@ -1,0 +1,10 @@
+.stack {
+  display: grid;
+  align-items: start;
+  .item {
+    overflow-x: hidden;
+  }
+}
+.dropZone {
+  width: 100%;
+}

@@ -1,0 +1,25 @@
+/* CustomImage.module.scss */
+
+.imageComponent {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.imagePlaceholder {
+  background: var(--background);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  svg {
+    width: 50px;
+    height: auto;
+    path {
+      fill: var(--background-6);
+      transition: fill 0.2s;
+    }
+  }
+}

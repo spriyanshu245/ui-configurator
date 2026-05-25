@@ -1,0 +1,145 @@
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pageContainer {
+  position: relative;
+  padding: 24px 20px 20px;
+  min-height: 100vh;
+
+  @media (max-width: 1200px) {
+    padding: 20px 20px 16px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 12px;
+  }
+}
+
+// Hero
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 32px;
+    height: auto;
+  }
+}
+
+.heroTitle {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+
+  @media (max-width: 1200px) {
+    font-size: 24px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 22px;
+  }
+}
+
+.heroSubtitle {
+  font-size: 14px;
+  color: var(--dark-gray-4);
+  margin: 6px 0 0;
+  max-width: 450px;
+  line-height: 1.5;
+
+  @media (max-width: 768px) {
+    font-size: 13px;
+  }
+}
+
+// Sections
+
+.section {
+  margin-top: 25px;
+  animation: fadeInUp 0.6s ease-out both 0.15s;
+
+  &:last-of-type {
+    margin-bottom: 24px;
+  }
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-3);
+}
+
+// Card grid
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+
+  // Staggered entrance for cards
+  >* {
+    animation: fadeInUp 0.5s ease-out both;
+
+    &:nth-child(1) {
+      animation-delay: 0.06s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: 0.12s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.18s;
+    }
+
+    &:nth-child(4) {
+      animation-delay: 0.24s;
+    }
+
+    &:nth-child(5) {
+      animation-delay: 0.30s;
+    }
+
+    &:nth-child(6) {
+      animation-delay: 0.36s;
+    }
+
+    &:nth-child(7) {
+      animation-delay: 0.42s;
+    }
+
+    &:nth-child(8) {
+      animation-delay: 0.48s;
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+}

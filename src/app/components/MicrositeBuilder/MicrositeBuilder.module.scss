@@ -1,0 +1,33 @@
+.micrositeContainer {
+  $componentsPaneWidth: var(--component-pane-width);
+  position: relative;
+  background-color: var(--background-2);
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+
+  * {
+    font-family: var(--font-family);
+  }
+
+  .componentsPane {
+    width: $componentsPaneWidth;
+    min-width: $componentsPaneWidth;
+    background-color: var(--background);
+    border-right: 1px solid var(--background-2);
+    position: fixed;
+    z-index: 1;
+  }
+  .builderPane {
+    width: calc(100% - $componentsPaneWidth);
+    left: $componentsPaneWidth;
+    height: calc(100vh - var(--header-height) - var(--control-panel-height));
+    position: relative;
+    padding: 20px 15px;
+    top: var(--control-panel-height);
+
+    &.preview {
+      width: 100%;
+      left: 0;
+    }
+  }
+}

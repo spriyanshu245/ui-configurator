@@ -1,0 +1,25 @@
+.pagination {
+  display: flex;
+  gap: 16px;
+  .paginationButton {
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--background-6);
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 500;
+
+    &:disabled {
+      cursor: not-allowed;
+      svg {
+        path {
+          fill: var(--background-6) !important;
+        }
+      }
+    }
+  }
+  .activePage {
+    color: var(--dark-gray-3);
+  }
+}
