@@ -1,10 +1,10 @@
-import { DSL_TOOLS } from '../../lib/tool-definitions';
-import { freeLLMClient, TOOL_CAPABLE_MODEL } from '../../lib/freellm-client';
-import { buildSystemPrompt } from '../../lib/prompt-builder';
-import { executeTool } from '../../lib/tool-executor';
-import { toolCallLog } from '../../db/queries/tool-call-log';
-import { queuePatch } from '../../lib/dsl-patcher';
-import { db } from '../../db/client';
+import { DSL_TOOLS } from '../../../../chat-agent/lib/tool-definitions';
+import { freeLLMClient, TOOL_CAPABLE_MODEL } from '../../../../chat-agent/lib/freellm-client';
+import { buildSystemPrompt } from '../../../../chat-agent/lib/prompt-builder';
+import { executeTool } from '../../../../chat-agent/lib/tool-executor';
+import { toolCallLog } from '../../../../chat-agent/db/queries/tool-call-log';
+import { queuePatch } from '../../../../chat-agent/lib/dsl-patcher';
+import { db } from '../../../../chat-agent/db/client';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: Request) {
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
               if (pending.error) {
                 toolResults.push({ tool_call_id: toolCall.id, content: \`Patch validation failed: \${pending.error}\` });
               } else {
-                const { pendingPatchesDB } = require('../../db/queries/pending-patches');
+                const { pendingPatchesDB } = require('../../../../chat-agent/db/queries/pending-patches');
                 pendingPatchesDB.save(pending);
 
                 toolResults.push({
