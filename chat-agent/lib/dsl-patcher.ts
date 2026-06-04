@@ -1,11 +1,21 @@
 import * as jsonpatch from 'fast-json-patch';
 import { v4 as uuidv4 } from 'uuid';
+import { fetchMicrositePages } from './microsite-loader';
 
 export async function queuePatch(args: any, sessionId: string) {
   const { microsite_id, page_path, patch, description, preview_hint, affected_components } = args;
 
-  // Here we would normally fetch the current DSL. Mocking it for now.
-  const currentDsl = { type: "page", components: [] };
+  let currentDsl: any = {};
+  try {
+    const micrositeData = await fetchMicrositePages(microsite_id);
+    const page = micrositeData?.pages?.find((p: any) => p.pageCode === page_path);
+    if (!page) {
+       return { error: 'Page not found' };
+    }
+    currentDsl = page;
+  } catch (err: any) {
+    return { error: 'Failed to fetch current DSL: ' + err.message };
+  }
 
   // Validate patch
   const errors = jsonpatch.validate(patch, currentDsl);
