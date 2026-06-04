@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+// @ts-ignore: allow side-effect global CSS import without type declarations
 import "./globals.css";
 import { gotham } from "@/app/fonts/baseFonts";
 import { HeaderProviderV2 } from "@/app/context/HeaderContextV2";
@@ -7,6 +8,7 @@ import { MicrositeProvider } from "./context/MicrositeContext";
 import SessionBootstrap from "@/platforms/session/SessionBootstrap";
 import SessionGuard from "@/platforms/session/SessionGuard";
 import ToastNotification from "./components/ToastNotification/ToastNotification";
+import { ChatPanel } from "../../chat-agent/components/ChatPanel";
 
 export const metadata: Metadata = {
   title: "UI Configurator",
@@ -30,6 +32,7 @@ export default function RootLayout({
           </MicrositeProvider>
         </ConfigClientWrapper>
         <ToastNotification />
+        <ChatPanel />
       </body>
     </html>
   );

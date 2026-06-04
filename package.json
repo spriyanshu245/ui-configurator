@@ -24,7 +24,8 @@
     "react-syntax-highlighter": "^16.1.1",
     "sass": "^1.80.4",
     "typescript": "^5",
-    "uuid": "^11.0.2"
+    "uuid": "^11.0.2",
+    "@rahi/web-renderer-lib": "0.29.0"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",

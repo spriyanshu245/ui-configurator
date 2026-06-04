@@ -1,0 +1,1573 @@
+{
+  "name": "Account Overview",
+  "code": "loan-accounts_accountOverview",
+  "slug": "accountOverview",
+  "description": "",
+  "components": [
+    {
+      "id": "09967724-4d5e-4345-93b3-75c12ba96192",
+      "type": "stack",
+      "displayName": "Stack",
+      "category": "component",
+      "components": [
+        {
+          "id": "90526b67-17f3-47a9-bf2a-01942453ec18",
+          "type": "button-v2",
+          "displayName": "CTA",
+          "category": "component",
+          "properties": {
+            "label": "",
+            "showLabel": false,
+            "actionType": "routing",
+            "columnWidths": [100],
+            "align": "right",
+            "buttonType": "tertiary",
+            "routingType": "Internal",
+            "routePage": "untitled-7",
+            "iconUrl": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDE2VjExTTEyLjUgOEMxMi41IDguMjc2MTQgMTIuMjc2MSA4LjUgMTIgOC41QzExLjcyMzkgOC41IDExLjUgOC4yNzYxNCAxMS41IDhNMTIuNSA4QzEyLjUgNy43MjM4NiAxMi4yNzYxIDcuNSAxMiA3LjVDMTEuNzIzOSA3LjUgMTEuNSA3LjcyMzg2IDExLjUgOE0xMi41IDhIMTEuNU0yMiAxMkMyMiAxNy41MjI4IDE3LjUyMjggMjIgMTIgMjJDNi40NzcxNSAyMiAyIDE3LjUyMjggMiAxMkMyIDYuNDc3MTUgNi40NzcxNSAyIDEyIDJDMTcuNTIyOCAyIDIyIDYuNDc3MTUgMjIgMTJaIiBzdHJva2U9IiMyRjM4NEMiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==",
+            "iconSize": 24,
+            "navigateWithoutDataTransfer": true,
+            "isIconButton": true
+          },
+          "components": []
+        }
+      ],
+      "properties": {
+        "columns": 2,
+        "columnGap": 10,
+        "repeatRows": false,
+        "hasFixedColumns": false,
+        "columnWidths": [50, 50],
+        "justification": "flex-end"
+      }
+    },
+    {
+      "id": "077c0ef3-c2fd-4b82-93b2-2e858c5d50d4",
+      "type": "form",
+      "displayName": "Form",
+      "category": "component",
+      "properties": {
+        "name": "form-name",
+        "prefillApiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}",
+        "prefillResponseBodySpecs": "{}",
+        "preFillApiHeaders": "{\"Content-Type\":\"application/json\"}",
+        "storePrefillInSession": true,
+        "prefillApiName": "loanAccountOverview",
+        "nameKeyIds": [
+          {
+            "label": "loanAccountOverview",
+            "id": "92f55e2c-7870-4968-9402-422f909922f2"
+          },
+          {
+            "label": "agreement-details",
+            "id": "b72d288a-bf7b-4208-a5ab-15add154e46f"
+          }
+        ]
+      },
+      "components": [
+        {
+          "id": "1108cd12-4ba0-439e-9f71-b119f49a5e69",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Loan Summary",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "05",
+            "columnWidths": [100]
+          },
+          "components": [
+            {
+              "id": "1cf79978-90d6-4c31-a459-51de53599197",
+              "type": "data-grid",
+              "displayName": "Data Grid",
+              "category": "component",
+              "properties": {
+                "showLabel": false,
+                "label": "Due Details",
+                "fieldLayout": "column",
+                "columns": 5,
+                "columnGap": 10,
+                "apiKey": "",
+                "apiUrl": "",
+                "gridData": [
+                  {
+                    "id": "88ecce02-a0d8-4ece-8171-4a6237194e40",
+                    "properties": {
+                      "label": "Down Payment Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.downPayment}",
+                      "columnInputType": "number",
+                      "isCurrency": true,
+                      "currencyName": "en-IN"
+                    }
+                  },
+                  {
+                    "id": "c84130be-8366-4cf7-8303-e9585f927500",
+                    "properties": {
+                      "label": "Top Up over Bal. Transfer",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.balanceTransferTopupAmount}",
+                      "columnInputType": "number",
+                      "isCurrency": true,
+                      "currencyName": "en-IN"
+                    }
+                  },
+                  {
+                    "id": "983bd773-4e3b-4eff-9bf0-9efef52f7b4a",
+                    "properties": {
+                      "label": "Loan Tenure",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.loanTenure}",
+                      "columnInputType": "number",
+                      "isCurrency": false,
+                      "currencyName": "en-IN"
+                    }
+                  },
+                  {
+                    "id": "dccf8c1e-3c9d-4cae-980f-25e7e455c644",
+                    "properties": {
+                      "label": "Installment Start Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentStartdate}",
+                      "columnInputType": "date",
+                      "isCurrency": true,
+                      "currencyName": "en-IN",
+                      "format": "en-GB"
+                    }
+                  },
+                  {
+                    "id": "d2c39db0-769d-489f-9a36-11efc3703a23",
+                    "properties": {
+                      "label": "Installment End Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentEnddate}",
+                      "columnInputType": "date",
+                      "isCurrency": true,
+                      "currencyName": "en-IN",
+                      "format": "en-GB"
+                    }
+                  },
+                  {
+                    "id": "1cae1436-d8d8-479f-a673-957486fcd61e",
+                    "properties": {
+                      "label": "Next Installment Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.nextInstallmentDate}",
+                      "columnInputType": "date",
+                      "isCurrency": true,
+                      "currencyName": "en-IN"
+                    }
+                  },
+                  {
+                    "id": "3dd66484-c1f0-418c-9565-b9001c87a1f3",
+                    "properties": {
+                      "label": "Next Installment Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "8cab73e3-485b-44c5-bd75-677549a1ef7e",
+                    "properties": {
+                      "label": "Account Status",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.loanAccountStatusLcode}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "cb9bdf13-dbe9-49a3-8d0d-4bcfcf2ba210",
+                    "properties": {
+                      "label": "Account Sub Status",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.loanAccountSubstatusLcode}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "421e00a6-0fa4-4c94-9c33-b9bb9357b185",
+                    "properties": {
+                      "label": "DPD",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalDayPastDues}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number"
+                    }
+                  },
+                  {
+                    "id": "c714e2e6-15a5-4f89-850a-b0d72a92bc3c",
+                    "properties": {
+                      "label": "Asset Classification Code",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.assetClassificationCode}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "249716c5-43e6-49af-b13d-bfb1a0de0428",
+                    "properties": {
+                      "label": "Total Provisioning Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.provisioningAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "290012bb-d097-4347-83ec-d20adbf9c9de",
+                    "properties": {
+                      "label": "Remaining Tenure",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.remainingTenure}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number"
+                    }
+                  }
+                ],
+                "apiName": "",
+                "method": "",
+                "apiHeaders": "{}",
+                "name": "92f55e2c-7870-4968-9402-422f909922f2",
+                "columnWidths": [20, 20, 20, 20, 20]
+              },
+              "isSection": false,
+              "isComponent": true,
+              "components": []
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "ad78a086-31cb-4250-b6cd-30a75c2f2ae1",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 15
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "259cdafe-6e8a-4888-bbe5-e409e1d5d568",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Agreement Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5"
+          },
+          "components": [
+            {
+              "id": "3dbc091a-a89e-4784-9ebf-9395e747f424",
+              "type": "data-grid",
+              "displayName": "Data Grid",
+              "category": "component",
+              "properties": {
+                "showLabel": false,
+                "label": "Loan Summary",
+                "fieldLayout": "column",
+                "columns": 5,
+                "columnGap": 30,
+                "apiKey": "",
+                "apiUrl": "/api/v1/agreements/${micrositeNav.loan-accounts.selected.agreementNumber}",
+                "gridData": [
+                  {
+                    "id": "dba4a42f-e0c1-4318-b725-937ae077866c",
+                    "properties": {
+                      "label": "Type of Application",
+                      "value": "${loan-accounts.loan-overview.agreement-details.applicationTypeLcode}",
+                      "columnAlign": "left",
+                      "columnInputType": "fetchDisplayValueFromApi",
+                      "fetchDisplayValueApiHeaders": "{\"Content-Type\":\"application/json\"}",
+                      "fetchDisplayValueApiUrl": "/api/v3/masters/APPLICATIONTYPE/${loan-accounts.loan-overview.agreement-details.applicationTypeLcode}",
+                      "fetchDisplayValueApiKey": "displayValue"
+                    }
+                  },
+                  {
+                    "id": "16169565-cedc-4b50-9968-6aa87e2bf56e",
+                    "properties": {
+                      "label": "Total Loan Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.financeAmount}",
+                      "columnInputType": "number",
+                      "columnAlign": "left",
+                      "isCurrency": true,
+                      "currencyName": "en-IN"
+                    }
+                  },
+                  {
+                    "id": "f2c8113d-1958-4b2f-8818-572b18710095",
+                    "properties": {
+                      "label": "Sourcing Branch Code",
+                      "value": "${loan-accounts.loan-overview.agreement-details.sourceBranchCode}",
+                      "columnInputType": "number"
+                    }
+                  },
+                  {
+                    "id": "cac6e95d-5abd-4d64-b5c9-a3e390a224d3",
+                    "properties": {
+                      "label": "PSL Qualified",
+                      "value": "${loan-accounts.loan-overview.agreement-details.pslQualified}",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "906233e4-36de-48e4-92e7-7bbb98843692",
+                    "properties": {
+                      "label": "PSL Sub Category",
+                      "value": "${loan-accounts.loan-overview.agreement-details.pslSubcategoryCode}",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "26493c07-a8bd-4eff-88d2-b23561ba332b",
+                    "properties": {
+                      "label": "Final Loan Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalDisbursedAmount}",
+                      "columnInputType": "number",
+                      "isCurrency": true,
+                      "currencyName": "en-IN"
+                    }
+                  }
+                ],
+                "apiName": "agreement-details",
+                "method": "GET",
+                "apiHeaders": "{\"Content-Type\":\"application/json\"}",
+                "name": "b72d288a-bf7b-4208-a5ab-15add154e46f",
+                "columnWidths": [20, 20, 20, 20, 20]
+              },
+              "isSection": false,
+              "isComponent": true,
+              "components": []
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "e6c18a5e-9868-438a-b549-ac0da7b4fa9a",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 15
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "3462de5c-92b8-4c91-ba10-39ff89a33cb3",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Loan Event Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "05"
+          },
+          "components": [
+            {
+              "id": "fd87f9fa-fe7f-4211-853d-f3160c7535ed",
+              "type": "data-grid",
+              "displayName": "Data Grid",
+              "category": "component",
+              "properties": {
+                "showLabel": false,
+                "label": "",
+                "fieldLayout": "column",
+                "columns": 5,
+                "columnGap": 30,
+                "apiKey": "",
+                "apiUrl": "",
+                "apiName": "",
+                "method": "",
+                "apiHeaders": "{}",
+                "name": "92f55e2c-7870-4968-9402-422f909922f2",
+                "gridData": [
+                  {
+                    "id": "978f15fe-1f22-4317-9e95-a3531319e2c1",
+                    "properties": {
+                      "label": "Account Re-Structured (Y/N)",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.isLanRestructured}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "fa8f5780-df96-4326-b08e-17927c52e320",
+                    "properties": {
+                      "label": "Account Settled  (Y/N)",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.isAccountSettled}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "5d7c0a10-243b-44ba-a515-65b7c7178e3e",
+                    "properties": {
+                      "label": "Write Off Status",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.writeoffStatus}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "text"
+                    }
+                  },
+                  {
+                    "id": "39c1ae4d-6a11-4d27-8047-8490989eab49",
+                    "properties": {
+                      "label": "Re-Structured Date ",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.restructuredDate}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "date",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "1a14565e-eca0-43b0-be0a-a1fa654d4e3e",
+                    "properties": {
+                      "label": "Last Restructure Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.lastRestructuredDate}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "date"
+                    }
+                  },
+                  {
+                    "id": "20c36e36-5766-4c30-a964-f2d00688fcf6",
+                    "properties": {
+                      "label": "Restructure Period End Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.restrSpecifiedPeriodEndDate}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "date",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "9451aa42-a66c-48db-bb39-b22e83b07de1",
+                    "properties": {
+                      "label": "Write Off Amt.",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.writeoffAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "dateFormatType": "\"en-GB\", {day: \"2-digit\", month: \"short\", year: \"numeric\"}",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "ce355968-ae7c-4129-856f-45033c91ecc2",
+                    "properties": {
+                      "label": "Write Off Amt. Collected",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.writeoffAmtCollected}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "73a3083f-cdf5-4473-afc3-bb5fc16a2af2",
+                    "properties": {
+                      "label": "Settlement Date",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.settlementDate}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number"
+                    }
+                  }
+                ],
+                "columnWidths": [20, 20, 20, 20, 20]
+              },
+              "isSection": false,
+              "isComponent": true,
+              "components": []
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "8152e34e-7a14-403a-b011-086084223495",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "ceea8529-cdca-4a29-b7b0-66f8e40e8b32",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Due Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "05"
+          },
+          "components": [
+            {
+              "id": "a3da53e0-5d45-4f7a-86c2-282e64a9b303",
+              "type": "data-grid",
+              "displayName": "Data Grid",
+              "category": "component",
+              "properties": {
+                "showLabel": false,
+                "label": "",
+                "fieldLayout": "column",
+                "columns": 5,
+                "columnGap": 30,
+                "apiKey": "",
+                "apiUrl": "",
+                "apiName": "",
+                "method": "",
+                "apiHeaders": "{}",
+                "name": "92f55e2c-7870-4968-9402-422f909922f2",
+                "gridData": [
+                  {
+                    "id": "a4e3243d-763d-4e9e-b25e-0ce195bbac94",
+                    "properties": {
+                      "label": "Future Outstanding Principal",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalFuturePrincipalAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "d62e63f0-8ebe-4a38-a40c-7e4decd1cfb3",
+                    "properties": {
+                      "label": "Overdue Principal",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalOverduePrincipalAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "e4741ce4-0332-414b-87c7-51ff453b25cd",
+                    "properties": {
+                      "label": "Overdue Interest",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalOverdueInterestAmount}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "c86d229d-40aa-4e79-98af-50047fb6e73f",
+                    "properties": {
+                      "label": "Total Penal Charges",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalPenalCharges}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "c2cddaee-1876-400a-ae85-9e9a4544fa31",
+                    "properties": {
+                      "label": "Total Fees Payable",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalFeeCharges}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  },
+                  {
+                    "id": "acfa76c4-e99b-4935-8b50-e43f759759d2",
+                    "properties": {
+                      "label": "Excess Money",
+                      "value": "${loan-accounts.loan-overview.loanAccountOverview.totalExcessAmt}",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnInputType": "number",
+                      "isCurrency": true
+                    }
+                  }
+                ]
+              },
+              "isSection": false,
+              "isComponent": true,
+              "components": []
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "0acf611b-23c4-471b-9714-5ae0e6e7b3af",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "9646baed-7e0e-41a8-9e5c-886c19c780f4",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Interest Rate Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5"
+          },
+          "components": [
+            {
+              "id": "36247159-b3ac-4ab2-99e3-b7688d2c9ad9",
+              "type": "table",
+              "displayName": "Table",
+              "category": "component",
+              "properties": {
+                "showLabel": true,
+                "label": "",
+                "defaultSort": false,
+                "sortByOrder": "Ascending",
+                "configurePageSize": false,
+                "defaultPageSize": 20,
+                "pageSizeOptions": [],
+                "apiHeaders": "{\"Content-Type\":\"application/json\"}",
+                "tableColumns": [
+                  {
+                    "id": "04f29633-6d85-4f73-a30d-a2a7594a78ea",
+                    "properties": {
+                      "label": "ROI Type",
+                      "name": "b148a9fd-2f87-4253-82f9-1d79e8b33c82",
+                      "enableFilter": false,
+                      "filterType": "",
+                      "enableSorting": false,
+                      "isClickable": false,
+                      "externalURL": "",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "fetchDisplayValueFromApi",
+                      "showLabel": true,
+                      "inputType": "fetchDisplayValueFromApi",
+                      "columnWidths": [100],
+                      "fetchDisplayValueApiUrl": "/api/v3/masters/RATETYPE/$roiTypeLcode",
+                      "fetchDisplayValueApiKey": "displayValue",
+                      "fetchDisplayValueApiHeaders": "{\"Content-Type\":\"application/json\"}",
+                      "dataTransfer": {
+                        "body": "{}"
+                      }
+                    },
+                    "type": "table-column"
+                  },
+                  {
+                    "id": "97925ea4-a05c-4f75-b166-73b00f2cf4b3",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Current ROI Type",
+                      "name": "804df8a6-536f-4d28-a09c-c77515147b3b",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "text",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left"
+                    }
+                  },
+                  {
+                    "id": "2c20f53e-fe4d-4e93-ba13-6dba3b59db37",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Current ROI",
+                      "name": "c7f7ead4-7e55-489c-9c0e-04a7562e6434",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left"
+                    }
+                  },
+                  {
+                    "id": "17120450-3113-4238-9eb1-75606c30cb89",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Base Rate",
+                      "name": "b85265ce-15fe-4c6e-a671-79b7c06c560e",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left"
+                    }
+                  },
+                  {
+                    "id": "ed7c3293-5745-42e5-951c-18576c927b6d",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Spread Rate",
+                      "name": "1e647700-e313-402d-a1df-6f4e75b0aa50",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left",
+                      "inputType": "number",
+                      "columnWidths": [100]
+                    }
+                  },
+                  {
+                    "id": "f3d92846-e6d5-44c6-8f6d-54f166a99ee7",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Offset Rate",
+                      "name": "109dc9ae-c95f-494f-8f48-a6fa62eeeab4",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left",
+                      "inputType": "number",
+                      "columnWidths": [100]
+                    }
+                  },
+                  {
+                    "id": "3c98417d-49f3-4690-81d7-1439693896dc",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Index Rate",
+                      "name": "7b9d0ea5-1dba-458a-ae29-691ec555b1ea",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "text",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left",
+                      "inputType": "text",
+                      "columnWidths": [100],
+                      "isConditionalComponent": false,
+                      "visibilityConditions": {
+                        "parentNames": ["804df8a6-536f-4d28-a09c-c77515147b3b"],
+                        "conditions": {
+                          "FIXED": false
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "e26fb798-8962-4a07-94b0-b6bc1d331273",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Period",
+                      "name": "155b1128-1745-4ab7-9b15-50e982af5b12",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "dateFormatType": "en-GB",
+                      "columnInputType": "number",
+                      "showLabel": true,
+                      "width": 0,
+                      "textAlign": "left"
+                    }
+                  }
+                ],
+                "linkedForm": "",
+                "method": "GET",
+                "apiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}/rates",
+                "apiName": "rates",
+                "pathToTableData": "loanAccountRates",
+                "storeDataInSession": true,
+                "nameKeyIds": [
+                  {
+                    "label": "roiTypeLcode",
+                    "id": "b148a9fd-2f87-4253-82f9-1d79e8b33c82"
+                  },
+                  {
+                    "label": "roiTypePart",
+                    "id": "804df8a6-536f-4d28-a09c-c77515147b3b"
+                  },
+                  {
+                    "label": "roiFinal",
+                    "id": "c7f7ead4-7e55-489c-9c0e-04a7562e6434"
+                  },
+                  {
+                    "label": "roiBase",
+                    "id": "b85265ce-15fe-4c6e-a671-79b7c06c560e"
+                  },
+                  {
+                    "label": "indexRatecode",
+                    "id": "7b9d0ea5-1dba-458a-ae29-691ec555b1ea"
+                  },
+                  {
+                    "label": "roiSpread",
+                    "id": "1e647700-e313-402d-a1df-6f4e75b0aa50"
+                  },
+                  {
+                    "label": "roiOffsetFinal",
+                    "id": "109dc9ae-c95f-494f-8f48-a6fa62eeeab4"
+                  },
+                  {
+                    "label": "period",
+                    "id": "155b1128-1745-4ab7-9b15-50e982af5b12"
+                  }
+                ],
+                "columnWidths": [100]
+              },
+              "isSection": false,
+              "isComponent": true
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "c0bffb5f-1138-4814-b7b7-b6462982e9b9",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 15
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true,
+          "components": []
+        }
+      ],
+      "isSection": false,
+      "isComponent": true
+    },
+    {
+      "id": "d4f191b5-3a8c-4f16-a599-ab0f4ab5ddc2",
+      "type": "form",
+      "displayName": "Form",
+      "category": "component",
+      "properties": {
+        "name": "amort-controls",
+        "prefillApiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}/variants?type=ALL",
+        "prefillResponseBodySpecs": "{}",
+        "preFillApiHeaders": "{\"Content-Type\":\"application/json\"}",
+        "prefillApiName": "amort-controls",
+        "storePrefillInSession": true,
+        "nameKeyIds": [
+          {
+            "label": "loanAccountOverview",
+            "id": "8c083896-441c-4b9a-b75a-71fb0763a7a8"
+          },
+          {
+            "label": "loanAccountMorats",
+            "id": "b11ce0fa-f72d-4c86-ac6f-a05c9c84ec65"
+          },
+          {
+            "label": "loanAccountBalloons",
+            "id": "cd646f4d-226f-46af-9ba6-033eba52c4da"
+          },
+          {
+            "label": "loanAccountSteps",
+            "id": "fbd10245-a6f7-4d8a-a35c-f1f69074a174"
+          }
+        ]
+      },
+      "components": [
+        {
+          "id": "b300e869-cb72-4ecc-bdd0-414d0825ea6f",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Advance Installment Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5"
+          },
+          "components": [
+            {
+              "id": "645ab0ab-533c-4d80-ac2c-951c26ba97aa",
+              "type": "data-grid",
+              "displayName": "Data Grid",
+              "category": "component",
+              "properties": {
+                "showLabel": false,
+                "label": "Loan Summary",
+                "fieldLayout": "column",
+                "columns": 5,
+                "columnGap": 30,
+                "apiKey": "",
+                "apiUrl": "",
+                "gridData": [
+                  {
+                    "id": "105d0336-1e4d-4027-8414-48ca80f33e94",
+                    "properties": {
+                      "label": "No of Advance Installments",
+                      "value": "${loan-accounts.loan-overview.amort-controls.loanAccountAdvInstalls.advinstallCount}",
+                      "columnAlign": "left",
+                      "columnInputType": "number"
+                    }
+                  }
+                ],
+                "apiName": "",
+                "method": "",
+                "apiHeaders": "{}",
+                "name": "8c083896-441c-4b9a-b75a-71fb0763a7a8"
+              },
+              "isSection": false,
+              "isComponent": true,
+              "components": []
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "624ef7ce-b0ad-4f6a-94cf-2962d7a54424",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "9cab08d7-dbcc-4f1c-9015-7a28d2cfd0a6",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Moratorium Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5",
+            "isConditionalComponent": true,
+            "visibilityConditions": {
+              "parentNames": [
+                "${loan-accounts.loan-overview.amort-controls.loanAccountMorats}"
+              ],
+              "conditions": {
+                "!null": true
+              }
+            }
+          },
+          "components": [
+            {
+              "id": "08c29224-1b18-4889-aafe-47122e6c89fb",
+              "type": "table",
+              "displayName": "Table",
+              "category": "form",
+              "properties": {
+                "showLabel": false,
+                "label": "",
+                "selectableRow": false,
+                "metaData": "",
+                "primaryKey": "",
+                "hideHeaderRow": false,
+                "hideBorders": false,
+                "tableColumns": [
+                  {
+                    "id": "7c74bfb0-1b21-486f-9337-2a7a4f49b2e6",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Morat Tenure",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "852ea03a-c2e1-4865-9d26-7de53d3f9d01",
+                      "enableSorting": false,
+                      "isClickable": false,
+                      "externalURL": "",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "d72359b1-9321-4377-82bc-3abe21f0718b",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Morat Start Installment",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "65fe2311-ddd4-4235-8592-92305bfa717d",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "17154f3c-f9b8-4963-802a-5b33b8e57623",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Interest Payable Method",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "1976871e-9d74-44b8-906a-56870a9c1200",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "4f2734b9-bb98-40bb-9f6b-05a2947490c8",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Partial Interest Basis",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "cdfbd860-6567-4694-bdc7-0466c41be3f5",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "58c13a4f-8c38-4811-8283-a2b86dae5344",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Partial Interest Value",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "7c458ba9-5512-467a-8ea4-440d4028ca95",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  }
+                ],
+                "linkedForm": "",
+                "name": "b11ce0fa-f72d-4c86-ac6f-a05c9c84ec65",
+                "pathToTableData": "",
+                "showFooterRow": false,
+                "nameKeyIds": [
+                  {
+                    "label": "moratTenure",
+                    "id": "852ea03a-c2e1-4865-9d26-7de53d3f9d01"
+                  },
+                  {
+                    "label": "moratStartInstallno",
+                    "id": "65fe2311-ddd4-4235-8592-92305bfa717d"
+                  },
+                  {
+                    "label": "moratIntservmethodLcode",
+                    "id": "1976871e-9d74-44b8-906a-56870a9c1200"
+                  },
+                  {
+                    "label": "moratPartialIntBasis",
+                    "id": "cdfbd860-6567-4694-bdc7-0466c41be3f5"
+                  },
+                  {
+                    "label": "moratPartialIntAmt",
+                    "id": "7c458ba9-5512-467a-8ea4-440d4028ca95"
+                  }
+                ]
+              },
+              "isSection": false,
+              "isComponent": false,
+              "isFormElement": true
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "730fb0bb-85ac-42bc-969a-7b5274a5b0fe",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "3d5b53dd-5b09-44bd-a263-2ef9ba47e96e",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "label": "Balloon Details",
+            "showLabel": true,
+            "width": "100",
+            "isCollapsible": false,
+            "subsectionHeaders": [
+              {
+                "id": "ad4db8c3-fac1-4530-a709-4c0968d31e0e",
+                "label": "Pill-1"
+              }
+            ],
+            "isConditionalComponent": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5",
+            "visibilityConditions": {
+              "parentNames": [
+                "${loan-accounts.loan-overview.amort-controls.loanAccountBalloons}"
+              ],
+              "conditions": {
+                "!null": true
+              }
+            }
+          },
+          "components": [
+            {
+              "id": "5885c0f2-34f9-47b6-bcb8-fa4297e118a5",
+              "type": "table",
+              "displayName": "Table",
+              "category": "form",
+              "properties": {
+                "showLabel": false,
+                "label": "",
+                "selectableRow": false,
+                "metaData": "",
+                "primaryKey": "",
+                "hideHeaderRow": false,
+                "hideBorders": false,
+                "tableColumns": [
+                  {
+                    "id": "fdd4561f-2644-4547-9b5f-e2cf98a28b67",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Balloon Installment Number",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "2f85e53f-e80d-4a1b-a18f-421b2d582e74",
+                      "enableSorting": false,
+                      "isClickable": false,
+                      "externalURL": "",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "a5b51132-a060-4bd1-9b4d-ca32a111a49a",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Balloon Amount",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "9041279c-4f9f-445e-91df-70a933a9b62e",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  }
+                ],
+                "linkedForm": "",
+                "name": "cd646f4d-226f-46af-9ba6-033eba52c4da",
+                "pathToTableData": "",
+                "apiHeaders": "{}",
+                "requestBodySpecs": "{}",
+                "nameKeyIds": [
+                  {
+                    "label": "ballnInstallmentNumber",
+                    "id": "2f85e53f-e80d-4a1b-a18f-421b2d582e74"
+                  },
+                  {
+                    "label": "ballnAmt",
+                    "id": "9041279c-4f9f-445e-91df-70a933a9b62e"
+                  }
+                ]
+              },
+              "isSection": false,
+              "isComponent": false,
+              "isFormElement": true
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "8e88a54a-b4e5-4674-843c-dcaf6c295044",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "1d9ae896-1051-4b68-976a-8b6a93dd7290",
+          "type": "sub-section",
+          "displayName": "Sub Section",
+          "category": "form",
+          "properties": {
+            "width": "100",
+            "label": "Step Details",
+            "showLabel": true,
+            "borderThickness": "1",
+            "borderStyle": "solid",
+            "borderColor": "#E6E5E5",
+            "borderRadius": "5",
+            "isConditionalComponent": true,
+            "visibilityConditions": {
+              "parentNames": [
+                "${loan-accounts.loan-overview.amort-controls.loanAccountSteps}"
+              ],
+              "conditions": {
+                "!null": true
+              }
+            },
+            "columnWidths": [100]
+          },
+          "components": [
+            {
+              "id": "d17d4c33-467d-4202-aa1b-cb89542758c9",
+              "type": "table",
+              "displayName": "Table",
+              "category": "form",
+              "properties": {
+                "showLabel": false,
+                "label": "",
+                "selectableRow": false,
+                "metaData": "",
+                "primaryKey": "",
+                "hideHeaderRow": false,
+                "hideBorders": false,
+                "tableColumns": [
+                  {
+                    "id": "7c74bfb0-1b21-486f-9337-2a7a4f49b2e6",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Step Basis",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "16904c2b-1d89-44be-be1e-87e583c2a5e1",
+                      "enableSorting": false,
+                      "isClickable": false,
+                      "externalURL": "",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "c5544cf3-9fa4-452f-9846-c1886c9a0687",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Step Value",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "c9967e78-f407-47c8-8315-11c4b23a3e66",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "09471826-988c-4550-8aef-4f63d2f2dd5b",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Step Installment Number",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "3e2ffe97-3129-47cf-a9f7-b667d21290c3",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  },
+                  {
+                    "id": "79efd7a7-4324-48d2-8369-86ee6fe0e3b6",
+                    "type": "table-column",
+                    "properties": {
+                      "label": "Period of Step",
+                      "showLabel": true,
+                      "columnInputType": "text",
+                      "name": "77491ef7-2218-43a5-8c1d-ebd172b2320a",
+                      "currencyName": "en-IN",
+                      "prefixType": "text",
+                      "suffixType": "text",
+                      "prefixIconUploadType": "url",
+                      "suffixIconUploadType": "url",
+                      "isInternal": false,
+                      "columnAlign": "left",
+                      "columnWidth": 0,
+                      "format": "en-GB",
+                      "inputType": "text"
+                    }
+                  }
+                ],
+                "linkedForm": "",
+                "name": "fbd10245-a6f7-4d8a-a35c-f1f69074a174",
+                "pathToTableData": "",
+                "nameKeyIds": [
+                  {
+                    "label": "stepBasisLcode",
+                    "id": "16904c2b-1d89-44be-be1e-87e583c2a5e1"
+                  },
+                  {
+                    "label": "stepValue",
+                    "id": "c9967e78-f407-47c8-8315-11c4b23a3e66"
+                  },
+                  {
+                    "label": "stepInstallno",
+                    "id": "3e2ffe97-3129-47cf-a9f7-b667d21290c3"
+                  },
+                  {
+                    "label": "period",
+                    "id": "77491ef7-2218-43a5-8c1d-ebd172b2320a"
+                  }
+                ]
+              },
+              "isSection": false,
+              "isComponent": false,
+              "isFormElement": true
+            }
+          ],
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        },
+        {
+          "id": "38470dca-5585-4c22-a73d-d687223f80f3",
+          "type": "spacer",
+          "displayName": "Spacer",
+          "category": "form",
+          "properties": {
+            "height": 20
+          },
+          "isSection": false,
+          "isComponent": false,
+          "isFormElement": true
+        }
+      ],
+      "isSection": false,
+      "isComponent": true
+    }
+  ]
+}
