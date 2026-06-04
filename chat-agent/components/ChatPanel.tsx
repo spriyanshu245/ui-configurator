@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { ChatMessage } from './ChatMessage';
-import { createParser } from 'eventsource-parser';
+"use client";
+import React, { useState } from "react";
+import { ChatMessage as ChatMessageView } from "./ChatMessage";
+import { createParser } from "../lib/eventsource-parser-wrapper";
+import type { ChatMessage as ChatMessageType } from "../types/types";
 
 import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
 
@@ -26,8 +28,8 @@ export function ChatPanel({ micrositeId, sessionId }: any) {
       let assistantMsg = { role: 'assistant', content: '', _isStreaming: true };
       setMessages([...localMessages, assistantMsg]);
 
-      const parser = createParser((event) => {
-        if (event.type === 'event') {
+      const parser = createParser((event: ParsedEventLocal | ReconnectIntervalLocal) => {
+        if (event.type === "event") {
           try {
             const data = JSON.parse(event.data);
             if (data.type === 'text_chunk') {
@@ -41,7 +43,7 @@ export function ChatPanel({ micrositeId, sessionId }: any) {
               setMessages(localMessages);
             }
           } catch (e) {
-            console.error('Error parsing SSE event data', e);
+            console.error("Error parsing SSE event data", e);
           }
         }
       });

@@ -1,20 +1,21 @@
 # Chat Agent for Microsite UI Configurator
 
 ## Overview
+
 This directory contains a self-contained chat agent overlay for the Next.js UI Configurator application. The agent assists users in viewing, understanding, modifying, and managing UI DSL structures using a conversational interface powered by large language models.
 
 ## Architecture
 
-* **LLM Integration**: The agent is powered by FreeLLMAPI out-of-the-box using the OpenAI SDK format. It falls back to NVIDIA NIM natively if required.
-* **Storage**: We decided on **`better-sqlite3`** for local state management (`skill_entries`, `dsl_history`, `tool_call_log`, `user_preferences`). It aligns perfectly with Next.js App router API limits without needing direct node bindings to the pre-existing MongoDB connection context of the Spring Boot application, making the chat interface isolated, embedded and fast.
-* **Knowledge base**: Driven by auto-compiled markdown (`agentSkill.md`) that self-updates via reflection.
+- **LLM Integration**: The agent is powered by FreeLLMAPI out-of-the-box using the OpenAI SDK format. It falls back to NVIDIA NIM natively if required.
+- **Storage**: We decided on **`better-sqlite3`** for local state management (`skill_entries`, `dsl_history`, `tool_call_log`, `user_preferences`). It aligns perfectly with Next.js App router API limits without needing direct node bindings to the pre-existing MongoDB connection context of the Spring Boot application, making the chat interface isolated, embedded and fast.
+- **Knowledge base**: Driven by auto-compiled markdown (`agentSkill.md`) that self-updates via reflection.
 
 ## Setup Instructions
 
 1. **Environment Variables**:
    In your Next.js `.env.local` add the following:
    \`\`\`env
-   FREELLM_BASE_URL=http://localhost:3001/v1
+   FREELLM_BASE_URL=http://localhost:3003/v1
    FREELLM_API_KEY=your-freellm-api-key
    FREELLM_MODEL=auto
 

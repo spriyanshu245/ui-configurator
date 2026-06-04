@@ -1,0 +1,413 @@
+curl ^"https://api.dev.rahi.cloud/api/v1/config/microsites/loan-accounts?version=1^" ^
+  -X ^"PUT^" ^
+  -H ^"accept: */*^" ^
+  -H ^"accept-language: en-US,en;q=0.9,en-IN;q=0.8^" ^
+  -H ^"content-type: application/json^" ^
+  -b ^"access_token=eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyMkRiRUpnZDFERm5hWHNoWUFmWGwyaDktWWtzR0xtZFJCai1paTBqMkpnIn0.eyJleHAiOjE3Nzk4NjY4MzgsImlhdCI6MTc3OTg2MzIzOCwianRpIjoib25ydHJvOmQ5OTAxNGYxLWVlZWYtYWRlNi0xYTMxLWYzY2U4MDA5NWI2ZSIsImlzcyI6Imh0dHBzOi8va2V5Y2xvYWsuZGV2LnJhaGkuY2xvdWQvcmVhbG1zL3RpZDAwMS1lbXBsb3llZSIsImF1ZCI6InJlYWxtLW1hbmFnZW1lbnQiLCJzdWIiOiI2MTgwNmI0MC04ZDRkLTQ5ZTktYmIyOS02ZTdmYjNiNzIyNDAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJjby5yYWhpLmNvbW1vbi51c2VybWFuYWdlbWVudC51c2VyLW1hbmFnZW1lbnQtbW9kdWxlIiwic2lkIjoiYjhkNTcxYTctMGVhZS00ODAyLThiMmEtMmQ2MTUyNDUzMTkwIiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vbG9jYWxob3N0OjMwMDAiXSwicmVzb3VyY2VfYWNjZXNzIjp7InJlYWxtLW1hbmFnZW1lbnQiOnsicm9sZXMiOlsibWFuYWdlLXJlYWxtIiwibWFuYWdlLXVzZXJzIl19fSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiU3VwZXIgQWRtaW4iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJsLTQwMDAxIiwiZ2l2ZW5fbmFtZSI6IlN1cGVyIEFkbWluIiwiZW1haWwiOiJhZGNAZ21haWwuY29tIn0.QdIUcDwABmzdFohounBJmPNpBjGY5JNIf1Aed4RtFOrl-7SEkcVqn7ekEOiBxdLMxnXSGynzOXJLfl5ojteB5z33cc88vMlTlaYtt1oikRRaGupEXHdQb5cF41k_cwTe6M9SFOSV-QW7UBjIqdVhpIzXq4TXu6mnOHYLy6SH3R2388H2fpgVvyPiLv5zIBLotPa_30VN1eTADExYPWJ-cWAsNVNlnbXMIyfbJnIcOCnNHTRuWTd0h59UIh9iST1NWdriZeiRYKjOuLFjz0tSgThyK-bMUIp8S40jTRur6enYhA-xLoXXxmw7X3FE_daMDWmJdw2jVhqwc9cdKydHKw; refresh_token=eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyNDcwZjY3MS1hZWE0LTRlMmYtYTJhMy1hNDczOWJlNTdhYWEifQ.eyJleHAiOjE3Nzk4NjY4MzgsImlhdCI6MTc3OTg2MzIzOCwianRpIjoiY2FlZDhkM2QtODFkYy1iMGFmLWE0ZDEtNjdkNjdjOWZhNDVjIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay5kZXYucmFoaS5jbG91ZC9yZWFsbXMvdGlkMDAxLWVtcGxveWVlIiwiYXVkIjoiaHR0cHM6Ly9rZXljbG9hay5kZXYucmFoaS5jbG91ZC9yZWFsbXMvdGlkMDAxLWVtcGxveWVlIiwic3ViIjoiNjE4MDZiNDAtOGQ0ZC00OWU5LWJiMjktNmU3ZmIzYjcyMjQwIiwidHlwIjoiUmVmcmVzaCIsImF6cCI6ImNvLnJhaGkuY29tbW9uLnVzZXJtYW5hZ2VtZW50LnVzZXItbWFuYWdlbWVudC1tb2R1bGUiLCJzaWQiOiJiOGQ1NzFhNy0wZWFlLTQ4MDItOGIyYS0yZDYxNTI0NTMxOTAiLCJzY29wZSI6Im9wZW5pZCByb2xlcyBwcm9maWxlIHdlYi1vcmlnaW5zIHNlcnZpY2VfYWNjb3VudCBlbWFpbCBhY3IgYmFzaWMifQ.VeaA2EQODpyCH1r3-ENiD85vk3qlwnPO1wR0s5K5oAoA3S1mM9FL8RSK73TVkC86ahKueECbBq5rvNVfAXCEMA^" ^
+  -H ^"origin: https://ui-configurator.dev.rahi.cloud^" ^
+  -H ^"priority: u=1, i^" ^
+  -H ^"referer: https://ui-configurator.dev.rahi.cloud/^" ^
+  -H ^"sec-ch-ua: ^\^"Chromium^\^";v=^\^"148^\^", ^\^"Microsoft Edge^\^";v=^\^"148^\^", ^\^"Not/A)Brand^\^";v=^\^"99^\^"^" ^
+  -H ^"sec-ch-ua-mobile: ?0^" ^
+  -H ^"sec-ch-ua-platform: ^\^"Windows^\^"^" ^
+  -H ^"sec-fetch-dest: empty^" ^
+  -H ^"sec-fetch-mode: cors^" ^
+  -H ^"sec-fetch-site: same-site^" ^
+  -H ^"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0^" ^
+  -H ^"workspace-code: engineering-workspace^" ^
+  -H ^"x-user-id: 40001^" ^
+  -H ^"x-user-type: employee^" ^
+  --data-raw ^"^{^\^"code^\^":^\^"loan-accounts^\^",^\^"name^\^":^\^"Loan Accounts^\^",^\^"description^\^":^\^"Loan Accounts^\^",^\^"archived^\^":false,^\^"accessControlled^\^":false,^\^"sourceSystem^\^":^\^"PLATFORMSUBSYSTEM_LMS^\^",^\^"slug^\^":^\^"loan-accounts^\^",^\^"firstPageCode^\^":^\^"loan-accounts_loan-overview^\^",^\^"pages^\^":^[^{^\^"pageCode^\^":^\^"loan-accounts_loan-overview^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_loanAccount360^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_accountOverview^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_customersOverview^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_disbursementDetails^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_controlParameters^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_loanControls^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_controlFeesCharges^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_fee-ruleset^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_schedules^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_amortSchedule^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_repaymentSchedule^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_customerTransactions^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_excessRefundDetails^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_systemTransactions^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_accounting^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_dues^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_provisioning^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_bpiAdjustment^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_voucherDetail^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_excessTransactions^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_dpd-history^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_leviedFeesCharges^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_fees^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_taxes^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_penal^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_payments^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_installments^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_fees__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_penal__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_assetCollateral^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_paymentReceipt^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_reschedule^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_reschedule__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_simulation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_prepayment__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_prepayment__2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_simulation__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_foreclosure__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_foreclosure__2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_simulation__2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_restructure__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_restructure__2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_restructureSimulation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_restructureDRE^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_writeoff^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_partialWriteoff^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_technicalWriteoff^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_fullWriteoff__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_writeoffDRE^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_documents^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_soa^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_voucherEntry^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_debit-note^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_credit-note^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_settlement__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_settlement__2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_settlementDRE^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_mandateManagement^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_existingMandates^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_mandateCancellation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_security-instruments^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_manualAssetClassificationNPA^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_paymentReceiptV2^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_branchReceipt^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_centralOpsReceipt^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_excess-refund^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_excess-refund-internal^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_fee-waiver^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_cancellation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_receipt-cancellation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_disbursement-cancellation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_individual^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_entity^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_identifier^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_contact^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_business^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_employer^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_address^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_address__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_gstn^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_financialDetails^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_keyManagementPerson^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_references^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_excess^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_eodbod^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_manualAssetClassificationNPA__1^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_additionalProvisioning^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_settlementAgreement^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_eod^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_untitled-7^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_Info-page-payment-receipt^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-reschedule^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-prepayment^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-foreclosure^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-restructure^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-writeoff^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-settlement^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_info-page-EOD-BOD^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_confirmation^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_payment^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_mandateStatus^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_cnacelMandate^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_selectBankCode^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_selectIFSCCode^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_apply-excess^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_cross-knock-off^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_interest-refund^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_issue-credit-note^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_loan-marking^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_add-marking^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_details^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_history^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_instruments-update^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_loan-marking-editrecord^\^"^},^{^\^"pageCode^\^":^\^"loan-accounts_ask^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_daily-history^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_vehiclecollateral^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_welcome-letter^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_no-dues^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_demand-notice^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_disbursement-details1^\^",^\^"pageVersion^\^":1^},^{^\^"pageCode^\^":^\^"loan-accounts_test-page^\^",^\^"pageVersion^\^":1^}^]^}^"
+
+
+request payload :
+
+{
+    "code": "loan-accounts",
+    "name": "Loan Accounts",
+    "description": "Loan Accounts",
+    "archived": false,
+    "accessControlled": false,
+    "sourceSystem": "PLATFORMSUBSYSTEM_LMS",
+    "slug": "loan-accounts",
+    "firstPageCode": "loan-accounts_loan-overview",
+    "pages": [
+        {
+            "pageCode": "loan-accounts_loan-overview"
+        },
+        {
+            "pageCode": "loan-accounts_loanAccount360"
+        },
+        {
+            "pageCode": "loan-accounts_accountOverview"
+        },
+        {
+            "pageCode": "loan-accounts_customersOverview"
+        },
+        {
+            "pageCode": "loan-accounts_disbursementDetails"
+        },
+        {
+            "pageCode": "loan-accounts_controlParameters"
+        },
+        {
+            "pageCode": "loan-accounts_loanControls"
+        },
+        {
+            "pageCode": "loan-accounts_controlFeesCharges"
+        },
+        {
+            "pageCode": "loan-accounts_fee-ruleset"
+        },
+        {
+            "pageCode": "loan-accounts_schedules"
+        },
+        {
+            "pageCode": "loan-accounts_amortSchedule"
+        },
+        {
+            "pageCode": "loan-accounts_repaymentSchedule"
+        },
+        {
+            "pageCode": "loan-accounts_customerTransactions"
+        },
+        {
+            "pageCode": "loan-accounts_excessRefundDetails"
+        },
+        {
+            "pageCode": "loan-accounts_systemTransactions"
+        },
+        {
+            "pageCode": "loan-accounts_accounting"
+        },
+        {
+            "pageCode": "loan-accounts_dues"
+        },
+        {
+            "pageCode": "loan-accounts_provisioning"
+        },
+        {
+            "pageCode": "loan-accounts_bpiAdjustment"
+        },
+        {
+            "pageCode": "loan-accounts_voucherDetail"
+        },
+        {
+            "pageCode": "loan-accounts_excessTransactions"
+        },
+        {
+            "pageCode": "loan-accounts_dpd-history"
+        },
+        {
+            "pageCode": "loan-accounts_leviedFeesCharges"
+        },
+        {
+            "pageCode": "loan-accounts_fees"
+        },
+        {
+            "pageCode": "loan-accounts_taxes"
+        },
+        {
+            "pageCode": "loan-accounts_penal"
+        },
+        {
+            "pageCode": "loan-accounts_payments"
+        },
+        {
+            "pageCode": "loan-accounts_installments"
+        },
+        {
+            "pageCode": "loan-accounts_fees__1"
+        },
+        {
+            "pageCode": "loan-accounts_penal__1"
+        },
+        {
+            "pageCode": "loan-accounts_assetCollateral"
+        },
+        {
+            "pageCode": "loan-accounts_paymentReceipt"
+        },
+        {
+            "pageCode": "loan-accounts_reschedule"
+        },
+        {
+            "pageCode": "loan-accounts_reschedule__1"
+        },
+        {
+            "pageCode": "loan-accounts_simulation"
+        },
+        {
+            "pageCode": "loan-accounts_prepayment__1"
+        },
+        {
+            "pageCode": "loan-accounts_prepayment__2"
+        },
+        {
+            "pageCode": "loan-accounts_simulation__1"
+        },
+        {
+            "pageCode": "loan-accounts_foreclosure__1"
+        },
+        {
+            "pageCode": "loan-accounts_foreclosure__2"
+        },
+        {
+            "pageCode": "loan-accounts_simulation__2"
+        },
+        {
+            "pageCode": "loan-accounts_restructure__1"
+        },
+        {
+            "pageCode": "loan-accounts_restructure__2"
+        },
+        {
+            "pageCode": "loan-accounts_restructureSimulation"
+        },
+        {
+            "pageCode": "loan-accounts_restructureDRE"
+        },
+        {
+            "pageCode": "loan-accounts_writeoff"
+        },
+        {
+            "pageCode": "loan-accounts_partialWriteoff"
+        },
+        {
+            "pageCode": "loan-accounts_technicalWriteoff"
+        },
+        {
+            "pageCode": "loan-accounts_fullWriteoff__1"
+        },
+        {
+            "pageCode": "loan-accounts_writeoffDRE"
+        },
+        {
+            "pageCode": "loan-accounts_documents"
+        },
+        {
+            "pageCode": "loan-accounts_soa"
+        },
+        {
+            "pageCode": "loan-accounts_voucherEntry"
+        },
+        {
+            "pageCode": "loan-accounts_debit-note"
+        },
+        {
+            "pageCode": "loan-accounts_credit-note"
+        },
+        {
+            "pageCode": "loan-accounts_settlement__1"
+        },
+        {
+            "pageCode": "loan-accounts_settlement__2"
+        },
+        {
+            "pageCode": "loan-accounts_settlementDRE"
+        },
+        {
+            "pageCode": "loan-accounts_mandateManagement"
+        },
+        {
+            "pageCode": "loan-accounts_existingMandates"
+        },
+        {
+            "pageCode": "loan-accounts_mandateCancellation"
+        },
+        {
+            "pageCode": "loan-accounts_security-instruments"
+        },
+        {
+            "pageCode": "loan-accounts_manualAssetClassificationNPA"
+        },
+        {
+            "pageCode": "loan-accounts_paymentReceiptV2"
+        },
+        {
+            "pageCode": "loan-accounts_branchReceipt"
+        },
+        {
+            "pageCode": "loan-accounts_centralOpsReceipt"
+        },
+        {
+            "pageCode": "loan-accounts_excess-refund"
+        },
+        {
+            "pageCode": "loan-accounts_excess-refund-internal"
+        },
+        {
+            "pageCode": "loan-accounts_fee-waiver"
+        },
+        {
+            "pageCode": "loan-accounts_cancellation"
+        },
+        {
+            "pageCode": "loan-accounts_receipt-cancellation"
+        },
+        {
+            "pageCode": "loan-accounts_disbursement-cancellation"
+        },
+        {
+            "pageCode": "loan-accounts_individual"
+        },
+        {
+            "pageCode": "loan-accounts_entity"
+        },
+        {
+            "pageCode": "loan-accounts_identifier"
+        },
+        {
+            "pageCode": "loan-accounts_contact"
+        },
+        {
+            "pageCode": "loan-accounts_business"
+        },
+        {
+            "pageCode": "loan-accounts_employer"
+        },
+        {
+            "pageCode": "loan-accounts_address"
+        },
+        {
+            "pageCode": "loan-accounts_address__1"
+        },
+        {
+            "pageCode": "loan-accounts_gstn"
+        },
+        {
+            "pageCode": "loan-accounts_financialDetails"
+        },
+        {
+            "pageCode": "loan-accounts_keyManagementPerson"
+        },
+        {
+            "pageCode": "loan-accounts_references"
+        },
+        {
+            "pageCode": "loan-accounts_excess"
+        },
+        {
+            "pageCode": "loan-accounts_eodbod"
+        },
+        {
+            "pageCode": "loan-accounts_manualAssetClassificationNPA__1"
+        },
+        {
+            "pageCode": "loan-accounts_additionalProvisioning"
+        },
+        {
+            "pageCode": "loan-accounts_settlementAgreement"
+        },
+        {
+            "pageCode": "loan-accounts_eod"
+        },
+        {
+            "pageCode": "loan-accounts_untitled-7"
+        },
+        {
+            "pageCode": "loan-accounts_Info-page-payment-receipt"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-reschedule"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-prepayment"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-foreclosure"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-restructure"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-writeoff"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-settlement"
+        },
+        {
+            "pageCode": "loan-accounts_info-page-EOD-BOD"
+        },
+        {
+            "pageCode": "loan-accounts_confirmation"
+        },
+        {
+            "pageCode": "loan-accounts_payment"
+        },
+        {
+            "pageCode": "loan-accounts_mandateStatus"
+        },
+        {
+            "pageCode": "loan-accounts_cnacelMandate"
+        },
+        {
+            "pageCode": "loan-accounts_selectBankCode"
+        },
+        {
+            "pageCode": "loan-accounts_selectIFSCCode"
+        },
+        {
+            "pageCode": "loan-accounts_apply-excess"
+        },
+        {
+            "pageCode": "loan-accounts_cross-knock-off"
+        },
+        {
+            "pageCode": "loan-accounts_interest-refund"
+        },
+        {
+            "pageCode": "loan-accounts_issue-credit-note"
+        },
+        {
+            "pageCode": "loan-accounts_loan-marking"
+        },
+        {
+            "pageCode": "loan-accounts_add-marking"
+        },
+        {
+            "pageCode": "loan-accounts_details"
+        },
+        {
+            "pageCode": "loan-accounts_history"
+        },
+        {
+            "pageCode": "loan-accounts_instruments-update"
+        },
+        {
+            "pageCode": "loan-accounts_loan-marking-editrecord"
+        },
+        {
+            "pageCode": "loan-accounts_ask",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_daily-history",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_vehiclecollateral",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_welcome-letter",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_no-dues",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_demand-notice",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_disbursement-details1",
+            "pageVersion": 1
+        },
+        {
+            "pageCode": "loan-accounts_test-page",
+            "pageVersion": 1
+        }
+    ]
+}
