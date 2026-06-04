@@ -23,6 +23,10 @@ export async function POST(req: Request) {
       approvedBy: 'user' // Defaulting to user
     });
 
+    const { cookies } = require('next/headers');
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
+
     const API_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://api.dev.rahi.cloud';
     const putResponse = await fetch(`${API_URL}/api/v1/config/pages/${pending.pagePath}`, {
       method: "PUT",
@@ -30,7 +34,8 @@ export async function POST(req: Request) {
         "accept": "*/*",
         "content-type": "application/json",
         "workspace-code": "engineering-workspace",
-        "x-user-type": "employee"
+        "x-user-type": "employee",
+        "Cookie": cookieHeader
       },
       body: JSON.stringify(pending.patchedDsl)
     });

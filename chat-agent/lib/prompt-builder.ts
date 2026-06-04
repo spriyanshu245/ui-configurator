@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { db } from '../db/client';
 
+import { fetchMicrositePages } from './microsite-loader';
+
 export async function buildSystemPrompt(context: any): Promise<string> {
   const skillPath = path.join(process.cwd(), 'chat-agent/knowledge/agentSkill.md');
   let skillContent = '';
@@ -17,6 +19,21 @@ export async function buildSystemPrompt(context: any): Promise<string> {
 
   const stmt = db.prepare('SELECT * FROM user_preferences');
   const preferences = stmt.all() as {key: string, value: string}[];
+
+  let allPagesContent = '';
+  try {
+    if (context.micrositeId) {
+      const micrositeData = await fetchMicrositePages(context.micrositeId);
+      const allPages = micrositeData?.pages || [];
+      allPagesContent = `Total pages: ${allPages.length}\nPage paths: ${allPages.map((p: any) => p.pageCode).join(', ')}\n\n`;
+      allPagesContent += allPages.map((p: any) => `
+--- PAGE: ${p.pageCode} ---
+${JSON.stringify(p, null, 2)}
+`).join('\n');
+    }
+  } catch(e) {
+    console.error("Failed to fetch initial microsite data for system prompt", e);
+  }
 
   return \`
 You are a DSL Page Builder Assistant for a microsite UI configurator.
@@ -36,7 +53,7 @@ You help users read, understand, and modify microsite pages described as JSON DS
 
 ═══ CURRENT MICROSITE CONTEXT ═══
 Microsite ID: \${context.micrositeId || 'Not provided'}
-\${context.allPages ? \`Total pages: \${context.allPages.length}\` : ''}
+${allPagesContent}
 
 ═══ USER PREFERENCES (learned) ═══
 \${preferences.map(p => \`\${p.key}: \${p.value}\`).join('\\n')}

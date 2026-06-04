@@ -10,13 +10,25 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(req: Request) {
   const { messages, micrositeId, sessionId } = await req.json();
 
+  // Format messages to ensure only valid OpenAI properties are sent
+  const formattedMessages = messages.map((m: any) => {
+    const validKeys = ['role', 'content', 'name', 'tool_call_id', 'tool_calls'];
+    const formatted: any = {};
+    for (const key of validKeys) {
+      if (m[key] !== undefined) {
+        formatted[key] = m[key];
+      }
+    }
+    return formatted;
+  });
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: object) => {
         controller.enqueue(\`data: \${JSON.stringify(event)}\\n\\n\`);
       };
 
-      let currentMessages = messages;
+      let currentMessages = formattedMessages;
       let loopCount = 0;
       const MAX_LOOPS = 10;
 
@@ -61,7 +73,13 @@ export async function POST(req: Request) {
 
           const validToolCalls = toolCalls.filter(Boolean);
 
+          let assistantMsg: any = { role: 'assistant', content: content || null };
+          if (validToolCalls.length > 0) {
+            assistantMsg.tool_calls = validToolCalls;
+          }
+
           if (!validToolCalls.length) {
+            send({ type: 'sync_messages', messages: [...currentMessages, assistantMsg] });
             send({ type: 'done' });
             break;
           }
@@ -84,11 +102,19 @@ export async function POST(req: Request) {
               } else {
                 const { pendingPatchesDB } = require('../../db/queries/pending-patches');
                 pendingPatchesDB.save(pending);
-                send({ type: 'patch_proposed', patch: pending });
+
                 toolResults.push({
                   tool_call_id: toolCall.id,
                   content: \`Patch queued for user approval. Patch ID: \${pending.id}. Do NOT proceed until you receive the approval confirmation.\`
                 });
+
+                send({ type: 'sync_messages', messages: [
+                  ...currentMessages,
+                  assistantMsg,
+                  ...toolResults.map(r => ({ role: 'tool', ...r }))
+                ]});
+
+                send({ type: 'patch_proposed', patch: pending, tool_call_id: toolCall.id });
                 send({ type: 'awaiting_approval' });
                 controller.close();
                 return;
@@ -102,11 +128,12 @@ export async function POST(req: Request) {
 
           currentMessages = [
             ...currentMessages,
-            { role: 'assistant', content: content || null, tool_calls: validToolCalls },
+            assistantMsg,
             ...toolResults.map(r => ({ role: 'tool', ...r }))
           ];
 
         } catch (error) {
+          console.error("Error in agent route:", error);
           send({ type: 'error', message: (error as Error).message });
           break;
         }
