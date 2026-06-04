@@ -8,6 +8,7 @@ import { MicrositeProvider } from "@/app/context/MicrositeContext";
 import MicrositeBuilder from "@/app/components/MicrositeBuilder/MicrositeBuilder";
 import { ConfiguratorModeProvider } from "@/app/context/ConfiguratorModeContext";
 import { useParams, useSearchParams } from "next/navigation";
+import { ChatPanel } from "@/../chat-agent/components/ChatPanel";
 
 const MicrositeConfigurator = () => {
   const { micrositeUrlSlug, version, workspaceCode } = useParams();
@@ -53,6 +54,7 @@ const MicrositeConfigurator = () => {
           <DragProvider>
             <ConfiguratorModeProvider mode="microsite">
               <MicrositeBuilder />
+              <ChatPanel />
             </ConfiguratorModeProvider>
           </DragProvider>
         </>
