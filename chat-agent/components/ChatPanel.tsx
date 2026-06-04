@@ -15,7 +15,7 @@ export function ChatPanel({ micrositeId, sessionId }: any) {
   const triggerAgent = async (currentMessages: any[]) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/agent', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: currentMessages, micrositeId, sessionId })

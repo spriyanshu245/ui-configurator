@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pendingPatchesDB } from '../../../db/queries/pending-patches';
+import { pendingPatchesDB } from '../../../../../chat-agent/db/queries/pending-patches';
 
 export async function POST(req: Request) {
   try {

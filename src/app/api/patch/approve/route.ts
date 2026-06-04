@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { applyPatch } from '../../../lib/dsl-patcher';
-import { dslHistory } from '../../../db/queries/dsl-history';
-import { pendingPatchesDB } from '../../../db/queries/pending-patches';
+import { applyPatch } from '../../../../../chat-agent/lib/dsl-patcher';
+import { dslHistory } from '../../../../../chat-agent/db/queries/dsl-history';
+import { pendingPatchesDB } from '../../../../../chat-agent/db/queries/pending-patches';
 
 export async function POST(req: Request) {
   try {
