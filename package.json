@@ -12,6 +12,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@rahi/web-renderer-lib": "0.29.0",
     "better-sqlite3": "^12.10.0",
     "date-fns": "^4.3.0",
     "eventsource-parser": "^3.0.8",
