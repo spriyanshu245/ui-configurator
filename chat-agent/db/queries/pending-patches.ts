@@ -1,41 +1,41 @@
 import { db } from '../client';
 
 export const pendingPatchesDB = {
-  save: (patch: any) => {
-    const stmt = db.prepare(`
-      INSERT INTO pending_patches (id, sessionId, micrositeId, pagePath, patch, description, previewHint, affectedComponents, currentDsl, patchedDsl, proposedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-      patch.id,
-      patch.sessionId,
-      patch.micrositeId,
-      patch.pagePath,
-      JSON.stringify(patch.patch),
-      patch.description,
-      patch.previewHint,
-      JSON.stringify(patch.affectedComponents),
-      JSON.stringify(patch.currentDsl),
-      JSON.stringify(patch.patchedDsl),
-      patch.proposedAt
-    );
+  save: async (patch: any) => {
+    await db.collection('pending_patches').insertOne({
+      id: patch.id,
+      sessionId: patch.sessionId,
+      micrositeId: patch.micrositeId,
+      pagePath: patch.pagePath,
+      patch: patch.patch,
+      description: patch.description,
+      previewHint: patch.previewHint,
+      affectedComponents: patch.affectedComponents,
+      currentDsl: patch.currentDsl,
+      patchedDsl: patch.patchedDsl,
+      proposedAt: patch.proposedAt
+    });
   },
 
-  get: (id: string) => {
-    const stmt = db.prepare('SELECT * FROM pending_patches WHERE id = ?');
-    const result = stmt.get(id) as any;
+  get: async (id: string) => {
+    const result = await db.collection('pending_patches').findOne({ id });
     if (!result) return null;
     return {
-      ...result,
-      patch: JSON.parse(result.patch),
-      affectedComponents: JSON.parse(result.affectedComponents),
-      currentDsl: JSON.parse(result.currentDsl),
-      patchedDsl: JSON.parse(result.patchedDsl)
+      id: result.id,
+      sessionId: result.sessionId,
+      micrositeId: result.micrositeId,
+      pagePath: result.pagePath,
+      patch: result.patch,
+      description: result.description,
+      previewHint: result.previewHint,
+      affectedComponents: result.affectedComponents,
+      currentDsl: result.currentDsl,
+      patchedDsl: result.patchedDsl,
+      proposedAt: result.proposedAt
     };
   },
 
-  delete: (id: string) => {
-    const stmt = db.prepare('DELETE FROM pending_patches WHERE id = ?');
-    stmt.run(id);
+  delete: async (id: string) => {
+    await db.collection('pending_patches').deleteOne({ id });
   }
 };

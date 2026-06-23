@@ -11,6 +11,25 @@ export type Parser = { feed: (chunk: string) => void };
 export function createParser(
   onParse: (event: ParsedEventLocal | ReconnectIntervalLocal) => void,
 ): Parser {
-  // delegate to the real implementation; keep the cast isolated here
-  return (createParserImpl as unknown as (cb: (e: any) => void) => Parser)(onParse as any);
+  return createParserImpl({
+    onEvent: (event) => {
+      onParse({
+        type: "event",
+        id: event.id,
+        data: event.data,
+      });
+    },
+    onComment: (comment) => {
+      onParse({
+        type: "comment",
+        data: comment,
+      });
+    },
+    onRetry: (interval) => {
+      onParse({
+        type: "reconnect-interval",
+        value: interval,
+      });
+    },
+  }) as unknown as Parser;
 }

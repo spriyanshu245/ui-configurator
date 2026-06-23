@@ -1,74 +1,51 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+import { MongoClient, Db } from "mongodb";
 
-const dbPath = process.env.AGENT_DB_PATH || path.join(process.cwd(), 'chat-agent/db/agent.db');
+const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
+const dbName = process.env.MONGODB_DB_NAME || "layoutX";
 
-// Ensure the directory exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+let activeClient: MongoClient;
+let activeDb: Db;
+
+console.log("Connecting to MongoDB at:", uri);
+
+try {
+  // Primary attempt
+  activeClient = new MongoClient(uri);
+  await activeClient.connect();
+  activeDb = activeClient.db(dbName);
+  console.log("Connected to MongoDB successfully!");
+} catch (err) {
+  console.error("First connection attempt failed:", (err as Error).message);
+  
+  if (uri.includes("localhost")) {
+    const fallbackUri = uri.replace("localhost", "127.0.0.1");
+    console.log("Attempting fallback connection to:", fallbackUri);
+    try {
+      activeClient = new MongoClient(fallbackUri);
+      await activeClient.connect();
+      activeDb = activeClient.db(dbName);
+      console.log("Connected to MongoDB via fallback URI successfully!");
+    } catch (fallbackErr) {
+      console.error("Fallback connection attempt also failed:", (fallbackErr as Error).message);
+      throw fallbackErr;
+    }
+  } else {
+    throw err;
+  }
 }
 
-export const db = new Database(dbPath);
+export const client = activeClient;
+export const db = activeDb;
 
-db.pragma('journal_mode = WAL');
-
-// Initialize schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS skill_entries (
-    id TEXT PRIMARY KEY,
-    category TEXT NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    confidence REAL NOT NULL,
-    source TEXT NOT NULL,
-    usageCount INTEGER DEFAULT 0,
-    embedding TEXT,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
+// Try to initialize/create the database by performing an idempotent write/touch
+try {
+  console.log(`Initializing/ensuring database "${dbName}" exists...`);
+  await db.collection("system_init").updateOne(
+    { name: "status" },
+    { $set: { initializedAt: new Date(), status: "active" } },
+    { upsert: true }
   );
-
-  CREATE TABLE IF NOT EXISTS dsl_history (
-    id TEXT PRIMARY KEY,
-    micrositeId TEXT NOT NULL,
-    pagePath TEXT NOT NULL,
-    dslSnapshot TEXT NOT NULL,
-    operation TEXT NOT NULL,
-    patchApplied TEXT,
-    description TEXT NOT NULL,
-    approvedBy TEXT NOT NULL,
-    createdAt TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS tool_call_log (
-    id TEXT PRIMARY KEY,
-    sessionId TEXT NOT NULL,
-    toolName TEXT NOT NULL,
-    input TEXT NOT NULL,
-    output TEXT NOT NULL,
-    success BOOLEAN NOT NULL,
-    durationMs INTEGER NOT NULL,
-    createdAt TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS user_preferences (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS pending_patches (
-    id TEXT PRIMARY KEY,
-    sessionId TEXT NOT NULL,
-    micrositeId TEXT NOT NULL,
-    pagePath TEXT NOT NULL,
-    patch TEXT NOT NULL,
-    description TEXT NOT NULL,
-    previewHint TEXT NOT NULL,
-    affectedComponents TEXT NOT NULL,
-    currentDsl TEXT NOT NULL,
-    patchedDsl TEXT NOT NULL,
-    proposedAt TEXT NOT NULL
-  );
-`);
+  console.log(`Database "${dbName}" initialized successfully!`);
+} catch (initErr) {
+  console.error("Warning: Failed to perform database initialization write:", (initErr as Error).message);
+}

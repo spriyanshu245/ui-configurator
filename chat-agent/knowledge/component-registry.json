@@ -1,0 +1,52 @@
+{
+  "Heading": {
+    "props": {
+      "text": { "type": "string", "required": true },
+      "size": { "type": "string", "required": false }
+    },
+    "children": [],
+    "example": { "id": "heading1", "type": "Heading", "text": "Welcome", "size": "h1" }
+  },
+  "Typograph": {
+    "props": {
+      "text": { "type": "string", "required": true },
+      "variant": { "type": "string", "required": false },
+      "color": { "type": "string", "required": false }
+    },
+    "children": [],
+    "example": { "id": "text1", "type": "Typograph", "text": "Loan Overview", "variant": "body1" }
+  },
+  "ButtonV2": {
+    "props": {
+      "label": { "type": "string", "required": true },
+      "action": { "type": "string", "required": false }
+    },
+    "children": [],
+    "example": { "id": "btn1", "type": "ButtonV2", "label": "Submit", "action": "submit_form" }
+  },
+  "Input": {
+    "props": {
+      "label": { "type": "string", "required": true },
+      "name": { "type": "string", "required": true },
+      "placeholder": { "type": "string", "required": false },
+      "required": { "type": "boolean", "required": false }
+    },
+    "children": [],
+    "example": { "id": "input1", "type": "Input", "label": "Full Name", "name": "fullName", "required": true }
+  },
+  "FormRow": {
+    "props": {
+      "layout": { "type": "string", "required": false }
+    },
+    "children": ["Input", "Select", "CheckboxGroup", "ButtonV2"],
+    "example": { "id": "row1", "type": "FormRow", "components": [] }
+  },
+  "Stack": {
+    "props": {
+      "direction": { "type": "string", "required": false },
+      "spacing": { "type": "number", "required": false }
+    },
+    "children": ["Heading", "Typograph", "Image", "ButtonV2", "FormRow"],
+    "example": { "id": "stack1", "type": "Stack", "direction": "column", "components": [] }
+  }
+}

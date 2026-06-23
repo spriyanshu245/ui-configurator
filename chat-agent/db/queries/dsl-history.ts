@@ -14,56 +14,101 @@ export interface DslHistoryEntry {
 }
 
 export const dslHistory = {
-  saveSnapshot: (entry: Omit<DslHistoryEntry, 'id' | 'createdAt' | 'dslSnapshot' | 'patchApplied'> & { dslSnapshot: object, patchApplied?: object[] }) => {
+  saveSnapshot: async (entry: Omit<DslHistoryEntry, 'id' | 'createdAt' | 'dslSnapshot' | 'patchApplied'> & { dslSnapshot: object, patchApplied?: object[] }) => {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    const stmt = db.prepare(`
-      INSERT INTO dsl_history (id, micrositeId, pagePath, dslSnapshot, operation, patchApplied, description, approvedBy, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
+    const col = db.collection('dsl_history');
+    await col.insertOne({
       id,
-      entry.micrositeId,
-      entry.pagePath,
-      JSON.stringify(entry.dslSnapshot),
-      entry.operation,
-      entry.patchApplied ? JSON.stringify(entry.patchApplied) : null,
-      entry.description,
-      entry.approvedBy,
-      now
-    );
+      micrositeId: entry.micrositeId,
+      pagePath: entry.pagePath,
+      dslSnapshot: entry.dslSnapshot,
+      operation: entry.operation,
+      patchApplied: entry.patchApplied || null,
+      description: entry.description,
+      approvedBy: entry.approvedBy,
+      createdAt: now
+    });
 
     // Prune to keep only the last 3 entries for this (micrositeId, pagePath) combination
-    const pruneStmt = db.prepare(`
-      DELETE FROM dsl_history
-      WHERE id NOT IN (
-        SELECT id FROM dsl_history
-        WHERE micrositeId = ? AND pagePath = ?
-        ORDER BY createdAt DESC
-        LIMIT 3
-      )
-      AND micrositeId = ? AND pagePath = ?
-    `);
-    pruneStmt.run(entry.micrositeId, entry.pagePath, entry.micrositeId, entry.pagePath);
+    const toDelete = await col.find(
+      { micrositeId: entry.micrositeId, pagePath: entry.pagePath },
+      { sort: { createdAt: -1 }, skip: 3 }
+    ).toArray();
+
+    if (toDelete.length > 0) {
+      const idsToDelete = toDelete.map(doc => doc._id);
+      await col.deleteMany({ _id: { $in: idsToDelete } });
+    }
 
     return id;
   },
 
-  getHistory: (micrositeId: string, pagePath: string, limit: number = 3) => {
-    const stmt = db.prepare(`
-      SELECT * FROM dsl_history
-      WHERE micrositeId = ? AND pagePath = ?
-      ORDER BY createdAt DESC
-      LIMIT ?
-    `);
+  getHistory: async (micrositeId: string, pagePath: string, limit: number = 3) => {
+    const col = db.collection('dsl_history');
+    const rows = await col.find(
+      { micrositeId, pagePath },
+      { sort: { createdAt: -1 }, limit }
+    ).toArray();
 
-    const rows = stmt.all(micrositeId, pagePath, limit) as any[];
     return rows.map(row => ({
-      ...row,
-      dslSnapshot: JSON.parse(row.dslSnapshot),
-      patchApplied: row.patchApplied ? JSON.parse(row.patchApplied) : undefined
+      id: row.id,
+      micrositeId: row.micrositeId,
+      pagePath: row.pagePath,
+      dslSnapshot: row.dslSnapshot,
+      operation: row.operation,
+      patchApplied: row.patchApplied,
+      description: row.description,
+      approvedBy: row.approvedBy,
+      createdAt: row.createdAt
     })) as DslHistoryEntry[];
+  }
+};
+
+export const sessionOps = {
+  saveMessage: async (userId: string, micrositeId: string, msg: any) => {
+    const col = db.collection('conversations');
+    await col.updateOne(
+      { userId, micrositeId },
+      { 
+        $push: { messages: { $each: [msg], $slice: -30 } } as any,
+        $set: { updatedAt: new Date().toISOString() }
+      },
+      { upsert: true }
+    );
+  },
+  getHistory: async (userId: string, micrositeId: string) => {
+    const col = db.collection('conversations');
+    const doc = await col.findOne({ userId, micrositeId });
+    if (!doc || !doc.messages) return [];
+    
+    const messages = doc.messages;
+    const len = messages.length;
+    return messages.map((m: any, i: number) => {
+      if (i < len - 20 && m.role) {
+        return { role: m.role, content: m.content || "" };
+      }
+      return m;
+    });
+  },
+  appendOp: async (userId: string, micrositeId: string, pagePath: string, op: any) => {
+    const col = db.collection('page_ops');
+    op.ts = new Date().toISOString();
+    await col.updateOne(
+      { userId, micrositeId, pagePath },
+      { $push: { ops: { $each: [op], $slice: -10 } } as any },
+      { upsert: true }
+    );
+  },
+  saveTask: async (userId: string, micrositeId: string, taskContext: any) => {
+    const col = db.collection('conversations');
+    await col.updateOne(
+      { userId, micrositeId },
+      { 
+        $set: { taskContext, updatedAt: new Date().toISOString() }
+      },
+      { upsert: true }
+    );
   }
 };

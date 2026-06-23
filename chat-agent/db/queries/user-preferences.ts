@@ -7,23 +7,31 @@ export interface UserPreference {
 }
 
 export const userPreferences = {
-  findAll: () => {
-    const stmt = db.prepare('SELECT * FROM user_preferences');
-    return stmt.all() as UserPreference[];
+  findAll: async () => {
+    const rows = await db.collection('user_preferences').find({}).toArray();
+    return rows.map(r => ({
+      key: r.key,
+      value: r.value,
+      updatedAt: r.updatedAt
+    })) as UserPreference[];
   },
 
-  set: (key: string, value: string) => {
+  set: async (key: string, value: string) => {
     const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      INSERT INTO user_preferences (key, value, updatedAt)
-      VALUES (?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt
-    `);
-    stmt.run(key, value, now);
+    await db.collection('user_preferences').updateOne(
+      { key },
+      { $set: { value, updatedAt: now } },
+      { upsert: true }
+    );
   },
 
-  get: (key: string) => {
-    const stmt = db.prepare('SELECT * FROM user_preferences WHERE key = ?');
-    return stmt.get(key) as UserPreference | undefined;
+  get: async (key: string) => {
+    const result = await db.collection('user_preferences').findOne({ key });
+    if (!result) return undefined;
+    return {
+      key: result.key,
+      value: result.value,
+      updatedAt: result.updatedAt
+    } as UserPreference;
   }
 };

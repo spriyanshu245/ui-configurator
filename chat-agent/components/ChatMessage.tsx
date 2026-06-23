@@ -1,6 +1,5 @@
 import React from 'react';
 import { DslDiffViewer } from './DslDiffViewer';
-import { ApprovalGate } from './ApprovalGate';
 import { Bot, User } from 'lucide-react';
 
 export function ChatMessage({ message, onApprove, onReject, onEdit }: any) {
@@ -47,13 +46,10 @@ export function ChatMessage({ message, onApprove, onReject, onEdit }: any) {
               patchedDsl={message.patch.patchedDsl}
               description={message.patch.description}
               previewHint={message.patch.previewHint}
-            />
-            <ApprovalGate
               patchId={message.patch.id}
               toolCallId={message.tool_call_id}
               onApprove={onApprove}
               onReject={onReject}
-              onEdit={onEdit}
             />
           </div>
         )}

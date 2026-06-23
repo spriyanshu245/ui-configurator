@@ -15,46 +15,70 @@ export interface SkillEntry {
 }
 
 export const skillEntries = {
-  findAll: (options?: { orderBy?: { category?: 'asc' | 'desc', usageCount?: 'asc' | 'desc' } }) => {
-    let query = 'SELECT * FROM skill_entries';
+  findAll: async (options?: { orderBy?: { category?: 'asc' | 'desc', usageCount?: 'asc' | 'desc' } }) => {
+    const col = db.collection('skill_entries');
+    let sortObj: any = {};
     if (options?.orderBy) {
-      const orderClauses = [];
-      if (options.orderBy.category) orderClauses.push(`category ${options.orderBy.category.toUpperCase()}`);
-      if (options.orderBy.usageCount) orderClauses.push(`usageCount ${options.orderBy.usageCount.toUpperCase()}`);
-      if (orderClauses.length > 0) {
-        query += ` ORDER BY ${orderClauses.join(', ')}`;
-      }
+      if (options.orderBy.category) sortObj.category = options.orderBy.category === 'asc' ? 1 : -1;
+      if (options.orderBy.usageCount) sortObj.usageCount = options.orderBy.usageCount === 'asc' ? 1 : -1;
     }
-    const stmt = db.prepare(query);
-    return stmt.all() as SkillEntry[];
+    const cursor = col.find({});
+    if (Object.keys(sortObj).length > 0) {
+      cursor.sort(sortObj);
+    }
+    const rows = await cursor.toArray();
+    return rows.map(r => ({
+      id: r.id,
+      category: r.category,
+      title: r.title,
+      content: r.content,
+      confidence: r.confidence,
+      source: r.source,
+      usageCount: r.usageCount,
+      embedding: r.embedding,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    })) as SkillEntry[];
   },
 
-  upsert: (entry: Partial<SkillEntry> & { title: string, category: string, content: string, confidence: number, source: string }) => {
-    const existing = db.prepare('SELECT id, usageCount FROM skill_entries WHERE title = ?').get(entry.title) as { id: string, usageCount: number } | undefined;
+  upsert: async (entry: Partial<SkillEntry> & { title: string, category: string, content: string, confidence: number, source: string }) => {
+    const col = db.collection('skill_entries');
+    const existing = await col.findOne({ title: entry.title });
     const now = new Date().toISOString();
 
     if (existing) {
-      const stmt = db.prepare(`
-        UPDATE skill_entries
-        SET content = ?, confidence = ?, source = ?, usageCount = ?, updatedAt = ?
-        WHERE id = ?
-      `);
-      stmt.run(entry.content, entry.confidence, entry.source, existing.usageCount + 1, now, existing.id);
+      await col.updateOne(
+        { title: entry.title },
+        { 
+          $set: { 
+            content: entry.content, 
+            confidence: entry.confidence, 
+            source: entry.source, 
+            usageCount: existing.usageCount + 1, 
+            updatedAt: now 
+          } 
+        }
+      );
       return existing.id;
     } else {
       const id = entry.id || uuidv4();
-      const stmt = db.prepare(`
-        INSERT INTO skill_entries (id, category, title, content, confidence, source, usageCount, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(id, entry.category, entry.title, entry.content, entry.confidence, entry.source, entry.usageCount || 0, now, now);
+      await col.insertOne({
+        id,
+        category: entry.category,
+        title: entry.title,
+        content: entry.content,
+        confidence: entry.confidence,
+        source: entry.source,
+        usageCount: entry.usageCount || 0,
+        embedding: entry.embedding || null,
+        createdAt: now,
+        updatedAt: now
+      });
       return id;
     }
   },
 
-  countSince: (date: string) => {
-    const stmt = db.prepare('SELECT COUNT(*) as count FROM skill_entries WHERE createdAt > ?');
-    const result = stmt.get(date) as { count: number };
-    return result.count;
+  countSince: async (date: string) => {
+    return await db.collection('skill_entries').countDocuments({ createdAt: { $gt: date } });
   }
 };

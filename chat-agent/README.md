@@ -7,7 +7,7 @@ This directory contains a self-contained chat agent overlay for the Next.js UI C
 ## Architecture
 
 - **LLM Integration**: The agent is powered by FreeLLMAPI out-of-the-box using the OpenAI SDK format. It falls back to NVIDIA NIM natively if required.
-- **Storage**: We decided on **`better-sqlite3`** for local state management (`skill_entries`, `dsl_history`, `tool_call_log`, `user_preferences`). It aligns perfectly with Next.js App router API limits without needing direct node bindings to the pre-existing MongoDB connection context of the Spring Boot application, making the chat interface isolated, embedded and fast.
+- **Storage**: We migrated to **`mongodb`** for local state management (`skill_entries`, `dsl_history`, `tool_call_log`, `user_preferences`). It aligns with the existing MongoDB connection context, allowing for a scalable and consolidated database layer.
 - **Knowledge base**: Driven by auto-compiled markdown (`agentSkill.md`) that self-updates via reflection.
 
 ## Setup Instructions
@@ -19,13 +19,14 @@ This directory contains a self-contained chat agent overlay for the Next.js UI C
    FREELLM_API_KEY=your-freellm-api-key
    FREELLM_MODEL=auto
 
-   AGENT_DB_PATH=./chat-agent/db/agent.db
+   MONGODB_URI=mongodb://localhost:27017
+   MONGODB_DB_NAME=antigravity
    \`\`\`
 
 2. **Dependencies**:
    From within \`chat-agent/\`, install its isolated dependencies if developing standalone, or ensure they are added to the root package:
    \`\`\`bash
-   npm install fast-json-patch openai better-sqlite3 react-syntax-highlighter uuid
+   npm install fast-json-patch openai mongodb react-syntax-highlighter uuid
    \`\`\`
 
 3. **Mounting**:

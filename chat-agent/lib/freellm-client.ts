@@ -5,6 +5,7 @@ import OpenAI from "openai";
 export const freeLLMClient = new OpenAI({
   baseURL: process.env.FREELLM_BASE_URL ?? "http://localhost:3001/v1",
   apiKey: process.env.FREELLM_API_KEY ?? "freellmapi-key-from-dashboard",
+  maxRetries: 5,
 });
 
 // Fallback logic for NVIDIA NIM if needed
@@ -14,7 +15,4 @@ export const nimClient = new OpenAI({
   apiKey: process.env.NVIDIA_NIM_API_KEY ?? "nim-api-key",
 });
 
-// Determine model to use
 export const TOOL_CAPABLE_MODEL = process.env.FREELLM_MODEL ?? "auto";
-
-// Ensure to handle fallbacks if needed at the routing layer

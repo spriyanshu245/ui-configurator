@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 export async function compileAgentSkill() {
-  const entries = skillEntries.findAll({
+  const entries = await skillEntries.findAll({
     orderBy: { category: "asc", usageCount: "desc" },
   });
 

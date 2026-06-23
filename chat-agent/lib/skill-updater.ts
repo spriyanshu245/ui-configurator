@@ -31,7 +31,7 @@ Extract 0-3 reusable knowledge entries. Respond ONLY with a JSON array:
 
     for (const entry of entries) {
       entry.source = "agent_reflection";
-      skillEntries.upsert(entry);
+      await skillEntries.upsert(entry);
     }
 
     // Optionally trigger recompile

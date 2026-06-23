@@ -20,15 +20,20 @@ export async function buildSystemPrompt(context: any): Promise<string> {
     skillContent = "# No knowledge base compiled yet.";
   }
 
-  const stmt = db.prepare("SELECT * FROM user_preferences");
-  const preferences = stmt.all() as { key: string; value: string }[];
+  let preferences: { key: string; value: string }[] = [];
+  try {
+    const preferencesCollection = db.collection("user_preferences");
+    preferences = (await preferencesCollection.find({}).toArray()) as unknown as { key: string; value: string }[];
+  } catch (e) {
+    console.error("Failed to fetch user preferences", e);
+  }
 
   let allPagesContent = "";
   try {
     if (context.micrositeId) {
       const micrositeData = await fetchMicrositePages(context.micrositeId);
       const allPages = micrositeData?.pages || [];
-      allPagesContent = `Total pages: ${allPages.length}nPage paths: ${allPages.map((p: any) => p.pageCode).join(", ")}nn`;
+      allPagesContent = `Total pages: ${allPages.length}\nPage paths: ${allPages.map((p: any) => p.pageCode).join(", ")}\n\n`;
       allPagesContent += allPages
         .map(
           (p: any) => `
@@ -36,7 +41,7 @@ export async function buildSystemPrompt(context: any): Promise<string> {
 ${JSON.stringify(p, null, 2)}
 `,
         )
-        .join("n");
+        .join("\n");
     }
   } catch (e) {
     console.error(
@@ -44,6 +49,19 @@ ${JSON.stringify(p, null, 2)}
       e,
     );
   }
+
+  let componentRegistryContent = "{}";
+  try {
+    const registryPath = path.join(process.cwd(), "chat-agent/knowledge/component-registry.json");
+    if (fs.existsSync(registryPath)) {
+      componentRegistryContent = fs.readFileSync(registryPath, "utf-8");
+    }
+  } catch (e) {
+    console.error("Failed to read component registry", e);
+  }
+
+  const taskContext = context.taskContext || {};
+  const pageOps = context.pageOps || {};
 
   return `
 You are a DSL Page Builder Assistant for a microsite UI configurator.
@@ -61,12 +79,23 @@ You help users read, understand, and modify microsite pages described as JSON DS
 ═══ YOUR KNOWLEDGE BASE ═══
 ${skillContent}
 
+═══ COMPONENTS ═══
+Only use these types. Match props exactly. Never invent props.
+${componentRegistryContent}
+
 ═══ CURRENT MICROSITE CONTEXT ═══
 Microsite ID: ${context.micrositeId || "Not provided"}
+Active Page Code: ${context.pageCode || "Not provided"}
+Active Page ID: ${context.id || "Not provided"}
 ${allPagesContent}
 
+═══ PRIOR CONTEXT ═══
+Last task: ${taskContext.intent || "None"}
+${taskContext.pendingPatch ? "Pending unapproved patch exists." : ""}
+Page history: ${JSON.stringify(pageOps)}
+
 ═══ USER PREFERENCES (learned) ═══
-${preferences.map((p) => `${p.key}: ${p.value}`).join("n")}
+${preferences.map((p) => `${p.key}: ${p.value}`).join("\n")}
 
 ═══ CONVERSATION STARTS ═══
 `;

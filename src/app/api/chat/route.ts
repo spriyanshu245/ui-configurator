@@ -1,34 +1,108 @@
 import { DSL_TOOLS } from "../../../../chat-agent/lib/tool-definitions";
 import {
-  freeLLMClient,
   TOOL_CAPABLE_MODEL,
+  freeLLMClient,
 } from "../../../../chat-agent/lib/freellm-client";
 import { buildSystemPrompt } from "../../../../chat-agent/lib/prompt-builder";
 import { executeTool } from "../../../../chat-agent/lib/tool-executor";
 import { toolCallLog } from "../../../../chat-agent/db/queries/tool-call-log";
+import { pendingPatchesDB } from "../../../../chat-agent/db/queries/pending-patches";
 import { queuePatch } from "../../../../chat-agent/lib/dsl-patcher";
 import { db } from "../../../../chat-agent/db/client";
-import { v4 as uuidv4 } from "uuid";
+import * as fs from "fs";
+import * as path from "path";
+
+function logToFile(msg: string) {
+  try {
+    const logPath = path.join(process.cwd(), "chat-agent.log");
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch (e) {}
+}
+
+type ChatRouteMessage = {
+  role?: string;
+  content?: string | null;
+  name?: string;
+  tool_call_id?: string;
+  tool_calls?: unknown[];
+};
+
+export async function GET() {
+  console.log("=== API CHAT GET INITIATED ===");
+  console.log("process.env.MONGODB_URI:", process.env.MONGODB_URI);
+  console.log(
+    "process.env.NEXT_PUBLIC_BASE_URL:",
+    process.env.NEXT_PUBLIC_BASE_URL,
+  );
+  try {
+    await db.command({ ping: 1 });
+    return new Response(JSON.stringify({ status: "connected" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ status: "error", error: (error as Error).message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+}
 
 export async function POST(req: Request) {
-  const { messages, micrositeId, sessionId } = await req.json();
+  const { messages, micrositeId, sessionId, pageCode, id } = await req.json();
 
-  // Format messages to ensure only valid OpenAI properties are sent
-  const formattedMessages = messages.map((m: any) => {
+  const safeMessages = Array.isArray(messages) ? messages : [];
+
+  const formattedMessages = safeMessages.map((message: ChatRouteMessage) => {
     const validKeys = ["role", "content", "name", "tool_call_id", "tool_calls"];
-    const formatted: any = {};
+    const formatted: Record<string, unknown> = {};
+
     for (const key of validKeys) {
-      if (m[key] !== undefined) {
-        formatted[key] = m[key];
+      const value = message[key as keyof ChatRouteMessage];
+      if (value !== undefined) {
+        formatted[key] = value;
       }
     }
+
     return formatted;
   });
+
+  const authHeader = req.headers.get("authorization");
+  let userId = req.headers.get("x-user-id") || "anonymous";
+  if (!userId || userId === "anonymous") {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const tokenPart = authHeader.split(" ")[1];
+        const payloadBase64 = tokenPart.split(".")[1];
+        const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+        const payloadJson = atob(base64);
+        const payload = JSON.parse(payloadJson);
+        if (payload.preferred_username) {
+          userId = payload.preferred_username.replace(/\D/g, "");
+        }
+      } catch (e) {
+      }
+    }
+  }
+
+  // Save the latest user message
+  const lastUserMsg = formattedMessages.slice().reverse().find(m => m.role === "user");
+  if (lastUserMsg) {
+     try {
+        const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
+        await sessionOps.saveMessage(userId, micrositeId, lastUserMsg);
+     } catch (e) {
+        logToFile(`Failed to save user message: ${e}`);
+     }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: object) => {
-        controller.enqueue(`data: ${JSON.stringify(event)}nn`);
+        controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
       };
 
       let currentMessages = formattedMessages;
@@ -38,15 +112,27 @@ export async function POST(req: Request) {
       while (loopCount < MAX_LOOPS) {
         loopCount++;
 
-        const systemPrompt = await buildSystemPrompt({ micrositeId });
+        const systemPrompt = await buildSystemPrompt({
+          micrositeId,
+          pageCode,
+          id,
+        });
 
         try {
+          const finalMessages = [
+            { role: "system", content: systemPrompt },
+            ...(currentMessages as any[]),
+          ];
+          logToFile("=== CHAT completions.create INITIATED ===");
+          logToFile(`Model: ${TOOL_CAPABLE_MODEL}`);
+          logToFile(`System Prompt Length: ${systemPrompt.length}`);
+          logToFile(`Messages Count: ${finalMessages.length}`);
+          logToFile(`Messages: ${JSON.stringify(finalMessages)}`);
+          logToFile(`Tools Count: ${DSL_TOOLS?.length}`);
+
           const response = await freeLLMClient.chat.completions.create({
             model: TOOL_CAPABLE_MODEL,
-            messages: [
-              { role: "system", content: systemPrompt },
-              ...currentMessages,
-            ],
+            messages: finalMessages,
             tools: DSL_TOOLS as any,
             tool_choice: "auto",
             stream: true,
@@ -55,17 +141,22 @@ export async function POST(req: Request) {
           let content = "";
           const toolCalls: any[] = [];
 
+          logToFile("Stream opened, reading chunks...");
           for await (const chunk of response) {
             if (chunk.choices[0]?.delta?.content) {
               const chunkContent = chunk.choices[0].delta.content;
               content += chunkContent;
+              logToFile(`Chunk content: ${chunkContent}`);
               send({ type: "text_chunk", content: chunkContent });
             }
             if (chunk.choices[0]?.delta?.tool_calls) {
               const calls = chunk.choices[0].delta.tool_calls;
-              for (const call of calls) {
-                if (!toolCalls[call.index]) {
-                  toolCalls[call.index] = {
+              logToFile(`Chunk tool_calls: ${JSON.stringify(calls)}`);
+              for (let i = 0; i < calls.length; i++) {
+                const call = calls[i];
+                const idx = typeof call.index === "number" ? call.index : i;
+                if (!toolCalls[idx]) {
+                  toolCalls[idx] = {
                     id: call.id,
                     type: call.type,
                     function: {
@@ -75,7 +166,7 @@ export async function POST(req: Request) {
                   };
                 }
                 if (call.function?.arguments) {
-                  toolCalls[call.index].function.arguments +=
+                  toolCalls[idx].function.arguments +=
                     call.function.arguments;
                 }
               }
@@ -83,8 +174,13 @@ export async function POST(req: Request) {
           }
 
           const validToolCalls = toolCalls.filter(Boolean);
+          logToFile(`Stream finished. Content: "${content}". Tool calls count: ${validToolCalls.length}`);
 
-          let assistantMsg: any = {
+          const assistantMsg: {
+            role: string;
+            content: string | null;
+            tool_calls?: unknown[];
+          } = {
             role: "assistant",
             content: content || null,
           };
@@ -123,10 +219,15 @@ export async function POST(req: Request) {
                   content: `Patch validation failed: ${pending.error}`,
                 });
               } else {
-                const {
-                  pendingPatchesDB,
-                } = require("../../../../chat-agent/db/queries/pending-patches");
-                pendingPatchesDB.save(pending);
+                await pendingPatchesDB.save(pending);
+
+                // Update task context for pending patch
+                try {
+                  const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
+                  await sessionOps.saveTask(userId, micrositeId, { intent: "DSL modification proposed", pendingPatch: true });
+                } catch (e) {
+                  logToFile(`Failed to save task context: ${e}`);
+                }
 
                 toolResults.push({
                   tool_call_id: toolCall.id,
@@ -152,8 +253,10 @@ export async function POST(req: Request) {
                 return;
               }
             } else {
+              logToFile(`Executing tool: ${toolCall.function.name} with args: ${toolCall.function.arguments}`);
               const result = await executeTool(toolCall.function.name, args);
-              toolCallLog.log(
+              logToFile(`Tool execution result: ${JSON.stringify(result)}`);
+              await toolCallLog.log(
                 sessionId,
                 toolCall.function.name,
                 args,
@@ -168,14 +271,34 @@ export async function POST(req: Request) {
             }
           }
 
-          currentMessages = [
+          const newMessages = [
             ...currentMessages,
             assistantMsg,
             ...toolResults.map((r) => ({ role: "tool", ...r })),
           ];
-        } catch (error) {
+          currentMessages = newMessages;
+
+          // Save assistant message to session history
+          try {
+             const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
+             await sessionOps.saveMessage(userId, micrositeId, assistantMsg);
+             for (const r of toolResults) {
+                await sessionOps.saveMessage(userId, micrositeId, { role: "tool", ...r });
+             }
+          } catch(e) {
+             logToFile(`Failed to save assistant messages: ${e}`);
+          }
+          
+        } catch (error: any) {
+          logToFile(`Error in agent route: ${error.message}\nStack: ${error.stack}`);
           console.error("Error in agent route:", error);
-          send({ type: "error", message: (error as Error).message });
+          
+          let errorMessage = error.message;
+          if (error.status === 429 || errorMessage.includes("429")) {
+            errorMessage = "I am currently experiencing high traffic and hit a rate limit. Please wait a moment and try again.";
+          }
+          
+          send({ type: "error", message: errorMessage });
           break;
         }
       }

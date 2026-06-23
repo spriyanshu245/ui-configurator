@@ -392,10 +392,9 @@ export const getBaseUrl = (prefix: string, env: string): string => {
     : `${protocol}//${apiHost.join(".")}`;
 };
 
-
 export const getApiBaseUrl = () => {
   if (!globalThis.window) {
-    throw new Error("window is not available");
+    return "https://api.dev.rahi.cloud";
   }
 
   const currentHost = globalThis.window.location.hostname;
