@@ -24,6 +24,22 @@
       "justification": {
         "type": "string",
         "required": false
+      },
+      "isConditionalComponent": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibilityConditions": {
+        "type": "object",
+        "required": false
+      },
+      "enableDisableConditions": {
+        "type": "object",
+        "required": false
+      },
+      "requiredFieldConditions": {
+        "type": "object",
+        "required": false
       }
     },
     "children": [
@@ -41,7 +57,17 @@
           50,
           50
         ],
-        "justification": "flex-end"
+        "justification": "flex-end",
+        "isConditionalComponent": true,
+        "visibilityConditions": {
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
+          "conditions": {
+            "!null": true,
+            "EXPECTED_VALUE": true
+          }
+        }
       },
       "components": [
         {
@@ -100,6 +126,22 @@
       "isIconButton": {
         "type": "boolean",
         "required": false
+      },
+      "isConditionalComponent": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibilityConditions": {
+        "type": "object",
+        "required": false
+      },
+      "enableDisableConditions": {
+        "type": "object",
+        "required": false
+      },
+      "requiredFieldConditions": {
+        "type": "object",
+        "required": false
       }
     },
     "children": [],
@@ -120,7 +162,17 @@
         "iconUrl": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDE2VjExTTEyLjUgOEMxMi41IDguMjc2MTQgMTIuMjc2MSA4LjUgMTIgOC41QzExLjcyMzkgOC41IDExLjUgOC4yNzYxNCAxMS41IDhNMTIuNSA4QzEyLjUgNy43MjM4NiAxMi4yNzYxIDcuNSAxMiA3LjVDMTEuNzIzOSA3LjUgMTEuNSA3LjcyMzg2IDExLjUgOE0xMi41IDhIMTEuNU0yMiAxMkMyMiAxNy41MjI4IDE3LjUyMjggMjIgMTIgMjJDNi40NzcxNSAyMiAyIDE3LjUyMjggMiAxMkMyIDYuNDc3MTUgNi40NzcxNSAyIDEyIDJDMTcuNTIyOCAyIDIyIDYuNDc3MTUgMjIgMTJaIiBzdHJva2U9IiMyRjM4NEMiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==",
         "iconSize": 24,
         "navigateWithoutDataTransfer": true,
-        "isIconButton": true
+        "isIconButton": true,
+        "isConditionalComponent": true,
+        "visibilityConditions": {
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
+          "conditions": {
+            "!null": true,
+            "EXPECTED_VALUE": true
+          }
+        }
       }
     }
   },
@@ -237,6 +289,14 @@
       "subsectionHeaders": {
         "type": "array",
         "required": false
+      },
+      "enableDisableConditions": {
+        "type": "object",
+        "required": false
+      },
+      "requiredFieldConditions": {
+        "type": "object",
+        "required": false
       }
     },
     "children": [
@@ -256,7 +316,17 @@
         "borderRadius": "05",
         "columnWidths": [
           100
-        ]
+        ],
+        "isConditionalComponent": true,
+        "visibilityConditions": {
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
+          "conditions": {
+            "!null": true,
+            "EXPECTED_VALUE": true
+          }
+        }
       },
       "components": [
         {
@@ -628,6 +698,22 @@
       "requestBodySpecs": {
         "type": "string",
         "required": false
+      },
+      "isConditionalComponent": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibilityConditions": {
+        "type": "object",
+        "required": false
+      },
+      "enableDisableConditions": {
+        "type": "object",
+        "required": false
+      },
+      "requiredFieldConditions": {
+        "type": "object",
+        "required": false
       }
     },
     "children": [],
@@ -872,7 +958,17 @@
         ],
         "columnWidths": [
           100
-        ]
+        ],
+        "isConditionalComponent": true,
+        "visibilityConditions": {
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
+          "conditions": {
+            "!null": true,
+            "EXPECTED_VALUE": true
+          }
+        }
       }
     }
   }

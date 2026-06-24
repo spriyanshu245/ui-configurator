@@ -69,3 +69,25 @@
 
 ## Low Confidence Entries
 - Complex conditional routing rules might need manual verification through the UI depending on nested session keys logic.
+## Conditional Rendering Rules
+- **Enabling Conditions**: To apply conditional logic, set `"isConditionalComponent": true` on a component.
+- **Available Conditional Props**: `visibilityConditions`, `enableDisableConditions`, `requiredFieldConditions`, and `dynamicOptions`.
+- **Condition Object Structure**:
+  - `parentNames`: An array of session keys or component IDs to watch. E.g., `["${micrositeNav.loan-accounts.selected.loanStatus}"]` or `["component-uuid"]`.
+  - `conditions`: An object where keys are expected values and values are boolean outcomes (`true`/`false`).
+- **Condition Operators**:
+  - Exact match: `"EXPECTED_VALUE": true`
+  - Null check: `"!null": true` (Triggers if the parent value is not null/empty).
+- **Example Usage**:
+  ```json
+  "isConditionalComponent": true,
+  "visibilityConditions": {
+    "parentNames": ["${loan-accounts.loan-overview.amort-controls.loanAccountMorats}"],
+    "conditions": {
+      "!null": true,
+      "ACTIVE": true,
+      "CLOSED": false
+    }
+  }
+  ```
+- **Form Linking**: Inside a form, conditionals often watch the ID (`nameKeyId`) of another input component. If watching another input component, use its UUID in the `parentNames` array. If watching a session variable, use the `${...}` syntax.
