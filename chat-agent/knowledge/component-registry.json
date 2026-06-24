@@ -1,52 +1,879 @@
 {
-  "Heading": {
+  "stack": {
     "props": {
-      "text": { "type": "string", "required": true },
-      "size": { "type": "string", "required": false }
+      "columns": {
+        "type": "number",
+        "required": false
+      },
+      "columnGap": {
+        "type": "number",
+        "required": false
+      },
+      "repeatRows": {
+        "type": "boolean",
+        "required": false
+      },
+      "hasFixedColumns": {
+        "type": "boolean",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      },
+      "justification": {
+        "type": "string",
+        "required": false
+      }
+    },
+    "children": [
+      "button-v2"
+    ],
+    "example": {
+      "id": "09967724-4d5e-4345-93b3-75c12ba96192",
+      "type": "stack",
+      "properties": {
+        "columns": 2,
+        "columnGap": 10,
+        "repeatRows": false,
+        "hasFixedColumns": false,
+        "columnWidths": [
+          50,
+          50
+        ],
+        "justification": "flex-end"
+      },
+      "components": [
+        {
+          "id": "...",
+          "type": "button-v2"
+        }
+      ]
+    }
+  },
+  "button-v2": {
+    "props": {
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "actionType": {
+        "type": "string",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      },
+      "align": {
+        "type": "string",
+        "required": false
+      },
+      "buttonType": {
+        "type": "string",
+        "required": false
+      },
+      "routingType": {
+        "type": "string",
+        "required": false
+      },
+      "routePage": {
+        "type": "string",
+        "required": false
+      },
+      "iconUrl": {
+        "type": "string",
+        "required": false
+      },
+      "iconSize": {
+        "type": "number",
+        "required": false
+      },
+      "navigateWithoutDataTransfer": {
+        "type": "boolean",
+        "required": false
+      },
+      "isIconButton": {
+        "type": "boolean",
+        "required": false
+      }
     },
     "children": [],
-    "example": { "id": "heading1", "type": "Heading", "text": "Welcome", "size": "h1" }
+    "example": {
+      "id": "90526b67-17f3-47a9-bf2a-01942453ec18",
+      "type": "button-v2",
+      "properties": {
+        "label": "",
+        "showLabel": false,
+        "actionType": "routing",
+        "columnWidths": [
+          100
+        ],
+        "align": "right",
+        "buttonType": "tertiary",
+        "routingType": "Internal",
+        "routePage": "untitled-7",
+        "iconUrl": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDE2VjExTTEyLjUgOEMxMi41IDguMjc2MTQgMTIuMjc2MSA4LjUgMTIgOC41QzExLjcyMzkgOC41IDExLjUgOC4yNzYxNCAxMS41IDhNMTIuNSA4QzEyLjUgNy43MjM4NiAxMi4yNzYxIDcuNSAxMiA3LjVDMTEuNzIzOSA3LjUgMTEuNSA3LjcyMzg2IDExLjUgOE0xMi41IDhIMTEuNU0yMiAxMkMyMiAxNy41MjI4IDE3LjUyMjggMjIgMTIgMjJDNi40NzcxNSAyMiAyIDE3LjUyMjggMiAxMkMyIDYuNDc3MTUgNi40NzcxNSAyIDEyIDJDMTcuNTIyOCAyIDIyIDYuNDc3MTUgMjIgMTJaIiBzdHJva2U9IiMyRjM4NEMiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==",
+        "iconSize": 24,
+        "navigateWithoutDataTransfer": true,
+        "isIconButton": true
+      }
+    }
   },
-  "Typograph": {
+  "form": {
     "props": {
-      "text": { "type": "string", "required": true },
-      "variant": { "type": "string", "required": false },
-      "color": { "type": "string", "required": false }
+      "name": {
+        "type": "string",
+        "required": false
+      },
+      "prefillApiUrl": {
+        "type": "string",
+        "required": false
+      },
+      "prefillResponseBodySpecs": {
+        "type": "string",
+        "required": false
+      },
+      "preFillApiHeaders": {
+        "type": "string",
+        "required": false
+      },
+      "storePrefillInSession": {
+        "type": "boolean",
+        "required": false
+      },
+      "prefillApiName": {
+        "type": "string",
+        "required": false
+      },
+      "nameKeyIds": {
+        "type": "array",
+        "required": false
+      }
+    },
+    "children": [
+      "sub-section",
+      "spacer"
+    ],
+    "example": {
+      "id": "077c0ef3-c2fd-4b82-93b2-2e858c5d50d4",
+      "type": "form",
+      "properties": {
+        "name": "form-name",
+        "prefillApiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}",
+        "prefillResponseBodySpecs": "{}",
+        "preFillApiHeaders": "{\"Content-Type\":\"application/json\"}",
+        "storePrefillInSession": true,
+        "prefillApiName": "loanAccountOverview",
+        "nameKeyIds": [
+          {
+            "label": "loanAccountOverview",
+            "id": "92f55e2c-7870-4968-9402-422f909922f2"
+          },
+          {
+            "label": "agreement-details",
+            "id": "b72d288a-bf7b-4208-a5ab-15add154e46f"
+          }
+        ]
+      },
+      "components": [
+        {
+          "id": "...",
+          "type": "sub-section"
+        }
+      ]
+    }
+  },
+  "sub-section": {
+    "props": {
+      "width": {
+        "type": "string",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "borderThickness": {
+        "type": "string",
+        "required": false
+      },
+      "borderStyle": {
+        "type": "string",
+        "required": false
+      },
+      "borderColor": {
+        "type": "string",
+        "required": false
+      },
+      "borderRadius": {
+        "type": "string",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      },
+      "isConditionalComponent": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibilityConditions": {
+        "type": "object",
+        "required": false
+      },
+      "isCollapsible": {
+        "type": "boolean",
+        "required": false
+      },
+      "subsectionHeaders": {
+        "type": "array",
+        "required": false
+      }
+    },
+    "children": [
+      "data-grid",
+      "table"
+    ],
+    "example": {
+      "id": "1108cd12-4ba0-439e-9f71-b119f49a5e69",
+      "type": "sub-section",
+      "properties": {
+        "width": "100",
+        "label": "Loan Summary",
+        "showLabel": true,
+        "borderThickness": "1",
+        "borderStyle": "solid",
+        "borderColor": "#E6E5E5",
+        "borderRadius": "05",
+        "columnWidths": [
+          100
+        ]
+      },
+      "components": [
+        {
+          "id": "...",
+          "type": "data-grid"
+        }
+      ]
+    }
+  },
+  "data-grid": {
+    "props": {
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "fieldLayout": {
+        "type": "string",
+        "required": false
+      },
+      "columns": {
+        "type": "number",
+        "required": false
+      },
+      "columnGap": {
+        "type": "number",
+        "required": false
+      },
+      "apiKey": {
+        "type": "string",
+        "required": false
+      },
+      "apiUrl": {
+        "type": "string",
+        "required": false
+      },
+      "gridData": {
+        "type": "array",
+        "required": false
+      },
+      "apiName": {
+        "type": "string",
+        "required": false
+      },
+      "method": {
+        "type": "string",
+        "required": false
+      },
+      "apiHeaders": {
+        "type": "string",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      }
     },
     "children": [],
-    "example": { "id": "text1", "type": "Typograph", "text": "Loan Overview", "variant": "body1" }
+    "example": {
+      "id": "1cf79978-90d6-4c31-a459-51de53599197",
+      "type": "data-grid",
+      "properties": {
+        "showLabel": false,
+        "label": "Due Details",
+        "fieldLayout": "column",
+        "columns": 5,
+        "columnGap": 10,
+        "apiKey": "",
+        "apiUrl": "",
+        "gridData": [
+          {
+            "id": "88ecce02-a0d8-4ece-8171-4a6237194e40",
+            "properties": {
+              "label": "Down Payment Amt.",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.downPayment}",
+              "columnInputType": "number",
+              "isCurrency": true,
+              "currencyName": "en-IN"
+            }
+          },
+          {
+            "id": "c84130be-8366-4cf7-8303-e9585f927500",
+            "properties": {
+              "label": "Top Up over Bal. Transfer",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.balanceTransferTopupAmount}",
+              "columnInputType": "number",
+              "isCurrency": true,
+              "currencyName": "en-IN"
+            }
+          },
+          {
+            "id": "983bd773-4e3b-4eff-9bf0-9efef52f7b4a",
+            "properties": {
+              "label": "Loan Tenure",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.loanTenure}",
+              "columnInputType": "number",
+              "isCurrency": false,
+              "currencyName": "en-IN"
+            }
+          },
+          {
+            "id": "dccf8c1e-3c9d-4cae-980f-25e7e455c644",
+            "properties": {
+              "label": "Installment Start Date",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentStartdate}",
+              "columnInputType": "date",
+              "isCurrency": true,
+              "currencyName": "en-IN",
+              "format": "en-GB"
+            }
+          },
+          {
+            "id": "d2c39db0-769d-489f-9a36-11efc3703a23",
+            "properties": {
+              "label": "Installment End Date",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentEnddate}",
+              "columnInputType": "date",
+              "isCurrency": true,
+              "currencyName": "en-IN",
+              "format": "en-GB"
+            }
+          },
+          {
+            "id": "1cae1436-d8d8-479f-a673-957486fcd61e",
+            "properties": {
+              "label": "Next Installment Date",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.nextInstallmentDate}",
+              "columnInputType": "date",
+              "isCurrency": true,
+              "currencyName": "en-IN"
+            }
+          },
+          {
+            "id": "3dd66484-c1f0-418c-9565-b9001c87a1f3",
+            "properties": {
+              "label": "Next Installment Amt.",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.installmentAmount}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "isCurrency": true
+            }
+          },
+          {
+            "id": "8cab73e3-485b-44c5-bd75-677549a1ef7e",
+            "properties": {
+              "label": "Account Status",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.loanAccountStatusLcode}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "text"
+            }
+          },
+          {
+            "id": "cb9bdf13-dbe9-49a3-8d0d-4bcfcf2ba210",
+            "properties": {
+              "label": "Account Sub Status",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.loanAccountSubstatusLcode}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "text"
+            }
+          },
+          {
+            "id": "421e00a6-0fa4-4c94-9c33-b9bb9357b185",
+            "properties": {
+              "label": "DPD",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.totalDayPastDues}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "number"
+            }
+          },
+          {
+            "id": "c714e2e6-15a5-4f89-850a-b0d72a92bc3c",
+            "properties": {
+              "label": "Asset Classification Code",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.assetClassificationCode}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "text"
+            }
+          },
+          {
+            "id": "249716c5-43e6-49af-b13d-bfb1a0de0428",
+            "properties": {
+              "label": "Total Provisioning Amt.",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.provisioningAmount}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "isCurrency": true
+            }
+          },
+          {
+            "id": "290012bb-d097-4347-83ec-d20adbf9c9de",
+            "properties": {
+              "label": "Remaining Tenure",
+              "value": "${loan-accounts.loan-overview.loanAccountOverview.remainingTenure}",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "number"
+            }
+          }
+        ],
+        "apiName": "",
+        "method": "",
+        "apiHeaders": "{}",
+        "name": "92f55e2c-7870-4968-9402-422f909922f2",
+        "columnWidths": [
+          20,
+          20,
+          20,
+          20,
+          20
+        ]
+      }
+    }
   },
-  "ButtonV2": {
+  "spacer": {
     "props": {
-      "label": { "type": "string", "required": true },
-      "action": { "type": "string", "required": false }
+      "height": {
+        "type": "number",
+        "required": false
+      }
     },
     "children": [],
-    "example": { "id": "btn1", "type": "ButtonV2", "label": "Submit", "action": "submit_form" }
+    "example": {
+      "id": "ad78a086-31cb-4250-b6cd-30a75c2f2ae1",
+      "type": "spacer",
+      "properties": {
+        "height": 15
+      }
+    }
   },
-  "Input": {
+  "table": {
     "props": {
-      "label": { "type": "string", "required": true },
-      "name": { "type": "string", "required": true },
-      "placeholder": { "type": "string", "required": false },
-      "required": { "type": "boolean", "required": false }
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "defaultSort": {
+        "type": "boolean",
+        "required": false
+      },
+      "sortByOrder": {
+        "type": "string",
+        "required": false
+      },
+      "configurePageSize": {
+        "type": "boolean",
+        "required": false
+      },
+      "defaultPageSize": {
+        "type": "number",
+        "required": false
+      },
+      "pageSizeOptions": {
+        "type": "array",
+        "required": false
+      },
+      "apiHeaders": {
+        "type": "string",
+        "required": false
+      },
+      "tableColumns": {
+        "type": "array",
+        "required": false
+      },
+      "linkedForm": {
+        "type": "string",
+        "required": false
+      },
+      "method": {
+        "type": "string",
+        "required": false
+      },
+      "apiUrl": {
+        "type": "string",
+        "required": false
+      },
+      "apiName": {
+        "type": "string",
+        "required": false
+      },
+      "pathToTableData": {
+        "type": "string",
+        "required": false
+      },
+      "storeDataInSession": {
+        "type": "boolean",
+        "required": false
+      },
+      "nameKeyIds": {
+        "type": "array",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      },
+      "selectableRow": {
+        "type": "boolean",
+        "required": false
+      },
+      "metaData": {
+        "type": "string",
+        "required": false
+      },
+      "primaryKey": {
+        "type": "string",
+        "required": false
+      },
+      "hideHeaderRow": {
+        "type": "boolean",
+        "required": false
+      },
+      "hideBorders": {
+        "type": "boolean",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "required": false
+      },
+      "showFooterRow": {
+        "type": "boolean",
+        "required": false
+      },
+      "requestBodySpecs": {
+        "type": "string",
+        "required": false
+      }
     },
     "children": [],
-    "example": { "id": "input1", "type": "Input", "label": "Full Name", "name": "fullName", "required": true }
-  },
-  "FormRow": {
-    "props": {
-      "layout": { "type": "string", "required": false }
-    },
-    "children": ["Input", "Select", "CheckboxGroup", "ButtonV2"],
-    "example": { "id": "row1", "type": "FormRow", "components": [] }
-  },
-  "Stack": {
-    "props": {
-      "direction": { "type": "string", "required": false },
-      "spacing": { "type": "number", "required": false }
-    },
-    "children": ["Heading", "Typograph", "Image", "ButtonV2", "FormRow"],
-    "example": { "id": "stack1", "type": "Stack", "direction": "column", "components": [] }
+    "example": {
+      "id": "36247159-b3ac-4ab2-99e3-b7688d2c9ad9",
+      "type": "table",
+      "properties": {
+        "showLabel": true,
+        "label": "",
+        "defaultSort": false,
+        "sortByOrder": "Ascending",
+        "configurePageSize": false,
+        "defaultPageSize": 20,
+        "pageSizeOptions": [],
+        "apiHeaders": "{\"Content-Type\":\"application/json\"}",
+        "tableColumns": [
+          {
+            "id": "04f29633-6d85-4f73-a30d-a2a7594a78ea",
+            "properties": {
+              "label": "ROI Type",
+              "name": "b148a9fd-2f87-4253-82f9-1d79e8b33c82",
+              "enableFilter": false,
+              "filterType": "",
+              "enableSorting": false,
+              "isClickable": false,
+              "externalURL": "",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "dateFormatType": "en-GB",
+              "columnInputType": "fetchDisplayValueFromApi",
+              "showLabel": true,
+              "inputType": "fetchDisplayValueFromApi",
+              "columnWidths": [
+                100
+              ],
+              "fetchDisplayValueApiUrl": "/api/v3/masters/RATETYPE/$roiTypeLcode",
+              "fetchDisplayValueApiKey": "displayValue",
+              "fetchDisplayValueApiHeaders": "{\"Content-Type\":\"application/json\"}",
+              "dataTransfer": {
+                "body": "{}"
+              }
+            },
+            "type": "table-column"
+          },
+          {
+            "id": "97925ea4-a05c-4f75-b166-73b00f2cf4b3",
+            "type": "table-column",
+            "properties": {
+              "label": "Current ROI Type",
+              "name": "804df8a6-536f-4d28-a09c-c77515147b3b",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "text",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left"
+            }
+          },
+          {
+            "id": "2c20f53e-fe4d-4e93-ba13-6dba3b59db37",
+            "type": "table-column",
+            "properties": {
+              "label": "Current ROI",
+              "name": "c7f7ead4-7e55-489c-9c0e-04a7562e6434",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left"
+            }
+          },
+          {
+            "id": "17120450-3113-4238-9eb1-75606c30cb89",
+            "type": "table-column",
+            "properties": {
+              "label": "Base Rate",
+              "name": "b85265ce-15fe-4c6e-a671-79b7c06c560e",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left"
+            }
+          },
+          {
+            "id": "ed7c3293-5745-42e5-951c-18576c927b6d",
+            "type": "table-column",
+            "properties": {
+              "label": "Spread Rate",
+              "name": "1e647700-e313-402d-a1df-6f4e75b0aa50",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left",
+              "inputType": "number",
+              "columnWidths": [
+                100
+              ]
+            }
+          },
+          {
+            "id": "f3d92846-e6d5-44c6-8f6d-54f166a99ee7",
+            "type": "table-column",
+            "properties": {
+              "label": "Offset Rate",
+              "name": "109dc9ae-c95f-494f-8f48-a6fa62eeeab4",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left",
+              "inputType": "number",
+              "columnWidths": [
+                100
+              ]
+            }
+          },
+          {
+            "id": "3c98417d-49f3-4690-81d7-1439693896dc",
+            "type": "table-column",
+            "properties": {
+              "label": "Index Rate",
+              "name": "7b9d0ea5-1dba-458a-ae29-691ec555b1ea",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "text",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left",
+              "inputType": "text",
+              "columnWidths": [
+                100
+              ],
+              "isConditionalComponent": false,
+              "visibilityConditions": {
+                "parentNames": [
+                  "804df8a6-536f-4d28-a09c-c77515147b3b"
+                ],
+                "conditions": {
+                  "FIXED": false
+                }
+              }
+            }
+          },
+          {
+            "id": "e26fb798-8962-4a07-94b0-b6bc1d331273",
+            "type": "table-column",
+            "properties": {
+              "label": "Period",
+              "name": "155b1128-1745-4ab7-9b15-50e982af5b12",
+              "currencyName": "en-IN",
+              "prefixType": "text",
+              "suffixType": "text",
+              "prefixIconUploadType": "url",
+              "suffixIconUploadType": "url",
+              "isInternal": false,
+              "dateFormatType": "en-GB",
+              "columnInputType": "number",
+              "showLabel": true,
+              "width": 0,
+              "textAlign": "left"
+            }
+          }
+        ],
+        "linkedForm": "",
+        "method": "GET",
+        "apiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}/rates",
+        "apiName": "rates",
+        "pathToTableData": "loanAccountRates",
+        "storeDataInSession": true,
+        "nameKeyIds": [
+          {
+            "label": "roiTypeLcode",
+            "id": "b148a9fd-2f87-4253-82f9-1d79e8b33c82"
+          },
+          {
+            "label": "roiTypePart",
+            "id": "804df8a6-536f-4d28-a09c-c77515147b3b"
+          },
+          {
+            "label": "roiFinal",
+            "id": "c7f7ead4-7e55-489c-9c0e-04a7562e6434"
+          },
+          {
+            "label": "roiBase",
+            "id": "b85265ce-15fe-4c6e-a671-79b7c06c560e"
+          },
+          {
+            "label": "indexRatecode",
+            "id": "7b9d0ea5-1dba-458a-ae29-691ec555b1ea"
+          },
+          {
+            "label": "roiSpread",
+            "id": "1e647700-e313-402d-a1df-6f4e75b0aa50"
+          },
+          {
+            "label": "roiOffsetFinal",
+            "id": "109dc9ae-c95f-494f-8f48-a6fa62eeeab4"
+          },
+          {
+            "label": "period",
+            "id": "155b1128-1745-4ab7-9b15-50e982af5b12"
+          }
+        ],
+        "columnWidths": [
+          100
+        ]
+      }
+    }
   }
 }
