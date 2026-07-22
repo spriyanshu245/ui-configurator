@@ -16,6 +16,7 @@ export function DslDiffViewer({
   toolCallId,
   onApprove,
   onReject,
+  hideActions = false,
 }: any) {
   const [activeTab, setActiveTab] = useState<"diff" | "edit">("diff");
   const [editedDsl, setEditedDsl] = useState<string>(() =>
@@ -219,46 +220,48 @@ export function DslDiffViewer({
           </div>
         )}
 
-        <div className={styles.actionsContainer}>
-          <button
-            onClick={handleApprove}
-            disabled={isApproving || !isJsonValid}
-            className={`${styles.approveBtn} ${!isJsonValid || isApproving ? styles.disabled : ""}`}
-          >
-            <Check size={16} /> {isApproving ? "Applying..." : "✓ Apply Change"}
-          </button>
-
-          {!rejectReasonOpen ? (
-            <button onClick={handleReject} className={styles.rejectBtn}>
-              <X size={16} /> ✗ Reject
+        {!hideActions && (
+          <div className={styles.actionsContainer}>
+            <button
+              onClick={handleApprove}
+              disabled={isApproving || !isJsonValid}
+              className={`${styles.approveBtn} ${!isJsonValid || isApproving ? styles.disabled : ""}`}
+            >
+              <Check size={16} /> {isApproving ? "Applying..." : "✓ Apply Change"}
             </button>
-          ) : (
-            <div className={styles.rejectReasonContainer}>
-              <input
-                type="text"
-                placeholder="Reason (optional)"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                className={styles.rejectInput}
-                autoFocus
-              />
-              <button
-                onClick={handleReject}
-                disabled={isRejecting}
-                className={styles.rejectConfirmBtn}
-              >
-                Confirm
-              </button>
-            </div>
-          )}
 
-          <button
-            onClick={() => setIsDismissed(true)}
-            className={styles.closeBtn}
-          >
-            ✕ Close
-          </button>
-        </div>
+            {!rejectReasonOpen ? (
+              <button onClick={handleReject} className={styles.rejectBtn}>
+                <X size={16} /> ✗ Reject
+              </button>
+            ) : (
+              <div className={styles.rejectReasonContainer}>
+                <input
+                  type="text"
+                  placeholder="Reason (optional)"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className={styles.rejectInput}
+                  autoFocus
+                />
+                <button
+                  onClick={handleReject}
+                  disabled={isRejecting}
+                  className={styles.rejectConfirmBtn}
+                >
+                  Confirm
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setIsDismissed(true)}
+              className={styles.closeBtn}
+            >
+              ✕ Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

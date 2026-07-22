@@ -7,7 +7,8 @@ import { buildSystemPrompt } from "../../../../chat-agent/lib/prompt-builder";
 import { executeTool } from "../../../../chat-agent/lib/tool-executor";
 import { toolCallLog } from "../../../../chat-agent/db/queries/tool-call-log";
 import { pendingPatchesDB } from "../../../../chat-agent/db/queries/pending-patches";
-import { queuePatch } from "../../../../chat-agent/lib/dsl-patcher";
+import { pendingBatchesDB } from "../../../../chat-agent/db/queries/pending-batches";
+import { queuePatch, queueBatch } from "../../../../chat-agent/lib/dsl-patcher";
 import { db } from "../../../../chat-agent/db/client";
 import { logger } from "../../../../chat-agent/lib/logger";
 import { getUserId } from "../../../../chat-agent/lib/getUserId";
@@ -321,6 +322,52 @@ export async function POST(req: Request) {
                 send({
                   type: "patch_proposed",
                   patch: pending,
+                  tool_call_id: toolCall.id,
+                });
+                send({ type: "awaiting_approval" });
+                controller.close();
+                return;
+              }
+            } else if (toolCall.function.name === "propose_dsl_batch") {
+              const pending = await queueBatch(args, effectiveSessionId);
+              if ("error" in pending) {
+                toolResults.push({
+                  tool_call_id: toolCall.id,
+                  content: `Batch validation failed: ${pending.error}`,
+                });
+              } else {
+                await pendingBatchesDB.save(pending);
+
+                // Update task context for pending batch
+                try {
+                  const {
+                    sessionOps,
+                  } = require("../../../../chat-agent/db/queries/dsl-history");
+                  await sessionOps.saveTask(userId, micrositeId, {
+                    intent: "DSL batch modification proposed",
+                    pendingPatch: true,
+                  });
+                } catch (e) {
+                  logger.warn("Failed to save task context", { error: (e as Error).message });
+                }
+
+                toolResults.push({
+                  tool_call_id: toolCall.id,
+                  content: `Batch queued for user approval. Batch ID: ${pending.id}. Do NOT proceed until you receive the approval confirmation.`,
+                });
+
+                send({
+                  type: "sync_messages",
+                  messages: [
+                    ...currentMessages,
+                    assistantMsg,
+                    ...toolResults.map((r) => ({ role: "tool", ...r })),
+                  ],
+                });
+
+                send({
+                  type: "batch_proposed",
+                  batch: pending,
                   tool_call_id: toolCall.id,
                 });
                 send({ type: "awaiting_approval" });

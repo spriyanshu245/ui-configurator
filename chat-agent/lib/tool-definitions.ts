@@ -124,6 +124,89 @@ export const DSL_TOOLS = [
   {
     type: "function",
     function: {
+      name: "propose_dsl_batch",
+      description: `Propose changes spanning MULTIPLE pages as a single atomic batch.
+        Use this INSTEAD OF propose_dsl_patch when the user's request spans more than
+        one page, OR when it requires saving changes on the current page and then
+        navigating to another page. All patches in the batch are validated up-front
+        before any of them are applied. The user approves (or rejects) the entire
+        batch as one unit — there is no partial/per-page approval. If applying the
+        batch fails partway through, every page that was already written is
+        automatically reverted back to its pre-batch state (auto-revert/compensation),
+        so the microsite is never left partially modified.
+        CRITICAL RULES:
+        - NEVER modify DSL directly in text. Always use this tool for multi-page changes.
+        - This does NOT apply anything. The user must approve the whole batch first.
+        - Each operation must target a different page via page_path.
+        - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
+        - Always include a clear human-readable description and preview_hint per page.
+        - Validate all JSON Pointer paths (RFC 6901) before proposing.
+        - Set navigate_to if, after approval, the user should land on a specific page
+          (e.g. the last page touched by the batch).`,
+      parameters: {
+        type: "object",
+        properties: {
+          microsite_id: { type: "string" },
+          operations: {
+            type: "array",
+            description: "One entry per page affected by this batch.",
+            items: {
+              type: "object",
+              properties: {
+                page_path: { type: "string" },
+                patch: {
+                  type: "array",
+                  description: "RFC 6902 JSON Patch operations array for this page",
+                  items: {
+                    type: "object",
+                    properties: {
+                      op: {
+                        type: "string",
+                        enum: ["add", "remove", "replace", "move", "copy", "test"],
+                      },
+                      path: { type: "string", description: "RFC 6901 JSON Pointer" },
+                      value: { description: "New value (not needed for remove)" },
+                      from: {
+                        type: "string",
+                        description: "Source path for move/copy",
+                      },
+                    },
+                    required: ["op", "path"],
+                  },
+                },
+                description: {
+                  type: "string",
+                  description: "Human-readable summary: what changes and why on this page",
+                },
+                preview_hint: {
+                  type: "string",
+                  description: "What the user will visually see change on this page",
+                },
+                affected_components: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "List of component IDs or types being modified on this page",
+                },
+              },
+              required: ["page_path", "patch", "description", "preview_hint", "affected_components"],
+            },
+          },
+          navigate_to: {
+            type: "string",
+            description: "Optional page_path to navigate the user to after the batch is approved.",
+          },
+          batch_description: {
+            type: "string",
+            description: "Human-readable summary of the whole batch, shown to the user before approval.",
+          },
+        },
+        required: ["microsite_id", "operations", "batch_description"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_dsl_history",
       description:
         "Get the last N DSL snapshots for a page. Use to understand recent changes or to prepare a rollback.",

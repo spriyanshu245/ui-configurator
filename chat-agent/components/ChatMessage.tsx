@@ -1,10 +1,11 @@
 import React from 'react';
 import { DslDiffViewer } from './DslDiffViewer';
+import { DslBatchDiffViewer } from './DslBatchDiffViewer';
 import { RollbackPanel } from './RollbackPanel';
 import { Bot, User } from 'lucide-react';
 import styles from './ChatMessage.module.scss';
 
-export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback }: any) {
+export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch }: any) {
   const isUser = message.role === 'user';
 
   return (
@@ -30,6 +31,17 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback }
               toolCallId={message.tool_call_id}
               onApprove={onApprove}
               onReject={onReject}
+            />
+          </div>
+        )}
+
+        {message.type === 'batch_proposed' && message.batch && (
+          <div className={styles.patchContainer}>
+            <DslBatchDiffViewer
+              batch={message.batch}
+              toolCallId={message.tool_call_id}
+              onApproveBatch={onApproveBatch}
+              onRejectBatch={onRejectBatch}
             />
           </div>
         )}

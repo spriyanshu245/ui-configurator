@@ -37,12 +37,30 @@ type ProposedRollback = {
   reason?: string;
 };
 
+type PendingBatchOperation = {
+  pagePath: string;
+  description?: string;
+  previewHint?: string;
+  affectedComponents?: string[];
+  currentDsl: unknown;
+  patchedDsl: unknown;
+  status?: string;
+};
+
+type PendingBatch = {
+  id: string;
+  batchDescription?: string;
+  navigateTo?: string | null;
+  operations: PendingBatchOperation[];
+};
+
 type ChatPanelMessage = ChatMessageType & {
   tool_call_id?: string;
   tool_calls?: ToolCall[];
-  type?: "patch_proposed" | "rollback_proposed";
+  type?: "patch_proposed" | "rollback_proposed" | "batch_proposed";
   patch?: PendingPatch;
   rollback?: ProposedRollback;
+  batch?: PendingBatch;
   _isStatus?: boolean;
   _isStreaming?: boolean;
 };
@@ -104,7 +122,7 @@ const toRouteMessages = (messages: ChatPanelMessage[]): RouteMessage[] =>
   }));
 
 export function ChatPanel() {
-  const { microsite, activePageCode } = useMicrosite();
+  const { microsite, activePageCode, setActivePage } = useMicrosite();
   const micrositeId = microsite.code?.trim();
   // Per-tab id — only ever logged (tool_call_log provenance), never used as the
   // query key for session state.
@@ -356,6 +374,7 @@ export function ChatPanel() {
               content?: string;
               patch?: PendingPatch;
               rollback?: ProposedRollback;
+              batch?: PendingBatch;
               tool_call_id?: string;
               message?: string;
               messages?: Partial<ChatPanelMessage>[];
@@ -382,6 +401,22 @@ export function ChatPanel() {
                 ...assistantMessage,
                 type: "patch_proposed",
                 patch: data.patch,
+                tool_call_id: data.tool_call_id,
+                _isStreaming: false,
+              };
+              setMessages(
+                hasSyncedMessages
+                  ? replaceAssistantMessage(syncedMessages, assistantMessage)
+                  : [...syncedMessages, assistantMessage],
+              );
+              return;
+            }
+
+            if (data.type === "batch_proposed" && data.batch) {
+              assistantMessage = {
+                ...assistantMessage,
+                type: "batch_proposed",
+                batch: data.batch,
                 tool_call_id: data.tool_call_id,
                 _isStreaming: false,
               };
@@ -699,6 +734,110 @@ export function ChatPanel() {
     }
   };
 
+  const handleApproveBatch = async (batchId: string, toolCallId?: string) => {
+    addStatusMessage("Approving batch...");
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const token = sessionStorage.getItem("accessToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch("/api/patch/approve-batch", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ batchId, toolCallId }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        const compensationNote =
+          Array.isArray(data?.compensationErrors) && data.compensationErrors.length > 0
+            ? ` Compensation also failed on: ${data.compensationErrors
+                .map((c: any) => c.pagePath)
+                .join(", ")}. Manual verification required.`
+            : "";
+        const errMsg =
+          (typeof data?.error === "string" ? data.error : "Batch approval failed.") +
+          compensationNote;
+        throw new Error(errMsg);
+      }
+
+      const toolMessage = createMessage({
+        role: "tool",
+        tool_call_id: toolCallId,
+        name: "propose_dsl_batch",
+        content: JSON.stringify({
+          success: true,
+          message: "Batch applied successfully",
+        }),
+      });
+
+      const assistantMessage = createMessage({
+        role: "assistant",
+        content:
+          "DSL batch approved and saved successfully! I've updated all affected pages. You can reload the preview to see the changes.",
+      });
+
+      const nextMessages = [
+        ...messages.filter((message) => !message._isStatus),
+        toolMessage,
+        assistantMessage,
+      ];
+
+      setMessages(nextMessages);
+
+      if (data.navigateTo) {
+        setActivePage(data.navigateTo);
+      }
+    } catch (error) {
+      console.error(error);
+      appendAssistantMessage(
+        error instanceof Error ? error.message : "Batch approval failed.",
+      );
+    }
+  };
+
+  const handleRejectBatch = async (batchId: string, reason?: string) => {
+    addStatusMessage(`Rejecting batch: ${reason || "No reason"}`);
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const token = sessionStorage.getItem("accessToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch("/api/patch/reject-batch", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ batchId, reason }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : "Batch rejection failed.",
+        );
+      }
+
+      const nextMessages = messages.filter((message) => !message._isStatus);
+      setMessages(nextMessages);
+    } catch (error) {
+      console.error(error);
+      appendAssistantMessage(
+        error instanceof Error ? error.message : "Batch rejection failed.",
+      );
+    }
+  };
+
   const handleRollback = async (historyId: string) => {
     if (!micrositeId || !activePageCode) {
       appendAssistantMessage(
@@ -838,6 +977,8 @@ export function ChatPanel() {
               onReject={handleReject}
               onEdit={() => {}}
               onRollback={handleRollback}
+              onApproveBatch={handleApproveBatch}
+              onRejectBatch={handleRejectBatch}
             />
           ))}
         {isLoading && (

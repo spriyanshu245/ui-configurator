@@ -99,6 +99,33 @@ export function updateDslCache(pagePath: string, dsl: any) {
   dslCache.set(pagePath, dsl);
 }
 
+/**
+ * Load the current DSL for a page: cache first, else fetch the microsite's
+ * page list to resolve the pageVersion, then fetch the page DSL and populate
+ * the cache. Shared by queuePatch and queueBatch. Read-only w.r.t. the cache
+ * beyond this population step — callers must NOT write intermediate applied
+ * state into dslCache themselves.
+ *
+ * Throws on failure (page not found / fetch error) — callers decide how to
+ * surface that (queuePatch/queueBatch both translate it into an {error} return).
+ */
+async function loadCurrentDsl(microsite_id: string, page_path: string): Promise<any> {
+  const cached = dslCache.get(page_path);
+  if (cached) return cached;
+
+  const micrositeData = await fetchMicrositePages(microsite_id);
+  const page = micrositeData?.pages?.find(
+    (p: any) => p.pageCode === page_path,
+  );
+  if (!page) {
+    throw new Error(`Page "${page_path}" not found in microsite "${microsite_id}"`);
+  }
+  const version = page.pageVersion || 1;
+  const currentDsl = await fetchPageDsl(page_path, version);
+  dslCache.set(page_path, currentDsl);
+  return currentDsl;
+}
+
 export async function queuePatch(args: any, sessionId: string) {
   const {
     microsite_id,
@@ -109,22 +136,11 @@ export async function queuePatch(args: any, sessionId: string) {
     affected_components,
   } = args;
 
-  let currentDsl: any = dslCache.get(page_path);
-  if (!currentDsl) {
-    try {
-      const micrositeData = await fetchMicrositePages(microsite_id);
-      const page = micrositeData?.pages?.find(
-        (p: any) => p.pageCode === page_path,
-      );
-      if (!page) {
-        return { error: `Page "${page_path}" not found in microsite "${microsite_id}"` };
-      }
-      const version = page.pageVersion || 1;
-      currentDsl = await fetchPageDsl(page_path, version);
-      dslCache.set(page_path, currentDsl);
-    } catch (err: any) {
-      return { error: "Failed to fetch current DSL: " + err.message };
-    }
+  let currentDsl: any;
+  try {
+    currentDsl = await loadCurrentDsl(microsite_id, page_path);
+  } catch (err: any) {
+    return { error: err.message.startsWith("Page ") ? err.message : "Failed to fetch current DSL: " + err.message };
   }
 
   let patchedDsl;
@@ -153,5 +169,118 @@ export async function queuePatch(args: any, sessionId: string) {
     currentDsl,
     patchedDsl,
     sessionId,
+  };
+}
+
+export interface BatchOperationInput {
+  page_path: string;
+  patch: Operation[];
+  description: string;
+  preview_hint?: string;
+  affected_components?: string[];
+}
+
+export interface QueuedBatchOperation {
+  pagePath: string;
+  description: string;
+  previewHint?: string;
+  affectedComponents?: string[];
+  currentDsl: any;
+  patchedDsl: any;
+  patch: Operation[];
+  status: "pending";
+}
+
+/**
+ * Validate and stage a multi-page batch of patches.
+ *
+ * PASS 1: for every operation, load the current DSL (cache or backend), apply
+ * the patch, and validate/assign ids. On ANY failure, return {error} immediately
+ * — nothing is queued and dslCache is left untouched (loadCurrentDsl may still
+ * populate the cache with unmodified "current" DSLs it fetched, which is fine —
+ * only the PATCHED/intermediate state must never be written to the cache here).
+ *
+ * PASS 2: only reached if every operation validated. Returns the full pending
+ * batch shape for persistence to pending_batches.
+ */
+export interface QueuedBatch {
+  id: string;
+  micrositeId: string;
+  batchDescription: string;
+  navigateTo: string | null;
+  operations: QueuedBatchOperation[];
+  proposedAt: string;
+  sessionId: string;
+  status: "pending";
+  expiresAt: Date;
+}
+
+export async function queueBatch(
+  args: any,
+  sessionId: string,
+): Promise<QueuedBatch | { error: string }> {
+  const {
+    microsite_id,
+    operations,
+    navigate_to,
+    batch_description,
+  } = args;
+
+  if (!Array.isArray(operations) || operations.length === 0) {
+    return { error: "Batch must include at least one operation." };
+  }
+
+  const validated: QueuedBatchOperation[] = [];
+
+  // PASS 1: validate everything before queuing anything.
+  for (const op of operations as BatchOperationInput[]) {
+    const { page_path, patch, description, preview_hint, affected_components } = op;
+
+    let currentDsl: any;
+    try {
+      currentDsl = await loadCurrentDsl(microsite_id, page_path);
+    } catch (err: any) {
+      const msg = err?.message?.startsWith("Page ")
+        ? err.message
+        : `Failed to fetch current DSL: ${err?.message}`;
+      return { error: `Validation failed on page "${page_path}": ${msg}` };
+    }
+
+    let patchedDsl;
+    try {
+      patchedDsl = applyPatch(currentDsl, patch);
+    } catch (err: any) {
+      return { error: `Validation failed on page "${page_path}": ${err.message}` };
+    }
+
+    try {
+      validateAndAssignIds(patchedDsl);
+    } catch (err: any) {
+      return { error: `Validation failed on page "${page_path}": ${err.message}` };
+    }
+
+    validated.push({
+      pagePath: page_path,
+      description,
+      previewHint: preview_hint,
+      affectedComponents: affected_components,
+      currentDsl,
+      patchedDsl,
+      patch,
+      status: "pending",
+    });
+  }
+
+  // PASS 2: everything validated — stage the batch for approval.
+  return {
+    id: uuidv4(),
+    micrositeId: microsite_id,
+    batchDescription: batch_description,
+    navigateTo: navigate_to || null,
+    operations: validated,
+    proposedAt: new Date().toISOString(),
+    sessionId,
+    status: "pending",
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   };
 }

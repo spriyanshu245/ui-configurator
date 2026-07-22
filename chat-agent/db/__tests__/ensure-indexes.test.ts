@@ -25,6 +25,7 @@ const COLLECTION_NAMES = [
   "sessions",
   "page_ops",
   "pending_patches",
+  "pending_batches",
   "skill_entries",
   "user_preferences",
   "temp_dsl",
@@ -59,6 +60,9 @@ describe("ensureIndexes", () => {
       { collection: "page_ops", name: "page_ops_lookup" },
       { collection: "pending_patches", name: "pending_patches_id" },
       { collection: "pending_patches", name: "pending_patches_ttl" },
+      { collection: "pending_batches", name: "pending_batches_id" },
+      { collection: "pending_batches", name: "pending_batches_ttl" },
+      { collection: "pending_batches", name: "pending_batches_microsite_status" },
       { collection: "skill_entries", name: "skill_entries_mergekey" },
       { collection: "skill_entries", name: "skill_entries_compile_order" },
       { collection: "user_preferences", name: "user_preferences_key" },
@@ -102,6 +106,13 @@ describe("ensureIndexes", () => {
       (call) => call[1]?.name === "temp_dsl_ttl",
     );
     expect(tempDslTtlCall?.[1]?.expireAfterSeconds).toBe(3600);
+
+    const pendingBatchesCalls =
+      collections["pending_batches"].createIndex.mock.calls;
+    const batchTtlCall = pendingBatchesCalls.find(
+      (call) => call[1]?.name === "pending_batches_ttl",
+    );
+    expect(batchTtlCall?.[1]?.expireAfterSeconds).toBe(0);
   });
 
   it("throws if a mocked dsl_history index reports expireAfterSeconds (guard against manual TTL mistakes)", async () => {

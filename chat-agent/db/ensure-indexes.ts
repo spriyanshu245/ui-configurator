@@ -41,6 +41,21 @@ export async function ensureIndexes(): Promise<void> {
       { name: 'pending_patches_ttl', expireAfterSeconds: 0 }
     ),
 
+    db.collection('pending_batches').createIndex(
+      { id: 1 },
+      { name: 'pending_batches_id', unique: true }
+    ),
+    db.collection('pending_batches').createIndex(
+      { expiresAt: 1 },
+      { name: 'pending_batches_ttl', expireAfterSeconds: 0 }
+    ),
+    // Backs the concurrent-lock check in the atomic batch-approve route: find any
+    // other batch for this microsite that is currently mid-flight ("applying").
+    db.collection('pending_batches').createIndex(
+      { micrositeId: 1, status: 1 },
+      { name: 'pending_batches_microsite_status' }
+    ),
+
     // sparse:true so existing docs without mergeKey don't break the unique build.
     // NOTE: mergeKey is not yet populated by skill-entries.ts logic — that's Workstream D's job.
     db.collection('skill_entries').createIndex(
