@@ -29,6 +29,7 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
               previewHint={message.patch.previewHint}
               patchId={message.patch.id}
               toolCallId={message.tool_call_id}
+              patch={message.patch.patch}
               onApprove={onApprove}
               onReject={onReject}
             />

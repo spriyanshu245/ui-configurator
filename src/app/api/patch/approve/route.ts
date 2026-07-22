@@ -7,6 +7,7 @@ import { sessionsOps } from "../../../../../chat-agent/db/queries/sessions";
 import { putPageDsl } from "../../../../../chat-agent/lib/backend-sync";
 import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
+import { runSkillReflection } from "../../../../../chat-agent/lib/skill-updater";
 
 export async function POST(req: Request) {
   try {
@@ -100,6 +101,13 @@ export async function POST(req: Request) {
     } catch (e) {
       logger.warn("Failed to append op for approval", { error: (e as Error).message });
     }
+
+    void runSkillReflection({
+      userRequest: pending.description,
+      patchApplied: pending.patch,
+      patchedDsl: pending.patchedDsl,
+      sourcePatchId: pending.id,
+    }).catch((e) => logger.error("skill reflection failed", { error: e.message }));
 
     await pendingPatchesDB.delete(patchId);
 

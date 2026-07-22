@@ -1,0 +1,47 @@
+.chunk {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.chunkHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.chunkLabel {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chunkBadge {
+  flex-shrink: 0;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chunkBody {
+  padding: 6px;
+  border-top: 1px solid #e2e8f0;
+}

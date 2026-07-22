@@ -36,11 +36,19 @@ jest.mock("../lib/backend-sync", () => ({
   putPageDsl: jest.fn().mockResolvedValue({ latestDsl: {} }),
 }));
 
+// Skill reflection is fire-and-forget and lives behind its own module chain
+// (which ultimately reaches the real MongoDB client). Mock it at the
+// boundary the route imports so this test never touches the DB layer.
+jest.mock("../lib/skill-updater", () => ({
+  runSkillReflection: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { POST } from "../../src/app/api/patch/approve/route";
 import { pendingPatchesDB } from "../db/queries/pending-patches";
 import { dslHistory, sessionOps } from "../db/queries/dsl-history";
 import { sessionsOps } from "../db/queries/sessions";
 import { putPageDsl } from "../lib/backend-sync";
+import { runSkillReflection } from "../lib/skill-updater";
 
 const getMock = pendingPatchesDB.get as jest.Mock;
 const deleteMock = pendingPatchesDB.delete as jest.Mock;
@@ -50,6 +58,7 @@ const saveTaskMock = sessionOps.saveTask as jest.Mock;
 const saveMessageMock = sessionOps.saveMessage as jest.Mock;
 const appendHistoryRefMock = sessionsOps.appendHistoryRef as jest.Mock;
 const putPageDslMock = putPageDsl as jest.Mock;
+const runSkillReflectionMock = runSkillReflection as jest.Mock;
 
 function makeReq(body: any) {
   return new Request("https://example.test/api/patch/approve", {
@@ -71,6 +80,8 @@ describe("POST /api/patch/approve — integrity fix", () => {
     appendHistoryRefMock.mockClear();
     putPageDslMock.mockClear();
     putPageDslMock.mockResolvedValue({ latestDsl: {} });
+    runSkillReflectionMock.mockClear();
+    runSkillReflectionMock.mockResolvedValue(undefined);
   });
 
   it("records patchApplied = pending.patch and wasEdited:false when no editedDsl is supplied", async () => {
@@ -171,5 +182,51 @@ describe("POST /api/patch/approve — integrity fix", () => {
         pagePath: "/home",
       }),
     );
+  });
+
+  it("fires skill reflection (fire-and-forget) with the pending patch's description/patch/patchedDsl/id", async () => {
+    const currentDsl = { id: "root", type: "page", components: [{ id: "a", type: "text", properties: { value: "old" } }] };
+    const patch = [{ op: "replace", path: "/components/0/properties/value", value: "new" }];
+    const patchedDsl = { id: "root", type: "page", components: [{ id: "a", type: "text", properties: { value: "new" } }] };
+
+    getMock.mockResolvedValue({
+      id: "patch4",
+      micrositeId: "m1",
+      pagePath: "/home",
+      patch,
+      currentDsl,
+      patchedDsl,
+      description: "Change text",
+      sessionId: "s1",
+    });
+
+    const res = await POST(makeReq({ patchId: "patch4" }));
+    expect(res.status).toBe(200);
+
+    expect(runSkillReflectionMock).toHaveBeenCalledWith({
+      userRequest: "Change text",
+      patchApplied: patch,
+      patchedDsl,
+      sourcePatchId: "patch4",
+    });
+  });
+
+  it("does not fail or block the approval response when skill reflection rejects", async () => {
+    const currentDsl = { id: "root", type: "page", components: [] };
+    getMock.mockResolvedValue({
+      id: "patch5",
+      micrositeId: "m1",
+      pagePath: "/home",
+      patch: [],
+      currentDsl,
+      description: "No-op",
+      sessionId: "s1",
+    });
+    runSkillReflectionMock.mockRejectedValue(new Error("reflection boom"));
+
+    const res = await POST(makeReq({ patchId: "patch5" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
   });
 });

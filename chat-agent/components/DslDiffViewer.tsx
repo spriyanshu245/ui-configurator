@@ -1,11 +1,34 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import type { Operation } from "fast-json-patch";
 import { Differ, Viewer } from "json-diff-kit";
 import "json-diff-kit/dist/viewer.css";
 import CodeMirror from "@uiw/react-codemirror";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { lintGutter, linter } from "@codemirror/lint";
 import { Check, X, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
+import { scopeDiffToPatch } from "../lib/scope-diff";
+import { DiffChunk } from "./DiffChunk";
 import styles from "./DslDiffViewer.module.scss";
+
+interface DslDiffViewerProps {
+  currentDsl: unknown;
+  patchedDsl: unknown;
+  description?: string;
+  previewHint?: string;
+  patchId?: string;
+  toolCallId?: string;
+  /**
+   * Optional RFC-6902 ops that produced patchedDsl from currentDsl. When
+   * present, the View Diff tab is scoped down to per-component chunks
+   * derived from these ops. When absent (e.g. the batch viewer, which
+   * doesn't carry a raw patch), falls back to the original whole-document
+   * diff view.
+   */
+  patch?: Operation[];
+  onApprove?: (patchId: string | undefined, toolCallId: string | undefined, dsl: any) => void | Promise<void>;
+  onReject?: (patchId: string | undefined, reason: string, toolCallId: string | undefined) => void | Promise<void>;
+  hideActions?: boolean;
+}
 
 export function DslDiffViewer({
   currentDsl,
@@ -14,10 +37,11 @@ export function DslDiffViewer({
   previewHint,
   patchId,
   toolCallId,
+  patch,
   onApprove,
   onReject,
   hideActions = false,
-}: any) {
+}: DslDiffViewerProps) {
   const [activeTab, setActiveTab] = useState<"diff" | "edit">("diff");
   const [editedDsl, setEditedDsl] = useState<string>(() =>
     JSON.stringify(patchedDsl, null, 2),
@@ -46,6 +70,9 @@ export function DslDiffViewer({
     [],
   );
 
+  // Whole-document diff — used only as a fallback when no `patch` prop is
+  // supplied (e.g. the batch viewer reuses this component without the raw
+  // RFC-6902 ops), preserving the original pre-scoping behavior.
   const diff = useMemo(() => {
     try {
       return differ.diff(currentDsl, parsedEditedDsl);
@@ -54,13 +81,31 @@ export function DslDiffViewer({
     }
   }, [currentDsl, parsedEditedDsl, differ]);
 
-  // Try to find IDs in the patch diff
+  // Scoped, per-component diff chunks derived from the patch ops. Recomputes
+  // whenever the user edits the raw patch in the "Edit Patch" tab, since
+  // parsedEditedDsl feeds into it.
+  const chunks = useMemo(() => {
+    if (!patch || patch.length === 0) return null;
+    try {
+      return scopeDiffToPatch(currentDsl, parsedEditedDsl, patch);
+    } catch (e) {
+      return null;
+    }
+  }, [currentDsl, parsedEditedDsl, patch]);
+
+  // Component ids/types touched by the scoped chunks, derived from the real
+  // chunk data (replaces the previous empty no-op stub).
   const affectedComponents = useMemo(() => {
+    if (!chunks) return [];
     const ids = new Set<string>();
-    // Since we don't have perfect extraction, we could regex the editedDsl string,
-    // but without explicit structure, it's safer to leave this lightweight or skip if unneeded.
+    for (const chunk of chunks) {
+      const node = (chunk.after ?? chunk.before) as any;
+      if (node && typeof node === "object" && typeof node.id === "string") {
+        ids.add(node.type ? `${node.id} (${node.type})` : node.id);
+      }
+    }
     return Array.from(ids);
-  }, [diff]);
+  }, [chunks]);
 
   useEffect(() => {
     if (activeTab === "diff" && diffContainerRef.current) {
@@ -78,7 +123,10 @@ export function DslDiffViewer({
         }
       }, 100);
     }
-  }, [activeTab, diff]);
+    // Depends on `chunks` (scoped view) as well as `diff` (whole-doc
+    // fallback view) since either may be what's actually rendered in the DOM
+    // under diffContainerRef.
+  }, [activeTab, diff, chunks]);
 
   const goToNextChange = () => {
     if (changeNodes.length === 0) return;
@@ -116,7 +164,7 @@ export function DslDiffViewer({
     if (!isJsonValid) return;
     setIsApproving(true);
     try {
-      await onApprove(patchId, toolCallId, parsedEditedDsl);
+      await onApprove?.(patchId, toolCallId, parsedEditedDsl);
     } finally {
       setIsApproving(false);
     }
@@ -129,7 +177,7 @@ export function DslDiffViewer({
     }
     setIsRejecting(true);
     try {
-      await onReject(
+      await onReject?.(
         patchId,
         rejectReason || "User rejected manually",
         toolCallId,
@@ -174,7 +222,21 @@ export function DslDiffViewer({
       <div className={styles.diffArea} ref={diffContainerRef}>
         {activeTab === "diff" && (
           <div className={styles.diffTabContent}>
-            <Viewer diff={diff} />
+            {chunks ? (
+              chunks.length > 0 ? (
+                chunks.map((chunk) => (
+                  <DiffChunk
+                    key={chunk.key}
+                    chunk={chunk}
+                    defaultOpen={chunks.length <= 3}
+                  />
+                ))
+              ) : (
+                <Viewer diff={diff} />
+              )
+            ) : (
+              <Viewer diff={diff} />
+            )}
           </div>
         )}
 
