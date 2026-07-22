@@ -149,6 +149,7 @@ export async function queuePatch(args: any, sessionId: string) {
     previewHint: preview_hint,
     affectedComponents: affected_components,
     proposedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     currentDsl,
     patchedDsl,
     sessionId,

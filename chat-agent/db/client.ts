@@ -1,4 +1,5 @@
 import { MongoClient, Db } from "mongodb";
+import { ensureIndexes } from "./ensure-indexes";
 
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const dbName = process.env.MONGODB_DB_NAME || "layoutX";
@@ -48,4 +49,13 @@ try {
   console.log(`Database "${dbName}" initialized successfully!`);
 } catch (initErr) {
   console.error("Warning: Failed to perform database initialization write:", (initErr as Error).message);
+}
+
+// Ensure all required indexes exist across collections (idempotent, safe to re-run).
+try {
+  console.log("Ensuring MongoDB indexes...");
+  await ensureIndexes();
+  console.log("MongoDB indexes ensured successfully!");
+} catch (indexErr) {
+  console.error("Warning: Failed to ensure MongoDB indexes:", (indexErr as Error).message);
 }

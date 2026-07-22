@@ -45,7 +45,7 @@ export async function executeTool(name: string, args: any) {
       return { data };
     }
     case "get_dsl_history":
-      return await dslHistory.getHistory(
+      return await dslHistory.getHistorySummaries(
         args.microsite_id,
         args.page_path,
         args.limit,

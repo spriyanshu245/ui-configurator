@@ -10,14 +10,6 @@ const TEMP_COLLECTION = 'temp_dsl';
 
 export const tempDslOps = {
   /**
-   * Ensure TTL index exists. Documents expire 1 hour (3600 seconds) after createdAt.
-   */
-  initIndex: async () => {
-    const col = db.collection(TEMP_COLLECTION);
-    await col.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 });
-  },
-
-  /**
    * Store the full DSL payload keyed by a toolCallId.
    */
   storeDsl: async (toolCallId: string, dsl: any) => {

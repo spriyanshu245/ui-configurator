@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { db } from "../db/client";
+import { logger } from "./logger";
 
 import { fetchMicrositePages } from "./microsite-loader";
 
@@ -25,7 +26,7 @@ export async function buildSystemPrompt(context: any): Promise<string> {
     const preferencesCollection = db.collection("user_preferences");
     preferences = (await preferencesCollection.find({}).toArray()) as unknown as { key: string; value: string }[];
   } catch (e) {
-    console.error("Failed to fetch user preferences", e);
+    logger.error("Failed to fetch user preferences", { error: (e as Error).message });
   }
 
   let allPagesContent = "";
@@ -44,9 +45,9 @@ ${JSON.stringify(p, null, 2)}
         .join("\n");
     }
   } catch (e) {
-    console.error(
+    logger.error(
       "Failed to fetch initial microsite data for system prompt",
-      e,
+      { error: (e as Error).message },
     );
   }
 
@@ -57,7 +58,7 @@ ${JSON.stringify(p, null, 2)}
       componentRegistryContent = fs.readFileSync(registryPath, "utf-8");
     }
   } catch (e) {
-    console.error("Failed to read component registry", e);
+    logger.error("Failed to read component registry", { error: (e as Error).message });
   }
 
   const taskContext = context.taskContext || {};

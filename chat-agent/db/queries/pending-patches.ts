@@ -13,7 +13,8 @@ export const pendingPatchesDB = {
       affectedComponents: patch.affectedComponents,
       currentDsl: patch.currentDsl,
       patchedDsl: patch.patchedDsl,
-      proposedAt: patch.proposedAt
+      proposedAt: patch.proposedAt,
+      expiresAt: patch.expiresAt || null
     });
   },
 

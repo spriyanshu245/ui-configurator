@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pendingPatchesDB } from '../../../../../chat-agent/db/queries/pending-patches';
+import { logger } from '../../../../../chat-agent/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       });
       await sessionOps.saveTask(userId, pending.micrositeId, { intent: "DSL modification rejected", pendingPatch: false });
     } catch (e) {
-      console.error("Failed to append op for rejection", e);
+      logger.error("Failed to append op for rejection", { error: (e as Error).message });
     }
 
     await pendingPatchesDB.delete(patchId);

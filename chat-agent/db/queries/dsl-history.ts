@@ -34,7 +34,7 @@ export const dslHistory = {
     // Prune to keep only the last 3 entries for this (micrositeId, pagePath) combination
     const toDelete = await col.find(
       { micrositeId: entry.micrositeId, pagePath: entry.pagePath },
-      { sort: { createdAt: -1 }, skip: 3 }
+      { sort: { createdAt: -1 }, skip: 3, projection: { _id: 1 } }
     ).toArray();
 
     if (toDelete.length > 0) {
@@ -63,6 +63,29 @@ export const dslHistory = {
       approvedBy: row.approvedBy,
       createdAt: row.createdAt
     })) as DslHistoryEntry[];
+  },
+
+  /**
+   * Same lookup as getHistory but omits dslSnapshot, which can be large.
+   * Use this when only summary metadata is needed (e.g. listing history for the UI/tools).
+   */
+  getHistorySummaries: async (micrositeId: string, pagePath: string, limit: number = 3) => {
+    const col = db.collection('dsl_history');
+    const rows = await col.find(
+      { micrositeId, pagePath },
+      { sort: { createdAt: -1 }, limit, projection: { dslSnapshot: 0 } }
+    ).toArray();
+
+    return rows.map(row => ({
+      id: row.id,
+      micrositeId: row.micrositeId,
+      pagePath: row.pagePath,
+      operation: row.operation,
+      patchApplied: row.patchApplied,
+      description: row.description,
+      approvedBy: row.approvedBy,
+      createdAt: row.createdAt
+    })) as Omit<DslHistoryEntry, 'dslSnapshot'>[];
   }
 };
 

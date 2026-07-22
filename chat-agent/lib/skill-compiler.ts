@@ -1,22 +1,23 @@
 import { skillEntries } from "../db/queries/skill-entries";
 import * as fs from "fs";
 import * as path from "path";
+import { logger } from "./logger";
 
 export async function compileAgentSkill() {
   const entries = await skillEntries.findAll({
     orderBy: { category: "asc", usageCount: "desc" },
   });
 
-  let md = "# Agent DSL Knowledge Basenn";
-  md += `_Compiled on ${new Date().toISOString()} from ${entries.length} entries_nn---nn`;
+  let md = "# Agent DSL Knowledge Base";
+  md += `_Compiled on ${new Date().toISOString()} from ${entries.length} entries_---`;
 
   const categories = [...new Set(entries.map((e) => e.category))];
 
   categories.forEach((cat) => {
-    md += `## ${cat.toUpperCase()}nn`;
+    md += `## ${cat.toUpperCase()}`;
     const catEntries = entries.filter((e) => e.category === cat);
     catEntries.forEach((entry) => {
-      md += `### ${entry.title} (Confidence: ${entry.confidence})nn${entry.content}nn`;
+      md += `### ${entry.title} (Confidence: ${entry.confidence})${entry.content}`;
     });
   });
 
@@ -29,7 +30,7 @@ export async function compileAgentSkill() {
     fs.mkdirSync(dir, { recursive: true });
   }
   fs.writeFileSync(destPath, md);
-  console.log(
+  logger.info(
     `Agent skill compiled with ${entries.length} entries into ${destPath}`,
   );
 }
