@@ -1,15 +1,18 @@
-import React from 'react';
+import React from "react";
+import styles from "./RollbackPanel.module.scss";
 
 export function RollbackPanel({ history }: any) {
   return (
-    <div style={{ marginTop: '20px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+    <div className={styles.container}>
       <h3>Rollback History</h3>
       {history && history.length > 0 ? (
         <ul>
           {history.map((h: any) => (
             <li key={h.id}>
               {h.description} - {new Date(h.createdAt).toLocaleString()}
-              <button disabled title="Coming soon">Rollback to here</button>
+              <button disabled title="Coming soon">
+                Rollback to here
+              </button>
             </li>
           ))}
         </ul>

@@ -58,7 +58,7 @@ const LoginForm = () => {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -75,9 +75,8 @@ const LoginForm = () => {
         credentials: "include",
       };
 
-      const userInfoResponse: UserInfoResponse = await apiRequest(
-        userInfoRequest
-      );
+      const userInfoResponse: UserInfoResponse =
+        await apiRequest(userInfoRequest);
       if (!userInfoResponse.userId) {
         throw new Error("Login failed: Missing UserId in userInfo response");
       }
@@ -87,7 +86,7 @@ const LoginForm = () => {
       };
       sessionStorage.setItem(
         "global.login.userDetails",
-        JSON.stringify(userDetails)
+        JSON.stringify(userDetails),
       );
 
       sessionManager.onLogin(userDetails);
@@ -149,7 +148,8 @@ const LoginForm = () => {
         if (!loginResponse.username) {
           throw new Error("Login failed: Missing username in response");
         }
-        appEnv === "development" && sessionStorage.setItem("accessToken", loginResponse.access_token);
+        appEnv === "development" &&
+          sessionStorage.setItem("accessToken", loginResponse.access_token);
         await getUserInfo(loginResponse);
       }
     } catch (error: any) {

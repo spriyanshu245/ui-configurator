@@ -24,6 +24,7 @@
   },
   "include": [
     "src",
+    "chat-agent",
     ".next/types/**/*.ts",
     "index.ts",
     ".next/dev/types/**/*.ts"

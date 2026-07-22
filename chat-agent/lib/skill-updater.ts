@@ -19,24 +19,24 @@ Extract 0-3 reusable knowledge entries. Respond ONLY with a JSON array:
 ]
 `;
 
-  try {
-    const response = await freeLLMClient.chat.completions.create({
-      model: TOOL_CAPABLE_MODEL,
-      messages: [{ role: "user", content: reflectionPrompt }],
-      max_tokens: 500,
-      temperature: 0.2,
-    });
+  // try {
+  //   const response = await freeLLMClient.chat.completions.create({
+  //     model: TOOL_CAPABLE_MODEL,
+  //     messages: [{ role: "user", content: reflectionPrompt }],
+  //     max_tokens: 500,
+  //     temperature: 0.2,
+  //   });
 
-    const entries = JSON.parse(response.choices[0].message.content ?? "[]");
+  //   const entries = JSON.parse(response.choices[0].message.content ?? "[]");
 
-    for (const entry of entries) {
-      entry.source = "agent_reflection";
-      await skillEntries.upsert(entry);
-    }
+  //   for (const entry of entries) {
+  //     entry.source = "agent_reflection";
+  //     await skillEntries.upsert(entry);
+  //   }
 
-    // Optionally trigger recompile
-    compileAgentSkill();
-  } catch (e) {
-    console.error("Reflection failed", e);
-  }
+  //   // Optionally trigger recompile
+  //   compileAgentSkill();
+  // } catch (e) {
+  //   console.error("Reflection failed", e);
+  // }
 }

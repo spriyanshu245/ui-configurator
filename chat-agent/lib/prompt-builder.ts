@@ -63,6 +63,14 @@ ${JSON.stringify(p, null, 2)}
   const taskContext = context.taskContext || {};
   const pageOps = context.pageOps || {};
 
+  const referenceDslsContent = context.referenceDsls 
+    ? `\n═══ REFERENCE DSLs ═══\n${typeof context.referenceDsls === 'string' ? context.referenceDsls : JSON.stringify(context.referenceDsls, null, 2)}\n`
+    : "";
+
+  const sessionContextData = context.sessionContext
+    ? `\n═══ SESSION DATA ═══\n${typeof context.sessionContext === 'string' ? context.sessionContext : JSON.stringify(context.sessionContext, null, 2)}\n`
+    : "";
+
   return `
 You are a DSL Page Builder Assistant for a microsite UI configurator.
 You help users read, understand, and modify microsite pages described as JSON DSL.
@@ -88,6 +96,8 @@ Microsite ID: ${context.micrositeId || "Not provided"}
 Active Page Code: ${context.pageCode || "Not provided"}
 Active Page ID: ${context.id || "Not provided"}
 ${allPagesContent}
+${referenceDslsContent}
+${sessionContextData}
 
 ═══ PRIOR CONTEXT ═══
 Last task: ${taskContext.intent || "None"}

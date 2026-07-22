@@ -9,6 +9,7 @@ import {
 import type { ChatMessage as ChatMessageType } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
 import { X, ArrowUp, Bot } from "lucide-react";
+import styles from "./ChatPanel.module.scss";
 
 type ToolCall = {
   id?: string;
@@ -96,10 +97,51 @@ export function ChatPanel() {
   const { microsite, activePageCode } = useMicrosite();
   const micrositeId = microsite.code?.trim();
   const sessionIdRef = useRef(createMessageId());
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<ChatPanelMessage[]>([]);
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAddDslModal, setShowAddDslModal] = useState(false);
+  const [dslInputText, setDslInputText] = useState("");
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionKeys, setSessionKeys] = useState<string[]>([]);
+  const [selectedSessionKeys, setSelectedSessionKeys] = useState<Set<string>>(
+    new Set(),
+  );
+
+  useEffect(() => {
+    if (!dslInputText.trim()) return;
+
+    const timeoutId = setTimeout(() => {
+      try {
+        const parsed = JSON.parse(dslInputText);
+        const formatted = JSON.stringify(parsed, null, 2);
+        if (formatted !== dslInputText) {
+          setDslInputText(formatted);
+        }
+      } catch (e) {
+        // Ignore invalid JSON
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [dslInputText]);
+
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashMenuIndex, setSlashMenuIndex] = useState(0);
+
+  const slashCommands = [
+    { command: "/abort", description: "Interrupt ongoing model request" },
+    { command: "/add-dsl", description: "Attach a reference DSL" },
+    { command: "/session", description: "Append current session data" },
+  ];
+
+  const visibleSlashCommands = slashCommands.filter((c) => {
+    const lastWord = input.split(/\s+/).pop() || "";
+    return c.command.startsWith(lastWord);
+  });
 
   const [width, setWidth] = useState(450);
   const [isResizing, setIsResizing] = useState(false);
@@ -128,6 +170,20 @@ export function ChatPanel() {
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizing]);
+
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        150,
+      )}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [input]);
 
   useEffect(() => {
     if (isOpen) {
@@ -217,9 +273,12 @@ export function ChatPanel() {
         reqHeaders["Authorization"] = `Bearer ${token}`;
       }
 
+      abortControllerRef.current = new AbortController();
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: reqHeaders,
+        signal: abortControllerRef.current.signal,
         body: JSON.stringify({
           messages: toRouteMessages(currentMessages),
           micrositeId,
@@ -322,7 +381,11 @@ export function ChatPanel() {
         if (done) break;
         parser.feed(decoder.decode(value));
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        console.log("Fetch aborted");
+        return;
+      }
       console.error(error);
       appendAssistantMessage(
         error instanceof Error
@@ -331,6 +394,7 @@ export function ChatPanel() {
       );
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -346,8 +410,128 @@ export function ChatPanel() {
 
     setMessages(nextMessages);
     setInput("");
+    setShowSlashMenu(false);
 
     void triggerAgent(nextMessages);
+  };
+
+  const executeCommand = (cmd: string) => {
+    const lastWordMatch = input.match(/\S+$/);
+    const replaceStart = lastWordMatch ? lastWordMatch.index! : input.length;
+    let baseInput = input.substring(0, replaceStart).trimEnd();
+
+    if (cmd === "/abort") {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+        appendAssistantMessage("Request aborted by user.");
+        setIsLoading(false);
+      }
+      setInput(baseInput);
+    } else if (cmd === "/add-dsl") {
+      setInput(baseInput);
+      setShowAddDslModal(true);
+    } else if (cmd === "/session") {
+      setInput(baseInput);
+      setSessionKeys(Object.keys(sessionStorage));
+      setSelectedSessionKeys(new Set());
+      setShowSessionModal(true);
+    }
+
+    setShowSlashMenu(false);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showSlashMenu && visibleSlashCommands.length > 0) {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashMenuIndex((prev) =>
+          prev > 0 ? prev - 1 : visibleSlashCommands.length - 1,
+        );
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashMenuIndex((prev) =>
+          prev < visibleSlashCommands.length - 1 ? prev + 1 : 0,
+        );
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        executeCommand(visibleSlashCommands[slashMenuIndex].command);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowSlashMenu(false);
+        return;
+      }
+    }
+
+    if (e.key === "ArrowDown" && !showSlashMenu) {
+      const cursor = e.currentTarget.selectionStart;
+      const textBefore = input.substring(0, cursor);
+      const textAfter = input.substring(cursor);
+
+      const lastOpen = textBefore.lastIndexOf("```json");
+      const nextClose = textAfter.indexOf("```");
+
+      if (lastOpen !== -1 && nextClose !== -1) {
+        e.preventDefault();
+        const target = cursor + nextClose + 3;
+        e.currentTarget.setSelectionRange(target, target);
+        return;
+      }
+    }
+
+    if (e.key === "{" && e.ctrlKey) {
+      e.preventDefault();
+      const val = input;
+      const start = e.currentTarget.selectionStart;
+      const end = e.currentTarget.selectionEnd;
+
+      const insertText = "```json\n\n```";
+      const newVal = val.substring(0, start) + insertText + val.substring(end);
+      setInput(newVal);
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(start + 8, start + 8);
+        }
+      }, 0);
+      return;
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    const lastWord = val.split(/\s+/).pop();
+    if (lastWord === "/") {
+      setShowSlashMenu(true);
+      setSlashMenuIndex(0);
+    } else if (lastWord?.startsWith("/")) {
+      setShowSlashMenu(true);
+      setSlashMenuIndex((prev) => {
+        const nextCount = slashCommands.filter((c) =>
+          c.command.startsWith(lastWord),
+        ).length;
+        return prev >= nextCount ? Math.max(0, nextCount - 1) : prev;
+      });
+    } else {
+      setShowSlashMenu(false);
+    }
   };
 
   const handleApprove = async (
@@ -369,7 +553,7 @@ export function ChatPanel() {
       const response = await fetch("/api/patch/approve", {
         method: "POST",
         headers,
-        body: JSON.stringify({ patchId, editedDsl }),
+        body: JSON.stringify({ patchId, toolCallId, editedDsl }),
       });
       const data = await response.json();
 
@@ -385,17 +569,25 @@ export function ChatPanel() {
         role: "tool",
         tool_call_id: toolCallId,
         name: "propose_dsl_patch",
-        content: JSON.stringify(data),
+        content: JSON.stringify({
+          success: true,
+          message: "Patch applied successfully",
+        }),
+      });
+
+      const assistantMessage = createMessage({
+        role: "assistant",
+        content:
+          "DSL patch approved and saved successfully! I've updated the page. You can reload the preview to see the changes.",
       });
 
       const nextMessages = [
         ...messages.filter((message) => !message._isStatus),
         toolMessage,
+        assistantMessage,
       ];
 
       setMessages(nextMessages);
-
-      await triggerAgent(nextMessages);
     } catch (error) {
       console.error(error);
       appendAssistantMessage(
@@ -461,86 +653,12 @@ export function ChatPanel() {
   if (!isOpen) {
     return (
       <>
-        <style>{`
-          @keyframes pulse-ring-inner {
-            0% { transform: scale(0.98); opacity: 0.6; }
-            100% { transform: scale(1.25); opacity: 0; }
-          }
-          @keyframes pulse-ring-outer {
-            0% { transform: scale(0.98); opacity: 0.4; }
-            100% { transform: scale(1.5); opacity: 0; }
-          }
-          @keyframes floating {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
-            100% { transform: translateY(0px); }
-          }
-          @keyframes gradient-bg {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          @keyframes slide-in-bubble {
-            from { opacity: 0; transform: translateX(12px) scale(0.92); }
-            to { opacity: 1; transform: translateX(0) scale(1); }
-          }
-          @keyframes pulse-green {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-          }
-        `}</style>
-
         {/* Floating Greeting Bubble */}
         {isHoveredLogo && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: "34px",
-              right: "96px",
-              padding: "8px 16px",
-              background: "rgba(30, 41, 59, 0.95)",
-              backdropFilter: "blur(4px)",
-              color: "#f8fafc",
-              borderRadius: "16px",
-              boxShadow:
-                "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
-              fontSize: "13px",
-              fontWeight: 500,
-              whiteSpace: "nowrap",
-              pointerEvents: "none",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              animation: "slide-in-bubble 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-block",
-                width: "8px",
-                height: "8px",
-                background: "#10b981",
-                borderRadius: "50%",
-                animation: "pulse-green 2s infinite",
-              }}
-            />
+          <div className={styles.floatingBubble}>
+            <span className={styles.onlineIndicator} />
             Ask LayoutX
-            <div
-              style={{
-                position: "absolute",
-                right: "-6px",
-                top: "50%",
-                transform: "translateY(-50%) rotate(45deg)",
-                width: "12px",
-                height: "12px",
-                background: "rgba(30, 41, 59, 0.95)",
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-              }}
-            />
+            <div className={styles.bubbleArrow} />
           </div>
         )}
 
@@ -548,78 +666,20 @@ export function ChatPanel() {
           onClick={() => setIsOpen(true)}
           onMouseEnter={() => setIsHoveredLogo(true)}
           onMouseLeave={() => setIsHoveredLogo(false)}
+          className={styles.logoButton}
           style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            width: "60px",
-            height: "60px",
-            zIndex: 9999,
-            background:
-              "linear-gradient(135deg, #3b82f6, #6366f1, #d946ef, #3b82f6)",
-            backgroundSize: "300% 300%",
-            color: "white",
-            border: "none",
-            borderRadius: "30px",
             boxShadow: isHoveredLogo
               ? "0 12px 28px -4px rgba(99, 102, 241, 0.5), 0 8px 16px -4px rgba(217, 70, 239, 0.3)"
               : "0 4px 16px 0 rgba(37, 99, 235, 0.25)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             transform: isHoveredLogo ? "scale(1.1) rotate(5deg)" : "scale(1)",
-            animation:
-              "gradient-bg 6s ease infinite, floating 3.5s ease-in-out infinite",
           }}
         >
           {/* Dual Pulse Rings */}
-          <div
-            style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: "rgba(99, 102, 241, 0.4)",
-              zIndex: -1,
-              animation:
-                "pulse-ring-inner 2.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: "rgba(37, 99, 235, 0.2)",
-              zIndex: -2,
-              animation:
-                "pulse-ring-outer 2.5s cubic-bezier(0.215, 0.610, 0.355, 1) 0.6s infinite",
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <div className={styles.pulseRingInner} />
+          <div className={styles.pulseRingOuter} />
+          <div className={styles.iconWrapper}>
             <Bot size={28} style={{ strokeWidth: 2 }} />
-            <span
-              style={{
-                position: "absolute",
-                top: "-2px",
-                right: "-2px",
-                width: "8px",
-                height: "8px",
-                background: "#10b981",
-                border: "2px solid #ffffff",
-                borderRadius: "50%",
-              }}
-            />
+            <span className={styles.iconOnlineIndicator} />
           </div>
         </button>
       </>
@@ -629,36 +689,10 @@ export function ChatPanel() {
   return (
     <div
       id="chat-panel-container"
-      style={{
-        position: "fixed",
-        right: 0,
-        top: 0,
-        bottom: 0,
-        width: `${width}px`,
-        background: "#ffffff",
-        borderLeft: "1px solid #e5e7eb",
-        display: "flex",
-        flexDirection: "column",
-        zIndex: 9999,
-        boxShadow: "-4px 0 15px rgba(0,0,0,0.05)",
-        fontFamily: "system-ui, sans-serif",
-      }}
+      className={styles.chatPanelContainer}
+      style={{ width: `${width}px` }}
     >
-      {/* Pointer event blocker overlay during resizing */}
-      {isResizing && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-            cursor: "col-resize",
-            zIndex: 99998,
-            backgroundColor: "transparent",
-          }}
-        />
-      )}
+      {isResizing && <div className={styles.resizeOverlay} />}
 
       {/* Resize Handle */}
       <div
@@ -668,62 +702,27 @@ export function ChatPanel() {
         }}
         onMouseEnter={() => setIsHandleHovered(true)}
         onMouseLeave={() => setIsHandleHovered(false)}
+        className={styles.resizeHandle}
         style={{
-          position: "absolute",
-          left: "-4px",
-          top: 0,
-          bottom: 0,
-          width: "8px",
-          cursor: "col-resize",
-          zIndex: 10000,
           background: isResizing
             ? "#3b82f6"
             : isHandleHovered
               ? "rgba(59, 130, 246, 0.5)"
               : "transparent",
-          transition: "background 0.15s ease",
         }}
       />
 
-      <div
-        style={{
-          padding: "16px",
-          background: "#1e293b",
-          color: "white",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <div className={styles.header}>
+        <div className={styles.headerTitle}>
           <Bot size={20} />
-          <span style={{ fontWeight: 600 }}>LayoutX</span>
+          <span className={styles.titleText}>LayoutX</span>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          style={{
-            background: "transparent",
-            color: "#cbd5e1",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-          }}
-        >
+        <button onClick={() => setIsOpen(false)} className={styles.closeButton}>
           <X size={20} />
         </button>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-          background: "#f8fafc",
-        }}
-      >
+      <div className={styles.messagesContainer}>
         {messages
           .filter((m) => m.role !== "tool" && !m._isStatus)
           .map((msg, i) => (
@@ -736,61 +735,163 @@ export function ChatPanel() {
             />
           ))}
         {isLoading && (
-          <div
-            style={{
-              alignSelf: "flex-start",
-              color: "#64748b",
-              fontSize: "14px",
-              fontStyle: "italic",
-              paddingLeft: "8px",
-            }}
-          >
-            Agent is thinking...
-          </div>
+          <div className={styles.loadingIndicator}>Agent is thinking...</div>
         )}
       </div>
 
-      <div
-        style={{
-          padding: "16px",
-          background: "white",
-          borderTop: "1px solid #e5e7eb",
-          display: "flex",
-          gap: "8px",
-        }}
-      >
-        <input
-          style={{
-            flex: 1,
-            padding: "10px 14px",
-            border: "1px solid #cbd5e1",
-            borderRadius: "24px",
-            outline: "none",
-            fontSize: "14px",
-          }}
+      <div className={styles.inputContainer}>
+        {showSessionModal && (
+          <div className={styles.modalContainer}>
+            <span className={styles.modalTitle}>Select Session Data</span>
+            <div className={styles.sessionScrollArea}>
+              {sessionKeys.length === 0 ? (
+                <span className={styles.emptyText}>
+                  No session data available.
+                </span>
+              ) : (
+                sessionKeys.map((key) => (
+                  <label key={key} className={styles.sessionLabel}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSessionKeys.has(key)}
+                      onChange={(e) => {
+                        const next = new Set(selectedSessionKeys);
+                        if (e.target.checked) next.add(key);
+                        else next.delete(key);
+                        setSelectedSessionKeys(next);
+                      }}
+                    />
+                    <span className={styles.sessionKey}>{key}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className={styles.modalButtons}>
+              <button
+                onClick={() => setShowSessionModal(false)}
+                className={styles.cancelButton}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const selectedData: Record<string, string | null> = {};
+                  selectedSessionKeys.forEach((k) => {
+                    selectedData[k] = sessionStorage.getItem(k);
+                  });
+                  const sessionString = JSON.stringify(selectedData, null, 2);
+                  setInput(
+                    (prev) =>
+                      prev +
+                      (prev ? "\n\n" : "") +
+                      `Session Data:\n\`\`\`json\n${sessionString}\n\`\`\``,
+                  );
+                  setShowSessionModal(false);
+                  setTimeout(() => {
+                    if (textareaRef.current) textareaRef.current.focus();
+                  }, 0);
+                }}
+                disabled={selectedSessionKeys.size === 0}
+                className={styles.primaryButton}
+                style={{
+                  background:
+                    selectedSessionKeys.size === 0 ? "#94a3b8" : "#2563eb",
+                  cursor:
+                    selectedSessionKeys.size === 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+        {showAddDslModal && (
+          <div className={styles.modalContainer}>
+            <span className={styles.modalTitle}>Add Reference DSL</span>
+            <textarea
+              className={styles.dslTextarea}
+              placeholder="Paste DSL here..."
+              value={dslInputText}
+              onChange={(e) => setDslInputText(e.target.value)}
+              autoFocus
+            />
+            <div className={styles.modalButtonsBasic}>
+              <button
+                onClick={() => {
+                  setShowAddDslModal(false);
+                  setDslInputText("");
+                }}
+                className={styles.cancelButton}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (dslInputText.trim()) {
+                    setInput(
+                      (prev) =>
+                        prev +
+                        (prev ? "\n\n" : "") +
+                        `Reference DSL:\n\`\`\`json\n${dslInputText}\n\`\`\``,
+                    );
+                  }
+                  setShowAddDslModal(false);
+                  setDslInputText("");
+                  setTimeout(() => {
+                    if (textareaRef.current) textareaRef.current.focus();
+                  }, 0);
+                }}
+                className={styles.primaryButtonBasic}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+        {showSlashMenu && visibleSlashCommands.length > 0 && (
+          <div className={styles.slashMenuContainer}>
+            {visibleSlashCommands.map((cmd, idx) => (
+              <div
+                key={cmd.command}
+                onClick={() => executeCommand(cmd.command)}
+                className={styles.slashMenuItem}
+                style={{
+                  background:
+                    idx === slashMenuIndex ? "#f1f5f9" : "transparent",
+                  borderBottom:
+                    idx < visibleSlashCommands.length - 1
+                      ? "1px solid #f1f5f9"
+                      : "none",
+                }}
+                onMouseEnter={() => setSlashMenuIndex(idx)}
+              >
+                <span className={styles.slashMenuCommand}>{cmd.command}</span>
+                <span className={styles.slashMenuDesc}>{cmd.description}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <textarea
+          ref={textareaRef}
+          className={styles.mainTextarea}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder={
             micrositeId
               ? "Ask me to modify the layout..."
               : "Open a microsite configurator page to start chatting..."
           }
           disabled={isLoading || !micrositeId}
+          rows={1}
         />
         <button
           onClick={sendMessage}
           disabled={isLoading || !input.trim()}
+          className={styles.sendButton}
           style={{
-            padding: "10px",
             background: input.trim() && !isLoading ? "#2563eb" : "#94a3b8",
-            color: "white",
-            border: "none",
-            borderRadius: "50%",
             cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
           <ArrowUp size={18} />

@@ -52,7 +52,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { messages, micrositeId, sessionId, pageCode, id } = await req.json();
+  const { messages, micrositeId, sessionId, pageCode, id, referenceDsls, sessionContext } = await req.json();
 
   const safeMessages = Array.isArray(messages) ? messages : [];
 
@@ -83,26 +83,41 @@ export async function POST(req: Request) {
         if (payload.preferred_username) {
           userId = payload.preferred_username.replace(/\D/g, "");
         }
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
   // Save the latest user message
-  const lastUserMsg = formattedMessages.slice().reverse().find(m => m.role === "user");
+  const lastUserMsg = formattedMessages
+    .slice()
+    .reverse()
+    .find((m) => m.role === "user");
   if (lastUserMsg) {
-     try {
-        const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
-        await sessionOps.saveMessage(userId, micrositeId, lastUserMsg);
-     } catch (e) {
-        logToFile(`Failed to save user message: ${e}`);
-     }
+    try {
+      const {
+        sessionOps,
+      } = require("../../../../chat-agent/db/queries/dsl-history");
+      await sessionOps.saveMessage(userId, micrositeId, lastUserMsg);
+    } catch (e) {
+      logToFile(`Failed to save user message: ${e}`);
+    }
   }
 
   const stream = new ReadableStream({
     async start(controller) {
+      let isAborted = false;
+      req.signal.addEventListener("abort", () => {
+        logToFile("Client aborted connection");
+        isAborted = true;
+      });
+
       const send = (event: object) => {
-        controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
+        if (isAborted || req.signal.aborted) return;
+        try {
+          controller.enqueue(`data: ${JSON.stringify(event)}\n\n`);
+        } catch (e) {
+          logToFile(`Failed to enqueue data: ${e}`);
+        }
       };
 
       let currentMessages = formattedMessages;
@@ -110,12 +125,15 @@ export async function POST(req: Request) {
       const MAX_LOOPS = 10;
 
       while (loopCount < MAX_LOOPS) {
+        if (isAborted || req.signal.aborted) break;
         loopCount++;
 
         const systemPrompt = await buildSystemPrompt({
           micrositeId,
           pageCode,
           id,
+          referenceDsls,
+          sessionContext,
         });
 
         try {
@@ -130,51 +148,97 @@ export async function POST(req: Request) {
           logToFile(`Messages: ${JSON.stringify(finalMessages)}`);
           logToFile(`Tools Count: ${DSL_TOOLS?.length}`);
 
-          const response = await freeLLMClient.chat.completions.create({
-            model: TOOL_CAPABLE_MODEL,
-            messages: finalMessages,
-            tools: DSL_TOOLS as any,
-            tool_choice: "auto",
-            stream: true,
-          });
-
           let content = "";
           const toolCalls: any[] = [];
 
-          logToFile("Stream opened, reading chunks...");
-          for await (const chunk of response) {
-            if (chunk.choices[0]?.delta?.content) {
-              const chunkContent = chunk.choices[0].delta.content;
-              content += chunkContent;
-              logToFile(`Chunk content: ${chunkContent}`);
-              send({ type: "text_chunk", content: chunkContent });
-            }
-            if (chunk.choices[0]?.delta?.tool_calls) {
-              const calls = chunk.choices[0].delta.tool_calls;
-              logToFile(`Chunk tool_calls: ${JSON.stringify(calls)}`);
-              for (let i = 0; i < calls.length; i++) {
-                const call = calls[i];
-                const idx = typeof call.index === "number" ? call.index : i;
-                if (!toolCalls[idx]) {
-                  toolCalls[idx] = {
-                    id: call.id,
-                    type: call.type,
-                    function: {
-                      name: call.function?.name || "",
-                      arguments: "",
-                    },
-                  };
+          if (freeLLMClient.constructor.name === "BedrockRuntimeClient") {
+            logToFile("Calling Bedrock Native API...");
+            const {
+              callBedrockWithTools,
+            } = require("../../../../chat-agent/lib/aws-bedrock-helper");
+            console.log("Calling Bedrock with tools...", finalMessages.length);
+            const bedrockResponse = await callBedrockWithTools(
+              freeLLMClient,
+              finalMessages,
+            );
+            const messageOutput = bedrockResponse.output?.message?.content;
+            if (messageOutput) {
+              for (const block of messageOutput) {
+                if (isAborted || req.signal.aborted) {
+                  logToFile("Bedrock generation aborted mid-stream");
+                  break;
                 }
-                if (call.function?.arguments) {
-                  toolCalls[idx].function.arguments +=
-                    call.function.arguments;
+                if (block.text) {
+                  content += block.text;
+                  logToFile(`Bedrock Text chunk: ${block.text}`);
+                  send({ type: "text_chunk", content: block.text });
+                }
+                if (block.toolUse) {
+                  const call = block.toolUse;
+                  logToFile(`Bedrock toolUse: ${JSON.stringify(call)}`);
+                  toolCalls.push({
+                    id: call.toolUseId,
+                    type: "function",
+                    function: {
+                      name: call.name,
+                      arguments: JSON.stringify(call.input),
+                    },
+                  });
+                }
+              }
+            }
+          } else {
+            const response = await (
+              freeLLMClient as any
+            ).chat.completions.create({
+              model: TOOL_CAPABLE_MODEL,
+              messages: finalMessages,
+              tools: DSL_TOOLS as any,
+              tool_choice: "auto",
+              stream: true,
+            });
+
+            logToFile("Stream opened, reading chunks...");
+            for await (const chunk of response) {
+              if (isAborted || req.signal.aborted) {
+                logToFile("OpenAI generation aborted mid-stream");
+                break;
+              }
+              if (chunk.choices[0]?.delta?.content) {
+                const chunkContent = chunk.choices[0].delta.content;
+                content += chunkContent;
+                logToFile(`Chunk content: ${chunkContent}`);
+                send({ type: "text_chunk", content: chunkContent });
+              }
+              if (chunk.choices[0]?.delta?.tool_calls) {
+                const calls = chunk.choices[0].delta.tool_calls;
+                logToFile(`Chunk tool_calls: ${JSON.stringify(calls)}`);
+                for (let i = 0; i < calls.length; i++) {
+                  const call = calls[i];
+                  const idx = typeof call.index === "number" ? call.index : i;
+                  if (!toolCalls[idx]) {
+                    toolCalls[idx] = {
+                      id: call.id,
+                      type: call.type,
+                      function: {
+                        name: call.function?.name || "",
+                        arguments: "",
+                      },
+                    };
+                  }
+                  if (call.function?.arguments) {
+                    toolCalls[idx].function.arguments +=
+                      call.function.arguments;
+                  }
                 }
               }
             }
           }
 
           const validToolCalls = toolCalls.filter(Boolean);
-          logToFile(`Stream finished. Content: "${content}". Tool calls count: ${validToolCalls.length}`);
+          logToFile(
+            `Stream finished. Content: "${content}". Tool calls count: ${validToolCalls.length}`,
+          );
 
           const assistantMsg: {
             role: string;
@@ -223,8 +287,13 @@ export async function POST(req: Request) {
 
                 // Update task context for pending patch
                 try {
-                  const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
-                  await sessionOps.saveTask(userId, micrositeId, { intent: "DSL modification proposed", pendingPatch: true });
+                  const {
+                    sessionOps,
+                  } = require("../../../../chat-agent/db/queries/dsl-history");
+                  await sessionOps.saveTask(userId, micrositeId, {
+                    intent: "DSL modification proposed",
+                    pendingPatch: true,
+                  });
                 } catch (e) {
                   logToFile(`Failed to save task context: ${e}`);
                 }
@@ -253,7 +322,9 @@ export async function POST(req: Request) {
                 return;
               }
             } else {
-              logToFile(`Executing tool: ${toolCall.function.name} with args: ${toolCall.function.arguments}`);
+              logToFile(
+                `Executing tool: ${toolCall.function.name} with args: ${toolCall.function.arguments}`,
+              );
               const result = await executeTool(toolCall.function.name, args);
               logToFile(`Tool execution result: ${JSON.stringify(result)}`);
               await toolCallLog.log(
@@ -280,24 +351,31 @@ export async function POST(req: Request) {
 
           // Save assistant message to session history
           try {
-             const { sessionOps } = require("../../../../chat-agent/db/queries/dsl-history");
-             await sessionOps.saveMessage(userId, micrositeId, assistantMsg);
-             for (const r of toolResults) {
-                await sessionOps.saveMessage(userId, micrositeId, { role: "tool", ...r });
-             }
-          } catch(e) {
-             logToFile(`Failed to save assistant messages: ${e}`);
+            const {
+              sessionOps,
+            } = require("../../../../chat-agent/db/queries/dsl-history");
+            await sessionOps.saveMessage(userId, micrositeId, assistantMsg);
+            for (const r of toolResults) {
+              await sessionOps.saveMessage(userId, micrositeId, {
+                role: "tool",
+                ...r,
+              });
+            }
+          } catch (e) {
+            logToFile(`Failed to save assistant messages: ${e}`);
           }
-          
         } catch (error: any) {
-          logToFile(`Error in agent route: ${error.message}\nStack: ${error.stack}`);
+          logToFile(
+            `Error in agent route: ${error.message}\nStack: ${error.stack}`,
+          );
           console.error("Error in agent route:", error);
-          
+
           let errorMessage = error.message;
           if (error.status === 429 || errorMessage.includes("429")) {
-            errorMessage = "I am currently experiencing high traffic and hit a rate limit. Please wait a moment and try again.";
+            errorMessage =
+              "I am currently experiencing high traffic and hit a rate limit. Please wait a moment and try again.";
           }
-          
+
           send({ type: "error", message: errorMessage });
           break;
         }

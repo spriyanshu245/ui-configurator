@@ -68,7 +68,7 @@ describe("JsonTextArea Component", () => {
       key: "Tab",
       code: "Tab",
       charCode: 8,
-      shiftKey: true,
+      ctrlKey: true,
       preventDefault: () => {},
     });
     expect(textarea.value).toBe("testarea");
@@ -81,7 +81,7 @@ describe("JsonTextArea Component", () => {
         value={minifiedJson}
         onChange={onChangeMock}
         onValidJson={onValidJsonMock}
-      />
+      />,
     );
     const button = screen.getByRole("button", { name: /Format JSON/i });
     fireEvent.click(button);
@@ -99,7 +99,7 @@ describe("JsonTextArea Component", () => {
     fireEvent.click(button);
     await waitFor(() => {
       expect(
-        screen.getByText("Cannot beautify invalid JSON")
+        screen.getByText("Cannot beautify invalid JSON"),
       ).toBeInTheDocument();
     });
   });
@@ -113,7 +113,7 @@ describe("JsonTextArea Component", () => {
         value='{"invalid": true}'
         onChange={onChangeMock}
         validateKeys={validateKeys}
-      />
+      />,
     );
     const textarea = screen.getByPlaceholderText("{}");
     fireEvent.change(textarea, { target: { value: '{"invalid":true}' } });
@@ -175,7 +175,7 @@ describe("JsonTextArea Component", () => {
         value='{"test":1}'
         onChange={onChangeMock}
         onValidJson={onValidJsonMock}
-      />
+      />,
     );
 
     expect(onChangeMock).toHaveBeenCalledWith(expect.stringContaining("test"));

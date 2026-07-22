@@ -45,6 +45,22 @@ export const DSL_TOOLS = [
   {
     type: "function",
     function: {
+      name: "query_dsl_path",
+      description:
+        "Query a specific subdocument or property within a large DSL stored in MongoDB to avoid loading the full JSON into context.",
+      parameters: {
+        type: "object",
+        properties: {
+          tempDslId: { type: "string", description: "The temporary DSL ID returned by get_page_dsl" },
+          path: { type: "string", description: "Dot notation path to query (e.g. 'components.0.props.title'). Leave empty to get summary of root." },
+        },
+        required: ["tempDslId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "propose_dsl_patch",
       description: `Propose changes to a page DSL as an RFC 6902 JSON Patch array.
         CRITICAL RULES:

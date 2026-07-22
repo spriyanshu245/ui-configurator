@@ -1,46 +1,25 @@
 import React from 'react';
 import { DslDiffViewer } from './DslDiffViewer';
 import { Bot, User } from 'lucide-react';
+import styles from './ChatMessage.module.scss';
 
 export function ChatMessage({ message, onApprove, onReject, onEdit }: any) {
   const isUser = message.role === 'user';
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: isUser ? 'flex-end' : 'flex-start',
-      gap: '4px'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '12px',
-        color: '#64748b',
-        flexDirection: isUser ? 'row-reverse' : 'row'
-      }}>
+    <div className={`${styles.messageWrapper} ${isUser ? styles.wrapperUser : styles.wrapperAgent}`}>
+      <div className={`${styles.header} ${isUser ? styles.headerUser : styles.headerAgent}`}>
         {isUser ? <User size={14} /> : <Bot size={14} />}
         <span>{isUser ? 'You' : 'Agent'}</span>
       </div>
 
-      <div style={{
-        padding: '12px',
-        background: isUser ? '#2563eb' : '#ffffff',
-        color: isUser ? '#ffffff' : '#0f172a',
-        border: isUser ? 'none' : '1px solid #e2e8f0',
-        borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-        maxWidth: '90%',
-        boxShadow: isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
-        lineHeight: '1.5',
-        fontSize: '14px'
-      }}>
-        <div style={{ whiteSpace: 'pre-wrap' }}>
+      <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleAgent}`}>
+        <div className={styles.content}>
           {message.content}
         </div>
 
         {message.type === 'patch_proposed' && message.patch && (
-          <div style={{ marginTop: '12px' }}>
+          <div className={styles.patchContainer}>
             <DslDiffViewer
               currentDsl={message.patch.currentDsl}
               patchedDsl={message.patch.patchedDsl}

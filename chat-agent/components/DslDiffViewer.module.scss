@@ -1,0 +1,203 @@
+.container {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.header {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.headerTitle {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.description {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.previewHint {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabButton {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 400;
+
+  &.active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+  }
+}
+
+.diffArea {
+  max-height: 55vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.diffArea :global(.json-diff-viewer-line-added) { border-left: 3px solid #10b981; }
+.diffArea :global(.json-diff-viewer-line-deleted) { border-left: 3px solid #ef4444; }
+.diffArea :global(.json-diff-viewer-line-modified) { border-left: 3px solid #f59e0b; }
+
+.diffTabContent {
+  padding: 8px;
+}
+
+.editTabContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.invalidWarning {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #fee2e2;
+}
+
+.validWarning {
+  background: #fffbeb;
+  color: #b45309;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #fde68a;
+}
+
+.codeMirror {
+  font-size: 13px;
+}
+
+.actionBar {
+  border-top: 1px solid #e2e8f0;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.diffNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  margin-right: auto;
+}
+
+.navButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.actionsContainer {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  width: 100%;
+  align-items: center;
+}
+
+.approveBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:disabled, &.disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+  }
+}
+
+.rejectBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  padding: 7px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rejectReasonContainer {
+  display: flex;
+  gap: 4px;
+}
+
+.rejectInput {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 150px;
+}
+
+.rejectConfirmBtn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.closeBtn {
+  background: transparent;
+  color: #64748b;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: auto;
+}

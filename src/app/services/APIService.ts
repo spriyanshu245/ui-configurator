@@ -8,7 +8,7 @@ const getAccessToken = () => {
 
 export const apiRequest = async (
   data: IRequestData,
-  optionsOverride?: { responseType?: "json" | "blob" | "text" }
+  optionsOverride?: { responseType?: "json" | "blob" | "text" },
 ): Promise<any> => {
   try {
     const resumed = await sessionManager.notifyActivity();
@@ -26,16 +26,18 @@ export const apiRequest = async (
       "Content-Type": rawBody ? "text/plain" : "application/json",
       "X-User-Type": "employee",
       ...headers,
-      "x-user-id": JSON.parse(sessionStorage.getItem("global.login.userDetails") as string)?.userId ?? ""
+      "x-user-id":
+        JSON.parse(sessionStorage.getItem("global.login.userDetails") as string)
+          ?.userId ?? "",
     };
-if (appEnv === "development") {
-      requestHeaders.authorization = getAccessToken()
+    if (appEnv === "development") {
+      requestHeaders.authorization = getAccessToken();
     }
 
     const options: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: credentials as RequestCredentials ?? "include",
+      credentials: (credentials as RequestCredentials) ?? "include",
     };
 
     if (body && ["POST", "PUT", "PATCH"].includes(method)) {
@@ -62,12 +64,12 @@ if (appEnv === "development") {
         : await response.text();
 
       throw new Error(
-        typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody)
+        typeof errorBody === "string" ? errorBody : JSON.stringify(errorBody),
       );
     }
 
     if (responseType === "blob") {
-      return (await response.blob());
+      return await response.blob();
     }
     if (responseType === "text") {
       return await response.text();

@@ -1,11 +1,14 @@
 /// <reference types="node" />
 import OpenAI from "openai";
 
-// FreeLLMAPI configuration
-export const freeLLMClient = new OpenAI({
-  baseURL: process.env.FREELLM_BASE_URL ?? "http://localhost:3001/v1",
-  apiKey: process.env.FREELLM_API_KEY ?? "freellmapi-key-from-dashboard",
-  maxRetries: 5,
+import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
+
+export const awsBedrockClient = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION ?? "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
 });
 
 // Fallback logic for NVIDIA NIM if needed
@@ -15,4 +18,14 @@ export const nimClient = new OpenAI({
   apiKey: process.env.NVIDIA_NIM_API_KEY ?? "nim-api-key",
 });
 
-export const TOOL_CAPABLE_MODEL = process.env.FREELLM_MODEL ?? "auto";
+export const googleGeminiClient = new OpenAI({
+  baseURL:
+    process.env.GOOGLE_GEMINI_BASE_URL ??
+    "https://generativelanguage.googleapis.com/v1beta/openai/",
+  apiKey: process.env.GOOGLE_GEMINI_API_KEY ?? "google-gemini-api-key",
+  maxRetries: 5,
+});
+
+// Keep switchable back to googleGeminiClient by replacing this export
+export const freeLLMClient = awsBedrockClient;
+export const TOOL_CAPABLE_MODEL = process.env.LLM_MODEL ?? "auto";

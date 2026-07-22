@@ -15,7 +15,7 @@ function logToFile(msg: string) {
 
 export async function POST(req: Request) {
   try {
-    const { patchId, editedDsl } = await req.json();
+    const { patchId, editedDsl, toolCallId } = await req.json();
 
     const pending = await pendingPatchesDB.get(patchId);
     if (!pending) {
@@ -129,6 +129,21 @@ export async function POST(req: Request) {
       });
       // Clear pendingPatch state
       await sessionOps.saveTask(userId, pending.micrositeId, { intent: "DSL modification approved", pendingPatch: false });
+
+      if (toolCallId) {
+        const toolMsg = {
+          role: "tool",
+          tool_call_id: toolCallId,
+          name: "propose_dsl_patch",
+          content: JSON.stringify({ success: true, message: "Patch applied successfully" }),
+        };
+        const assistantMsg = {
+          role: "assistant",
+          content: "DSL patch approved and saved successfully! I've updated the page. You can reload the preview to see the changes.",
+        };
+        await sessionOps.saveMessage(userId, pending.micrositeId, toolMsg);
+        await sessionOps.saveMessage(userId, pending.micrositeId, assistantMsg);
+      }
     } catch (e) {
       logToFile(`Failed to append op for approval: ${e}`);
     }
