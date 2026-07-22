@@ -29,6 +29,13 @@ jest.mock("@/app/context/ControlPanelContext", () => ({
 }));
 
 jest.mock("@/app/context/MicrositeContext", () => ({
+  // ChatPanel (rendered inside the configurator) calls useMicrosite(); the mock
+  // must expose it or the whole tree throws "useMicrosite is not a function".
+  useMicrosite: () => ({
+    microsite: { code: "test-microsite" },
+    activePageCode: "test-page",
+    setActivePage: jest.fn(),
+  }),
   MicrositeProvider: ({
     children,
     code,
