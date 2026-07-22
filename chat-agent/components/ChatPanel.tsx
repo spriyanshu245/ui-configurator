@@ -8,7 +8,7 @@ import {
 } from "../lib/eventsource-parser-wrapper";
 import type { ChatMessage as ChatMessageType } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
-import { X, ArrowUp, Bot } from "lucide-react";
+import { X, ArrowUp, Bot, Loader2 } from "lucide-react";
 import styles from "./ChatPanel.module.scss";
 
 type ToolCall = {
@@ -63,6 +63,9 @@ type ChatPanelMessage = ChatMessageType & {
   batch?: PendingBatch;
   _isStatus?: boolean;
   _isStreaming?: boolean;
+  _isError?: boolean;
+  _retryMessages?: ChatPanelMessage[];
+  _changeStatus?: "proposed" | "applied" | "reverted";
 };
 
 type RouteMessage = Pick<
@@ -148,6 +151,11 @@ export function ChatPanel() {
   const [sessionKeys, setSessionKeys] = useState<string[]>([]);
   const [selectedSessionKeys, setSelectedSessionKeys] = useState<Set<string>>(
     new Set(),
+  );
+  // Declarative session-restore pill (replaces the old imperative DOM hack).
+  const [showRestorePill, setShowRestorePill] = useState(false);
+  const restorePillTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
   );
 
   useEffect(() => {
@@ -268,17 +276,14 @@ export function ChatPanel() {
               );
               setMessages(m);
 
-              // Show pill
-              const pill = document.createElement("div");
-              pill.innerText = "↩ Session restored";
-              pill.className =
-                "absolute top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-3 py-1 rounded-full text-xs opacity-90 z-50 transition-opacity duration-500";
-              pill.id = "session-restore-pill";
-              document
-                .getElementById("chat-panel-container")
-                ?.appendChild(pill);
-              setTimeout(() => {
-                if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+              // Show pill (declarative React state — auto-dismisses after 5s).
+              if (restorePillTimeoutRef.current) {
+                clearTimeout(restorePillTimeoutRef.current);
+              }
+              setShowRestorePill(true);
+              restorePillTimeoutRef.current = setTimeout(() => {
+                setShowRestorePill(false);
+                restorePillTimeoutRef.current = null;
               }, 5000);
             }
           })
@@ -287,10 +292,37 @@ export function ChatPanel() {
     }
   }, [isOpen, micrositeId]);
 
+  // Clear any pending restore-pill timeout on unmount.
+  useEffect(() => {
+    return () => {
+      if (restorePillTimeoutRef.current) {
+        clearTimeout(restorePillTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const appendAssistantMessage = (content: string) => {
     setMessages((prev) => [
       ...prev,
       createMessage({ role: "assistant", content }),
+    ]);
+  };
+
+  // Routes both catch-block errors and SSE {type:"error"} events through a
+  // distinctly-styled error bubble (instead of a plain assistant message),
+  // tagging it with the messages needed to retry via the existing triggerAgent.
+  const appendErrorMessage = (
+    content: string,
+    retryMessages?: ChatPanelMessage[],
+  ) => {
+    setMessages((prev) => [
+      ...prev,
+      createMessage({
+        role: "assistant",
+        content,
+        _isError: true,
+        _retryMessages: retryMessages,
+      }),
     ]);
   };
 
@@ -403,6 +435,7 @@ export function ChatPanel() {
                 patch: data.patch,
                 tool_call_id: data.tool_call_id,
                 _isStreaming: false,
+                _changeStatus: "proposed",
               };
               setMessages(
                 hasSyncedMessages
@@ -419,6 +452,7 @@ export function ChatPanel() {
                 batch: data.batch,
                 tool_call_id: data.tool_call_id,
                 _isStreaming: false,
+                _changeStatus: "proposed",
               };
               setMessages(
                 hasSyncedMessages
@@ -435,6 +469,7 @@ export function ChatPanel() {
                 rollback: data.rollback,
                 tool_call_id: data.tool_call_id,
                 _isStreaming: false,
+                _changeStatus: "proposed",
               };
               setMessages(
                 hasSyncedMessages
@@ -452,7 +487,7 @@ export function ChatPanel() {
             }
 
             if (data.type === "error" && typeof data.message === "string") {
-              appendAssistantMessage(data.message);
+              appendErrorMessage(data.message, currentMessages);
             }
           } catch (error) {
             console.error("Error parsing SSE event data", error);
@@ -471,10 +506,11 @@ export function ChatPanel() {
         return;
       }
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error
           ? error.message
           : "Sorry, I encountered an error.",
+        currentMessages,
       );
     } finally {
       setIsLoading(false);
@@ -497,6 +533,16 @@ export function ChatPanel() {
     setShowSlashMenu(false);
 
     void triggerAgent(nextMessages);
+  };
+
+  // Retry affordance for error-styled bubbles: re-sends the same message set
+  // through the EXISTING triggerAgent path — no new request logic.
+  const handleRetryMessage = (retryMessages?: ChatPanelMessage[]) => {
+    if (isLoading) return;
+    const fallback = messages.filter(
+      (message) => !message._isStatus && !message._isError,
+    );
+    void triggerAgent(retryMessages && retryMessages.length ? retryMessages : fallback);
   };
 
   const executeCommand = (cmd: string) => {
@@ -663,6 +709,7 @@ export function ChatPanel() {
         role: "assistant",
         content:
           "DSL patch approved and saved successfully! I've updated the page. You can reload the preview to see the changes.",
+        _changeStatus: "applied",
       });
 
       const nextMessages = [
@@ -674,7 +721,7 @@ export function ChatPanel() {
       setMessages(nextMessages);
     } catch (error) {
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error ? error.message : "Patch approval failed.",
       );
     }
@@ -728,7 +775,7 @@ export function ChatPanel() {
       await triggerAgent(nextMessages);
     } catch (error) {
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error ? error.message : "Patch rejection failed.",
       );
     }
@@ -780,6 +827,7 @@ export function ChatPanel() {
         role: "assistant",
         content:
           "DSL batch approved and saved successfully! I've updated all affected pages. You can reload the preview to see the changes.",
+        _changeStatus: "applied",
       });
 
       const nextMessages = [
@@ -795,7 +843,7 @@ export function ChatPanel() {
       }
     } catch (error) {
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error ? error.message : "Batch approval failed.",
       );
     }
@@ -832,7 +880,7 @@ export function ChatPanel() {
       setMessages(nextMessages);
     } catch (error) {
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error ? error.message : "Batch rejection failed.",
       );
     }
@@ -878,6 +926,7 @@ export function ChatPanel() {
         role: "assistant",
         content:
           "Rollback applied successfully! The page has been reverted. You can reload the preview to see the changes.",
+        _changeStatus: "reverted",
       });
 
       const nextMessages = [
@@ -888,7 +937,7 @@ export function ChatPanel() {
       setMessages(nextMessages);
     } catch (error) {
       console.error(error);
-      appendAssistantMessage(
+      appendErrorMessage(
         error instanceof Error ? error.message : "Rollback failed.",
       );
     }
@@ -960,11 +1009,25 @@ export function ChatPanel() {
         <div className={styles.headerTitle}>
           <Bot size={20} />
           <span className={styles.titleText}>LayoutX</span>
+          {isLoading && (
+            <Loader2
+              size={14}
+              className={styles.headerSpinner}
+              aria-label="Request in progress"
+            />
+          )}
         </div>
         <button onClick={() => setIsOpen(false)} className={styles.closeButton}>
           <X size={20} />
         </button>
+        {isLoading && <div className={styles.headerProgressBar} />}
       </div>
+
+      {showRestorePill && (
+        <div className={styles.restorePill} role="status">
+          ↩ Session restored
+        </div>
+      )}
 
       <div className={styles.messagesContainer}>
         {messages
@@ -979,10 +1042,18 @@ export function ChatPanel() {
               onRollback={handleRollback}
               onApproveBatch={handleApproveBatch}
               onRejectBatch={handleRejectBatch}
+              onRetry={handleRetryMessage}
             />
           ))}
         {isLoading && (
-          <div className={styles.loadingIndicator}>Agent is thinking...</div>
+          <div className={styles.loadingIndicator}>
+            <span className={styles.typingDots} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            Agent is thinking...
+          </div>
         )}
       </div>
 
@@ -1120,14 +1191,16 @@ export function ChatPanel() {
         )}
         <textarea
           ref={textareaRef}
-          className={styles.mainTextarea}
+          className={`${styles.mainTextarea} ${isLoading ? styles.mainTextareaDisabled : ""}`}
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={
-            micrositeId
-              ? "Ask me to modify the layout..."
-              : "Open a microsite configurator page to start chatting..."
+            isLoading
+              ? "Waiting for the agent to respond..."
+              : micrositeId
+                ? "Ask me to modify the layout..."
+                : "Open a microsite configurator page to start chatting..."
           }
           disabled={isLoading || !micrositeId}
           rows={1}
@@ -1135,13 +1208,18 @@ export function ChatPanel() {
         <button
           onClick={sendMessage}
           disabled={isLoading || !input.trim()}
-          className={styles.sendButton}
+          className={`${styles.sendButton} ${isLoading ? styles.sendButtonLoading : ""}`}
+          aria-busy={isLoading}
           style={{
             background: input.trim() && !isLoading ? "#2563eb" : "#94a3b8",
             cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
           }}
         >
-          <ArrowUp size={18} />
+          {isLoading ? (
+            <Loader2 size={18} className={styles.spinIcon} />
+          ) : (
+            <ArrowUp size={18} />
+          )}
         </button>
       </div>
     </div>

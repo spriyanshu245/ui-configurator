@@ -136,6 +136,7 @@
 }
 
 .header {
+  position: relative;
   padding: 16px;
   background: #1e293b;
   color: white;
@@ -152,6 +153,48 @@
 
 .titleText {
   font-weight: 600;
+}
+
+.headerSpinner {
+  color: #93c5fd;
+  animation: spin 1s linear infinite;
+}
+
+.headerProgressBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.25);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    border-radius: 2px;
+    animation: header-progress 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+
+.restorePill {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2563eb;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  z-index: 20;
+  animation: slide-in-bubble 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .closeButton {
@@ -174,10 +217,30 @@
 
 .loadingIndicator {
   align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #64748b;
   font-size: 14px;
   font-style: italic;
   padding-left: 8px;
+}
+
+.typingDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typing-dot 1.2s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
 }
 
 .inputContainer {
@@ -320,6 +383,13 @@
   overflow-y: auto;
   line-height: 20px;
   font-family: inherit;
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mainTextareaDisabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .sendButton {
@@ -332,6 +402,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s ease;
+}
+
+.sendButtonLoading {
+  cursor: wait;
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes floating {
@@ -367,4 +446,19 @@
   0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
   70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes header-progress {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
 }
