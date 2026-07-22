@@ -10,6 +10,8 @@ import { pendingPatchesDB } from "../../../../chat-agent/db/queries/pending-patc
 import { queuePatch } from "../../../../chat-agent/lib/dsl-patcher";
 import { db } from "../../../../chat-agent/db/client";
 import { logger } from "../../../../chat-agent/lib/logger";
+import { getUserId } from "../../../../chat-agent/lib/getUserId";
+import { sessionsOps } from "../../../../chat-agent/db/queries/sessions";
 
 type ChatRouteMessage = {
   role?: string;
@@ -43,7 +45,18 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { messages, micrositeId, sessionId, pageCode, id, referenceDsls, sessionContext } = await req.json();
+  const {
+    messages,
+    micrositeId,
+    sessionId,
+    clientSessionId,
+    pageCode,
+    id,
+    referenceDsls,
+    sessionContext,
+    taskContext,
+    pageOps,
+  } = await req.json();
 
   const safeMessages = Array.isArray(messages) ? messages : [];
 
@@ -61,21 +74,20 @@ export async function POST(req: Request) {
     return formatted;
   });
 
-  const authHeader = req.headers.get("authorization");
-  let userId = req.headers.get("x-user-id") || "anonymous";
-  if (!userId || userId === "anonymous") {
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      try {
-        const tokenPart = authHeader.split(" ")[1];
-        const payloadBase64 = tokenPart.split(".")[1];
-        const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
-        const payloadJson = atob(base64);
-        const payload = JSON.parse(payloadJson);
-        if (payload.preferred_username) {
-          userId = payload.preferred_username.replace(/\D/g, "");
-        }
-      } catch (e) {}
-    }
+  const userId = getUserId(req);
+
+  // The client-supplied sessionId (canonical if session/restore ran, else the
+  // per-tab id) is what we use for tool_call_log provenance. clientSessionId is
+  // always the per-tab id, used to keep the canonical session's clientSessionIds
+  // list in sync.
+  const effectiveSessionId = clientSessionId ?? sessionId;
+
+  // Fire-and-forget bump of the canonical (userId, micrositeId) session — do not
+  // block the response on this.
+  if (micrositeId) {
+    sessionsOps
+      .resolve(userId, micrositeId, clientSessionId)
+      .catch((e: Error) => logger.error("Failed to bump session", { error: e.message }));
   }
 
   // Save the latest user message
@@ -125,6 +137,9 @@ export async function POST(req: Request) {
           id,
           referenceDsls,
           sessionContext,
+          taskContext,
+          pageOps,
+          userId,
         });
 
         try {
@@ -267,7 +282,7 @@ export async function POST(req: Request) {
             }
 
             if (toolCall.function.name === "propose_dsl_patch") {
-              const pending = await queuePatch(args, sessionId);
+              const pending = await queuePatch(args, effectiveSessionId);
               if (pending.error) {
                 toolResults.push({
                   tool_call_id: toolCall.id,
@@ -317,13 +332,16 @@ export async function POST(req: Request) {
                 toolName: toolCall.function.name,
                 argsLength: toolCall.function.arguments.length,
               });
-              const result = await executeTool(toolCall.function.name, args);
+              const result = await executeTool(toolCall.function.name, args, {
+                userId,
+                micrositeId,
+              });
               logger.debug("Tool execution completed", {
                 toolName: toolCall.function.name,
                 resultLength: JSON.stringify(result).length,
               });
               await toolCallLog.log(
-                sessionId,
+                effectiveSessionId,
                 toolCall.function.name,
                 args,
                 result,
@@ -334,6 +352,18 @@ export async function POST(req: Request) {
                 tool_call_id: toolCall.id,
                 content: JSON.stringify(result),
               });
+
+              if (
+                toolCall.function.name === "propose_rollback" &&
+                result?.queued &&
+                result?.rollback
+              ) {
+                send({
+                  type: "rollback_proposed",
+                  rollback: result.rollback,
+                  tool_call_id: toolCall.id,
+                });
+              }
             }
           }
 

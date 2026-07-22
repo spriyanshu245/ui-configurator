@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pendingPatchesDB } from '../../../../../chat-agent/db/queries/pending-patches';
+import { getUserId } from '../../../../../chat-agent/lib/getUserId';
 import { logger } from '../../../../../chat-agent/lib/logger';
 
 export async function POST(req: Request) {
@@ -13,23 +14,7 @@ export async function POST(req: Request) {
 
     // Potentially log this to skill entries to learn from the rejection
 
-    const authHeader = req.headers.get("authorization");
-    let userId = req.headers.get("x-user-id") || "anonymous";
-    if (!userId || userId === "anonymous") {
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        try {
-          const tokenPart = authHeader.split(" ")[1];
-          const payloadBase64 = tokenPart.split(".")[1];
-          const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
-          const payloadJson = atob(base64);
-          const payload = JSON.parse(payloadJson);
-          if (payload.preferred_username) {
-            userId = payload.preferred_username.replace(/\D/g, "");
-          }
-        } catch (e) {
-        }
-      }
-    }
+    const userId = getUserId(req);
 
     try {
       const { sessionOps } = require("../../../../../chat-agent/db/queries/dsl-history");

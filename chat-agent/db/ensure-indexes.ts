@@ -20,6 +20,13 @@ export async function ensureIndexes(): Promise<void> {
       { name: 'conversations_lookup', unique: true }
     ),
 
+    // Backs sessionsOps.resolve's findOneAndUpdate upsert — must be unique so
+    // concurrent requests for the same (userId, micrositeId) never race into dupes.
+    db.collection('sessions').createIndex(
+      { userId: 1, micrositeId: 1 },
+      { name: 'sessions_lookup', unique: true }
+    ),
+
     db.collection('page_ops').createIndex(
       { userId: 1, micrositeId: 1, pagePath: 1 },
       { name: 'page_ops_lookup', unique: true }
@@ -45,10 +52,11 @@ export async function ensureIndexes(): Promise<void> {
       { name: 'skill_entries_compile_order' }
     ),
 
-    // Not unique — Workstream C will rescope this to per-user later.
+    // Compound unique per (userId, micrositeId, key) — rescoped from the former
+    // global-only {key:1} index as part of per-user preferences (Workstream C).
     db.collection('user_preferences').createIndex(
-      { key: 1 },
-      { name: 'user_preferences_key' }
+      { userId: 1, micrositeId: 1, key: 1 },
+      { name: 'user_preferences_key', unique: true }
     ),
 
     db.collection('temp_dsl').createIndex(

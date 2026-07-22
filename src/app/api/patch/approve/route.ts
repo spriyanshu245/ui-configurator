@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import * as jsonpatch from "fast-json-patch";
 import { applyPatch } from "../../../../../chat-agent/lib/dsl-patcher";
-import { dslHistory } from "../../../../../chat-agent/db/queries/dsl-history";
+import { dslHistory, sessionOps } from "../../../../../chat-agent/db/queries/dsl-history";
 import { pendingPatchesDB } from "../../../../../chat-agent/db/queries/pending-patches";
-import { getApiBaseUrl } from "../../../utils/utils";
+import { sessionsOps } from "../../../../../chat-agent/db/queries/sessions";
+import { putPageDsl } from "../../../../../chat-agent/lib/backend-sync";
+import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
 
 export async function POST(req: Request) {
@@ -17,14 +20,22 @@ export async function POST(req: Request) {
       );
     }
 
+    const wasEdited = !!editedDsl;
     const patchedDsl = editedDsl || applyPatch(pending.currentDsl, pending.patch);
+
+    // When the user hand-edited the proposed DSL, the patch that was originally
+    // proposed no longer reflects what actually got applied. Recompute the real
+    // patch from (currentDsl -> patchedDsl) so dsl_history stays truthful.
+    const actualPatch = wasEdited
+      ? jsonpatch.compare(pending.currentDsl as object, patchedDsl as object)
+      : pending.patch;
 
     const { cookies } = require('next/headers');
     const cookieStore = await cookies();
     const cookieHeader = cookieStore.toString();
 
     const authHeader = req.headers.get("authorization");
-    let userIdHeader = req.headers.get("x-user-id");
+    const userIdHeader = req.headers.get("x-user-id");
 
     logger.debug("Approval request headers", {
       hasAuthHeader: !!authHeader,
@@ -32,95 +43,39 @@ export async function POST(req: Request) {
       cookieHeaderLength: cookieHeader?.length ?? 0,
     });
 
-    if (!userIdHeader && authHeader && authHeader.startsWith("Bearer ")) {
-      try {
-        const tokenPart = authHeader.split(" ")[1];
-        const payloadBase64 = tokenPart.split(".")[1];
-        const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
-        const payloadJson = atob(base64);
-        const payload = JSON.parse(payloadJson);
-        if (payload.preferred_username) {
-          userIdHeader = payload.preferred_username.replace(/\D/g, "");
-          logger.debug("Extracted userId from JWT");
-        }
-      } catch (e) {
-        logger.warn("Failed to decode JWT", { error: (e as Error).message });
-      }
-    }
+    const userId = getUserId(req);
 
-    const API_URL = getApiBaseUrl();
-    logger.debug("Backend API resolution", { baseUrl: API_URL });
-    const putUrl = `${API_URL}/api/v1/config/pages/${pending.pagePath}?version=1`;
-    logger.debug("Submitting patch to backend", {
-      url: putUrl,
-      patchSize: JSON.stringify(patchedDsl).length,
+    await putPageDsl(pending.pagePath, patchedDsl, {
+      authHeader,
+      cookieHeader,
+      userIdHeader,
+      version: 1,
     });
 
-    const putResponse = await fetch(
-      putUrl,
-      {
-        method: "PUT",
-        headers: {
-          accept: "*/*",
-          "content-type": "application/json",
-          "workspace-code": "engineering-workspace",
-          "x-user-type": "employee",
-          Cookie: cookieHeader,
-          ...(authHeader ? { Authorization: authHeader } : {}),
-          ...(userIdHeader ? { "x-user-id": userIdHeader } : {}),
-        },
-        body: JSON.stringify(patchedDsl),
-      },
-    );
-
-    if (!putResponse.ok) {
-      const errorText = await putResponse.text().catch(() => "");
-      logger.error("PUT request failed", {
-        status: putResponse.status,
-        statusText: putResponse.statusText,
-      });
-      throw new Error(
-        `Failed to apply patch to backend API (Status: ${putResponse.status} ${putResponse.statusText}): ${errorText}`,
-      );
-    }
-
-    // Immediately re-fetch and cache the latest DSL state
-    try {
-      const getResponse = await fetch(putUrl, {
-        method: "GET",
-        headers: {
-          accept: "*/*",
-          "content-type": "application/json",
-          "workspace-code": "engineering-workspace",
-          "x-user-type": "employee",
-          Cookie: cookieHeader,
-          ...(authHeader ? { Authorization: authHeader } : {}),
-          ...(userIdHeader ? { "x-user-id": userIdHeader } : {}),
-        }
-      });
-      if (getResponse.ok) {
-        const latestDsl = await getResponse.json();
-        const { updateDslCache } = require("../../../../../chat-agent/lib/dsl-patcher");
-        updateDslCache(pending.pagePath, latestDsl);
-        logger.info("Updated in-memory DSL cache", { pagePath: pending.pagePath });
-      }
-    } catch (e) {
-      logger.warn("Failed to fetch latest DSL after PUT", { error: (e as Error).message });
-    }
-
-    await dslHistory.saveSnapshot({
+    const historyId = await dslHistory.saveSnapshot({
       micrositeId: pending.micrositeId,
       pagePath: pending.pagePath,
       dslSnapshot: pending.currentDsl,
       operation: "patch_applied",
-      patchApplied: pending.patch,
+      patchApplied: actualPatch,
       description: pending.description,
       approvedBy: "user",
+      sessionId: pending.sessionId,
+      wasEdited,
     });
 
     try {
-      const { sessionOps } = require("../../../../../chat-agent/db/queries/dsl-history");
-      const userId = userIdHeader || "anonymous";
+      await sessionsOps.appendHistoryRef(userId, pending.micrositeId, {
+        historyId,
+        patchId: pending.id,
+        pagePath: pending.pagePath,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      logger.warn("Failed to append session history ref", { error: (e as Error).message });
+    }
+
+    try {
       await sessionOps.appendOp(userId, pending.micrositeId, pending.pagePath, {
         summary: "Patch approved and applied",
         outcome: "success"

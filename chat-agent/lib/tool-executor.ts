@@ -4,7 +4,16 @@ import { fetchMicrositePages, fetchPageDsl } from "./microsite-loader";
 import { tempDslOps } from "../db/queries/temp-dsl";
 import { v4 as uuidv4 } from "uuid";
 
-export async function executeTool(name: string, args: any) {
+export interface ToolExecutionContext {
+  userId?: string;
+  micrositeId?: string;
+}
+
+export async function executeTool(
+  name: string,
+  args: any,
+  ctx: ToolExecutionContext = {},
+) {
   switch (name) {
     case "get_microsite_pages":
       const data = await fetchMicrositePages(args.microsite_id);
@@ -21,12 +30,12 @@ export async function executeTool(name: string, args: any) {
       }
       const version = page.pageVersion || 1;
       const dsl = await fetchPageDsl(args.page_path, version);
-      
+
       const tempDslId = uuidv4();
       await tempDslOps.storeDsl(tempDslId, dsl);
-      
-      return { 
-        tempDslId, 
+
+      return {
+        tempDslId,
         message: "DSL is large and has been stored in MongoDB. Use query_dsl_path to query specific JSON paths.",
         rootSummary: {
           id: dsl.id,
@@ -50,11 +59,50 @@ export async function executeTool(name: string, args: any) {
         args.page_path,
         args.limit,
       );
-    case "log_user_preference":
-      await userPreferences.set(args.key, args.value);
+    case "log_user_preference": {
+      const userId = ctx.userId || "anonymous";
+      const micrositeId = ctx.micrositeId || "__global__";
+      await userPreferences.set(userId, micrositeId, args.key, args.value);
       return { success: true };
-    case "propose_rollback":
-      return { queued: true, message: "Rollback proposed" };
+    }
+    case "propose_rollback": {
+      const { microsite_id, page_path, steps_back, reason } = args;
+      const clampedStepsBack = Math.min(3, Math.max(1, Number(steps_back) || 1));
+
+      const summaries = await dslHistory.getHistorySummaries(
+        microsite_id,
+        page_path,
+        3,
+      );
+
+      if (!summaries || summaries.length === 0) {
+        return {
+          queued: false,
+          message: `No snapshot history available for "${page_path}" in "${microsite_id}".`,
+        };
+      }
+
+      const target = summaries[clampedStepsBack - 1];
+      if (!target) {
+        return {
+          queued: false,
+          message: `Only ${summaries.length} snapshot(s) available for "${page_path}" — cannot go back ${clampedStepsBack} step(s).`,
+        };
+      }
+
+      return {
+        queued: true,
+        rollback: {
+          historyId: target.id,
+          micrositeId: target.micrositeId,
+          pagePath: target.pagePath,
+          description: target.description,
+          createdAt: target.createdAt,
+          reason,
+        },
+        message: `Rollback proposed to snapshot from ${target.createdAt} ("${target.description}"). Awaiting user confirmation — this does NOT auto-apply.`,
+      };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

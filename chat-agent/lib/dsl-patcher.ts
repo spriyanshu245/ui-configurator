@@ -15,7 +15,7 @@ try {
   console.warn("Could not load component-registry.json", e);
 }
 
-function validateAndAssignIds(dsl: any) {
+export function validateAndAssignIds(dsl: any) {
   if (!dsl || !Array.isArray(dsl.components)) return;
 
   function traverse(node: any, currentFormNameKeyIds: string[] = []) {

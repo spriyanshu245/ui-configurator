@@ -22,6 +22,7 @@ function makeCollection(name: string): MockCollection {
 const COLLECTION_NAMES = [
   "dsl_history",
   "conversations",
+  "sessions",
   "page_ops",
   "pending_patches",
   "skill_entries",
@@ -54,6 +55,7 @@ describe("ensureIndexes", () => {
     const expected: Array<{ collection: string; name: string }> = [
       { collection: "dsl_history", name: "dsl_history_lookup" },
       { collection: "conversations", name: "conversations_lookup" },
+      { collection: "sessions", name: "sessions_lookup" },
       { collection: "page_ops", name: "page_ops_lookup" },
       { collection: "pending_patches", name: "pending_patches_id" },
       { collection: "pending_patches", name: "pending_patches_ttl" },

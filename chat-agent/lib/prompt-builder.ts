@@ -24,7 +24,14 @@ export async function buildSystemPrompt(context: any): Promise<string> {
   let preferences: { key: string; value: string }[] = [];
   try {
     const preferencesCollection = db.collection("user_preferences");
-    preferences = (await preferencesCollection.find({}).toArray()) as unknown as { key: string; value: string }[];
+    preferences = (await preferencesCollection
+      .find({
+        $or: [
+          { userId: context.userId, micrositeId: context.micrositeId },
+          { userId: "__global__" },
+        ],
+      })
+      .toArray()) as unknown as { key: string; value: string }[];
   } catch (e) {
     logger.error("Failed to fetch user preferences", { error: (e as Error).message });
   }

@@ -145,9 +145,11 @@ export const DSL_TOOLS = [
     type: "function",
     function: {
       name: "propose_rollback",
-      description: `[FUTURE FEATURE — available but gated]
-        Propose reverting a page to a previous snapshot.
-        Fetches the snapshot, generates the inverse patch, and sends it through the approval gate.`,
+      description: `Propose reverting a page to a previous snapshot.
+        Resolves steps_back against the last 3 stored snapshots and returns a
+        rollback proposal for the user to confirm. Does NOT auto-apply — the
+        user must confirm via the rollback UI, which re-applies the stored
+        pre-image DSL as-is (no inverse-patch computation).`,
       parameters: {
         type: "object",
         properties: {

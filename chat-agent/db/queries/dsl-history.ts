@@ -7,14 +7,16 @@ export interface DslHistoryEntry {
   pagePath: string;
   dslSnapshot: object;
   operation: 'patch_applied' | 'rollback' | 'initial_load';
-  patchApplied?: object[];
+  patchApplied?: object[] | null;
   description: string;
   approvedBy: string;
+  sessionId?: string;
+  wasEdited?: boolean;
   createdAt: string;
 }
 
 export const dslHistory = {
-  saveSnapshot: async (entry: Omit<DslHistoryEntry, 'id' | 'createdAt' | 'dslSnapshot' | 'patchApplied'> & { dslSnapshot: object, patchApplied?: object[] }) => {
+  saveSnapshot: async (entry: Omit<DslHistoryEntry, 'id' | 'createdAt' | 'dslSnapshot' | 'patchApplied'> & { dslSnapshot: object, patchApplied?: object[] | null }) => {
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -28,6 +30,8 @@ export const dslHistory = {
       patchApplied: entry.patchApplied || null,
       description: entry.description,
       approvedBy: entry.approvedBy,
+      sessionId: entry.sessionId,
+      wasEdited: entry.wasEdited ?? false,
       createdAt: now
     });
 
@@ -43,6 +47,29 @@ export const dslHistory = {
     }
 
     return id;
+  },
+
+  /**
+   * Fetch a single history entry by id, scoped to (micrositeId, pagePath) so a
+   * historyId can't be replayed against the wrong page/microsite.
+   */
+  getEntry: async (historyId: string, micrositeId: string, pagePath: string) => {
+    const col = db.collection('dsl_history');
+    const row = await col.findOne({ id: historyId, micrositeId, pagePath });
+    if (!row) return null;
+    return {
+      id: row.id,
+      micrositeId: row.micrositeId,
+      pagePath: row.pagePath,
+      dslSnapshot: row.dslSnapshot,
+      operation: row.operation,
+      patchApplied: row.patchApplied,
+      description: row.description,
+      approvedBy: row.approvedBy,
+      sessionId: row.sessionId,
+      wasEdited: row.wasEdited,
+      createdAt: row.createdAt,
+    } as DslHistoryEntry;
   },
 
   getHistory: async (micrositeId: string, pagePath: string, limit: number = 3) => {
@@ -61,6 +88,8 @@ export const dslHistory = {
       patchApplied: row.patchApplied,
       description: row.description,
       approvedBy: row.approvedBy,
+      sessionId: row.sessionId,
+      wasEdited: row.wasEdited,
       createdAt: row.createdAt
     })) as DslHistoryEntry[];
   },
@@ -84,6 +113,8 @@ export const dslHistory = {
       patchApplied: row.patchApplied,
       description: row.description,
       approvedBy: row.approvedBy,
+      sessionId: row.sessionId,
+      wasEdited: row.wasEdited,
       createdAt: row.createdAt
     })) as Omit<DslHistoryEntry, 'dslSnapshot'>[];
   }

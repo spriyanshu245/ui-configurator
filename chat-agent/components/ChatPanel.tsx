@@ -28,11 +28,21 @@ type PendingPatch = {
   previewHint?: string;
 };
 
+type ProposedRollback = {
+  historyId: string;
+  micrositeId: string;
+  pagePath: string;
+  description?: string;
+  createdAt: string;
+  reason?: string;
+};
+
 type ChatPanelMessage = ChatMessageType & {
   tool_call_id?: string;
   tool_calls?: ToolCall[];
-  type?: "patch_proposed";
+  type?: "patch_proposed" | "rollback_proposed";
   patch?: PendingPatch;
+  rollback?: ProposedRollback;
   _isStatus?: boolean;
   _isStreaming?: boolean;
 };
@@ -96,7 +106,18 @@ const toRouteMessages = (messages: ChatPanelMessage[]): RouteMessage[] =>
 export function ChatPanel() {
   const { microsite, activePageCode } = useMicrosite();
   const micrositeId = microsite.code?.trim();
+  // Per-tab id — only ever logged (tool_call_log provenance), never used as the
+  // query key for session state.
   const sessionIdRef = useRef(createMessageId());
+  // Canonical (userId, micrositeId) session id resolved by /api/session/restore.
+  // Falls back to the per-tab id until restore completes.
+  const canonicalSessionIdRef = useRef<string | null>(null);
+  // taskContext + pageOps stashed from /api/session/restore so continuity survives
+  // across chat turns instead of being dropped on the floor.
+  const sessionContextRef = useRef<{
+    taskContext?: Record<string, any>;
+    pageOps?: Record<string, any[]>;
+  }>({});
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<ChatPanelMessage[]>([]);
@@ -197,13 +218,21 @@ export function ChatPanel() {
       if (micrositeId) {
         const token = sessionStorage.getItem("accessToken");
         fetch(
-          `/api/session/restore?micrositeId=${encodeURIComponent(micrositeId)}`,
+          `/api/session/restore?micrositeId=${encodeURIComponent(micrositeId)}&clientSessionId=${encodeURIComponent(sessionIdRef.current)}`,
           {
             headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           },
         )
           .then((res) => res.json())
           .then((data) => {
+            if (typeof data.sessionId === "string") {
+              canonicalSessionIdRef.current = data.sessionId;
+            }
+            sessionContextRef.current = {
+              taskContext: data.taskContext,
+              pageOps: data.pageOps,
+            };
+
             if (
               data.messages &&
               data.messages.length > 0 &&
@@ -284,7 +313,10 @@ export function ChatPanel() {
           micrositeId,
           pageCode: activePageCode,
           id: activePageCode,
-          sessionId: sessionIdRef.current,
+          sessionId: canonicalSessionIdRef.current ?? sessionIdRef.current,
+          clientSessionId: sessionIdRef.current,
+          taskContext: sessionContextRef.current?.taskContext,
+          pageOps: sessionContextRef.current?.pageOps,
         }),
       });
       if (!response.ok) {
@@ -323,6 +355,7 @@ export function ChatPanel() {
               type?: string;
               content?: string;
               patch?: PendingPatch;
+              rollback?: ProposedRollback;
               tool_call_id?: string;
               message?: string;
               messages?: Partial<ChatPanelMessage>[];
@@ -349,6 +382,22 @@ export function ChatPanel() {
                 ...assistantMessage,
                 type: "patch_proposed",
                 patch: data.patch,
+                tool_call_id: data.tool_call_id,
+                _isStreaming: false,
+              };
+              setMessages(
+                hasSyncedMessages
+                  ? replaceAssistantMessage(syncedMessages, assistantMessage)
+                  : [...syncedMessages, assistantMessage],
+              );
+              return;
+            }
+
+            if (data.type === "rollback_proposed" && data.rollback) {
+              assistantMessage = {
+                ...assistantMessage,
+                type: "rollback_proposed",
+                rollback: data.rollback,
                 tool_call_id: data.tool_call_id,
                 _isStreaming: false,
               };
@@ -650,6 +699,62 @@ export function ChatPanel() {
     }
   };
 
+  const handleRollback = async (historyId: string) => {
+    if (!micrositeId || !activePageCode) {
+      appendAssistantMessage(
+        "Open a microsite configurator page before rolling back.",
+      );
+      return;
+    }
+
+    addStatusMessage("Rolling back...");
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const token = sessionStorage.getItem("accessToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch("/api/patch/rollback", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          micrositeId,
+          pagePath: activePageCode,
+          historyId,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data?.error === "string" ? data.error : "Rollback failed.",
+        );
+      }
+
+      const assistantMessage = createMessage({
+        role: "assistant",
+        content:
+          "Rollback applied successfully! The page has been reverted. You can reload the preview to see the changes.",
+      });
+
+      const nextMessages = [
+        ...messages.filter((message) => !message._isStatus),
+        assistantMessage,
+      ];
+
+      setMessages(nextMessages);
+    } catch (error) {
+      console.error(error);
+      appendAssistantMessage(
+        error instanceof Error ? error.message : "Rollback failed.",
+      );
+    }
+  };
+
   if (!isOpen) {
     return (
       <>
@@ -732,6 +837,7 @@ export function ChatPanel() {
               onApprove={handleApprove}
               onReject={handleReject}
               onEdit={() => {}}
+              onRollback={handleRollback}
             />
           ))}
         {isLoading && (
