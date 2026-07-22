@@ -1,7 +1,12 @@
 import { userPreferences } from "../db/queries/user-preferences";
 import { dslHistory } from "../db/queries/dsl-history";
-import { fetchMicrositePages, fetchPageDsl } from "./microsite-loader";
+import {
+  fetchMicrositePages,
+  fetchMicrosites,
+  fetchPageDsl,
+} from "./microsite-loader";
 import { tempDslOps } from "../db/queries/temp-dsl";
+import { logger } from "./logger";
 import { v4 as uuidv4 } from "uuid";
 
 export interface ToolExecutionContext {
@@ -19,7 +24,18 @@ export async function executeTool(
       const data = await fetchMicrositePages(args.microsite_id);
       return data;
     case "list_microsites":
-      return [{ id: "loan-accounts", name: "Loan Accounts" }];
+      try {
+        return await fetchMicrosites();
+      } catch (e) {
+        // Backend list endpoint may be unavailable in some environments; surface
+        // the failure to the agent rather than silently returning stale/fake data.
+        logger.warn("list_microsites backend fetch failed", {
+          error: (e as Error).message,
+        });
+        return {
+          error: `Could not list microsites from the backend: ${(e as Error).message}`,
+        };
+      }
     case "get_page_dsl": {
       const micrositeData = await fetchMicrositePages(args.microsite_id);
       const page = micrositeData.pages?.find(

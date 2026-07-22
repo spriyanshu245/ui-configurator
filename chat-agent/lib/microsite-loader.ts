@@ -67,6 +67,44 @@ export async function fetchMicrositePages(micrositeId: string) {
   return data;
 }
 
+/**
+ * Fetch the list of all microsites from the backend config service.
+ * Returns a normalized array of { id, name, slug, pageCount }. The backend
+ * response shape can vary (bare array vs. { data | microsites | items: [...] }),
+ * so we normalize defensively and never throw for the caller — an empty list
+ * is a valid answer the agent can reason about.
+ */
+export async function fetchMicrosites(): Promise<
+  Array<{ id: string; name: string; slug?: string; pageCount?: number }>
+> {
+  const API_URL = getApiBaseUrl();
+  const reqHeaders = await buildRequestHeaders();
+
+  const response = await fetch(`${API_URL}/api/v1/config/microsites?version=1`, {
+    headers: reqHeaders,
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch microsites (Status: ${response.status} ${response.statusText}): ${errorText}`,
+    );
+  }
+
+  const data = await response.json();
+  const rows: any[] = Array.isArray(data)
+    ? data
+    : data?.data ?? data?.microsites ?? data?.items ?? [];
+
+  return rows.map((m: any) => ({
+    id: m.code ?? m.id ?? m.slug,
+    name: m.name ?? m.code ?? m.id,
+    slug: m.slug ?? m.code,
+    pageCount: Array.isArray(m.pages) ? m.pages.length : undefined,
+  }));
+}
+
 export async function fetchPageDsl(pageCode: string, version: number) {
   const API_URL = getApiBaseUrl();
   const reqHeaders = await buildRequestHeaders();
