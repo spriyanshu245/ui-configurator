@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       authHeader,
       cookieHeader,
       userIdHeader,
+      userId,
       version: 1,
     });
 

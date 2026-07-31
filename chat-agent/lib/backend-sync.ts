@@ -6,6 +6,13 @@ export interface PutPageDslOptions {
   authHeader?: string | null;
   cookieHeader?: string;
   userIdHeader?: string | null;
+  /**
+   * Resolved acting user id (e.g. from getUserId(req)). Used as the `x-user-id`
+   * header when the incoming request didn't carry one — the backend derives the
+   * acting user from this header and rejects the write with a ContextException
+   * ("Failed to get User Id from context") if it is missing.
+   */
+  userId?: string | null;
   version?: number;
 }
 
@@ -23,15 +30,19 @@ export async function putPageDsl(
   dsl: unknown,
   opts: PutPageDslOptions = {},
 ): Promise<PutPageDslResult> {
-  const { authHeader, cookieHeader, userIdHeader, version = 1 } = opts;
+  const { authHeader, cookieHeader, userIdHeader, userId, version = 1 } = opts;
 
   const API_URL = getApiBaseUrl();
   logger.debug("Backend API resolution", { baseUrl: API_URL });
 
   const putUrl = `${API_URL}/api/v1/config/pages/${pagePath}?version=${version}`;
+  // Prefer the incoming x-user-id header; otherwise fall back to the resolved
+  // acting user id so the backend always has a user in context.
+  const effectiveUserId = userIdHeader || (userId && userId !== "anonymous" ? userId : null);
   logger.debug("Submitting patch to backend", {
     url: putUrl,
     patchSize: JSON.stringify(dsl).length,
+    hasUserId: !!effectiveUserId,
   });
 
   const headers: Record<string, string> = {
@@ -41,7 +52,7 @@ export async function putPageDsl(
     "x-user-type": "employee",
     Cookie: cookieHeader || "",
     ...(authHeader ? { Authorization: authHeader } : {}),
-    ...(userIdHeader ? { "x-user-id": userIdHeader } : {}),
+    ...(effectiveUserId ? { "x-user-id": effectiveUserId } : {}),
   };
 
   const putResponse = await fetch(putUrl, {

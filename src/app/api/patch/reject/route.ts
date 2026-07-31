@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pendingPatchesDB } from '../../../../../chat-agent/db/queries/pending-patches';
+import { sessionOps } from '../../../../../chat-agent/db/queries/dsl-history';
 import { getUserId } from '../../../../../chat-agent/lib/getUserId';
 import { logger } from '../../../../../chat-agent/lib/logger';
 
@@ -17,7 +18,6 @@ export async function POST(req: Request) {
     const userId = getUserId(req);
 
     try {
-      const { sessionOps } = require("../../../../../chat-agent/db/queries/dsl-history");
       await sessionOps.appendOp(userId, pending.micrositeId, pending.pagePath, {
         summary: `Patch rejected: ${reason || "No reason"}`,
         outcome: "rejected"

@@ -72,6 +72,7 @@ export async function POST(req: Request) {
           authHeader,
           cookieHeader,
           userIdHeader,
+          userId,
           version: 1,
         });
         await pendingBatchesDB.updateOpStatus(batchId, op.pagePath, "applied");
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
             authHeader,
             cookieHeader,
             userIdHeader,
+            userId,
             version: 1,
           });
           await pendingBatchesDB.updateOpStatus(

@@ -63,6 +63,49 @@ describe("putPageDsl", () => {
     expect(result.latestDsl).toEqual(latestDsl);
   });
 
+  it("falls back to the resolved userId for x-user-id when the header is absent (bug fix: backend 'Failed to get User Id from context')", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK" })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    globalThis.fetch = fetchMock as any;
+
+    await putPageDsl("/home", { id: "root" }, {
+      authHeader: "Bearer token",
+      cookieHeader: "session=abc",
+      userIdHeader: null, // client did not send x-user-id
+      userId: "12345", // resolved from the JWT via getUserId
+      version: 1,
+    });
+
+    const putHeaders = fetchMock.mock.calls[0][1].headers;
+    expect(putHeaders["x-user-id"]).toBe("12345");
+  });
+
+  it("prefers the incoming x-user-id header over the resolved userId", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK" })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    globalThis.fetch = fetchMock as any;
+
+    await putPageDsl("/home", {}, { userIdHeader: "99", userId: "12345" });
+
+    expect(fetchMock.mock.calls[0][1].headers["x-user-id"]).toBe("99");
+  });
+
+  it("omits x-user-id when neither a header nor a non-anonymous userId is available", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK" })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    globalThis.fetch = fetchMock as any;
+
+    await putPageDsl("/home", {}, { userId: "anonymous" });
+
+    expect(fetchMock.mock.calls[0][1].headers["x-user-id"]).toBeUndefined();
+  });
+
   it("defaults version to 1 when not provided", async () => {
     const fetchMock = jest
       .fn()

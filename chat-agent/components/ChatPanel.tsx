@@ -77,6 +77,36 @@ const createMessageId = () =>
   globalThis.crypto?.randomUUID?.() ??
   `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+/**
+ * Build the identity headers the backend expects, mirroring the app's shared
+ * APIService: an `Authorization: Bearer` token plus an `x-user-id` resolved from
+ * `global.login.userDetails`. The backend rejects config PUTs with a
+ * ContextException ("Failed to get User Id from context") when x-user-id is
+ * absent, so every approve/reject/rollback request must forward it — the server
+ * route relays these headers on to the backend PUT.
+ */
+const buildAuthHeaders = (
+  base: Record<string, string> = {},
+): Record<string, string> => {
+  const headers: Record<string, string> = { ...base };
+  try {
+    const token = sessionStorage.getItem("accessToken");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const rawDetails = sessionStorage.getItem("global.login.userDetails");
+    if (rawDetails) {
+      const userId = JSON.parse(rawDetails)?.userId;
+      if (userId !== undefined && userId !== null && `${userId}` !== "") {
+        headers["x-user-id"] = `${userId}`;
+      }
+    }
+  } catch {
+    // sessionStorage/JSON access can throw in some contexts — send whatever we have.
+  }
+  return headers;
+};
+
 const createMessage = (
   message: Omit<ChatPanelMessage, "id">,
 ): ChatPanelMessage => ({
@@ -344,13 +374,7 @@ export function ChatPanel() {
     setIsLoading(true);
 
     try {
-      const reqHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        reqHeaders["Authorization"] = `Bearer ${token}`;
-      }
+      const reqHeaders = buildAuthHeaders({ "Content-Type": "application/json" });
 
       abortControllerRef.current = new AbortController();
 
@@ -672,13 +696,7 @@ export function ChatPanel() {
     addStatusMessage("Approving patch...");
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
 
       const response = await fetch("/api/patch/approve", {
         method: "POST",
@@ -735,13 +753,7 @@ export function ChatPanel() {
     addStatusMessage(`Rejecting patch: ${reason}`);
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
 
       const response = await fetch("/api/patch/reject", {
         method: "POST",
@@ -785,13 +797,7 @@ export function ChatPanel() {
     addStatusMessage("Approving batch...");
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
 
       const response = await fetch("/api/patch/approve-batch", {
         method: "POST",
@@ -853,13 +859,7 @@ export function ChatPanel() {
     addStatusMessage(`Rejecting batch: ${reason || "No reason"}`);
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
 
       const response = await fetch("/api/patch/reject-batch", {
         method: "POST",
@@ -897,13 +897,7 @@ export function ChatPanel() {
     addStatusMessage("Rolling back...");
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
 
       const response = await fetch("/api/patch/rollback", {
         method: "POST",

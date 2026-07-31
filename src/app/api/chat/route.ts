@@ -13,6 +13,8 @@ import { db } from "../../../../chat-agent/db/client";
 import { logger } from "../../../../chat-agent/lib/logger";
 import { getUserId } from "../../../../chat-agent/lib/getUserId";
 import { sessionsOps } from "../../../../chat-agent/db/queries/sessions";
+import { sessionOps } from "../../../../chat-agent/db/queries/dsl-history";
+import { callBedrockWithTools } from "../../../../chat-agent/lib/aws-bedrock-helper";
 
 type ChatRouteMessage = {
   role?: string;
@@ -98,9 +100,6 @@ export async function POST(req: Request) {
     .find((m) => m.role === "user");
   if (lastUserMsg) {
     try {
-      const {
-        sessionOps,
-      } = require("../../../../chat-agent/db/queries/dsl-history");
       await sessionOps.saveMessage(userId, micrositeId, lastUserMsg);
     } catch (e) {
       logger.warn("Failed to save user message", { error: (e as Error).message });
@@ -160,9 +159,6 @@ export async function POST(req: Request) {
 
           if (freeLLMClient.constructor.name === "BedrockRuntimeClient") {
             logger.debug("Calling Bedrock Native API");
-            const {
-              callBedrockWithTools,
-            } = require("../../../../chat-agent/lib/aws-bedrock-helper");
             const bedrockResponse = await callBedrockWithTools(
               freeLLMClient,
               finalMessages,
@@ -294,9 +290,6 @@ export async function POST(req: Request) {
 
                 // Update task context for pending patch
                 try {
-                  const {
-                    sessionOps,
-                  } = require("../../../../chat-agent/db/queries/dsl-history");
                   await sessionOps.saveTask(userId, micrositeId, {
                     intent: "DSL modification proposed",
                     pendingPatch: true,
@@ -340,9 +333,6 @@ export async function POST(req: Request) {
 
                 // Update task context for pending batch
                 try {
-                  const {
-                    sessionOps,
-                  } = require("../../../../chat-agent/db/queries/dsl-history");
                   await sessionOps.saveTask(userId, micrositeId, {
                     intent: "DSL batch modification proposed",
                     pendingPatch: true,
@@ -423,9 +413,6 @@ export async function POST(req: Request) {
 
           // Save assistant message to session history
           try {
-            const {
-              sessionOps,
-            } = require("../../../../chat-agent/db/queries/dsl-history");
             await sessionOps.saveMessage(userId, micrositeId, assistantMsg);
             for (const r of toolResults) {
               await sessionOps.saveMessage(userId, micrositeId, {

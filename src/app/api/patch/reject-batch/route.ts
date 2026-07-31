@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pendingBatchesDB } from '../../../../../chat-agent/db/queries/pending-batches';
+import { sessionOps } from '../../../../../chat-agent/db/queries/dsl-history';
 import { getUserId } from '../../../../../chat-agent/lib/getUserId';
 import { logger } from '../../../../../chat-agent/lib/logger';
 
@@ -15,7 +16,6 @@ export async function POST(req: Request) {
     const userId = getUserId(req);
 
     try {
-      const { sessionOps } = require("../../../../../chat-agent/db/queries/dsl-history");
       for (const op of pending.operations) {
         await sessionOps.appendOp(userId, pending.micrositeId, op.pagePath, {
           summary: `Batch rejected: ${reason || "No reason"}`,

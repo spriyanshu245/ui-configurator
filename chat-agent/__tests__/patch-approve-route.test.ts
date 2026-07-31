@@ -211,6 +211,41 @@ describe("POST /api/patch/approve — integrity fix", () => {
     });
   });
 
+  it("passes a userId to putPageDsl so the backend has a user in context (bug fix)", async () => {
+    // Build a Bearer JWT whose payload has preferred_username "emp-778899" and
+    // NO x-user-id header, exercising the getUserId JWT-decode fallback.
+    const payload = Buffer.from(
+      JSON.stringify({ preferred_username: "emp-778899" }),
+    ).toString("base64");
+    const jwt = `header.${payload}.sig`;
+
+    const req = new Request("https://example.test/api/patch/approve", {
+      method: "POST",
+      headers: { authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ patchId: "patch6" }),
+    });
+
+    getMock.mockResolvedValue({
+      id: "patch6",
+      micrositeId: "m1",
+      pagePath: "/home",
+      patch: [],
+      currentDsl: { id: "root", type: "page", components: [] },
+      description: "No-op",
+      sessionId: "s1",
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    // putPageDsl must receive userId "778899" (digits of preferred_username).
+    expect(putPageDslMock).toHaveBeenCalledWith(
+      "/home",
+      expect.anything(),
+      expect.objectContaining({ userId: "778899" }),
+    );
+  });
+
   it("does not fail or block the approval response when skill reflection rejects", async () => {
     const currentDsl = { id: "root", type: "page", components: [] };
     getMock.mockResolvedValue({
