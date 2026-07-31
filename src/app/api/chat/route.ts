@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     sessionContext,
     taskContext,
     pageOps,
+    images,
   } = await req.json();
 
   const safeMessages = Array.isArray(messages) ? messages : [];
@@ -77,6 +78,39 @@ export async function POST(req: Request) {
     return formatted;
   });
 
+  // Wireframe / design-image input: attach any uploaded images to the most
+  // recent user message as multimodal content so the vision-capable model can
+  // examine them and propose matching DSL components. Images are for this turn
+  // only — they are NOT persisted to session history (which keeps text-only).
+  const safeImages = Array.isArray(images)
+    ? images.filter(
+        (img: any) => img && typeof img.dataBase64 === "string",
+      )
+    : [];
+  if (safeImages.length > 0) {
+    for (let i = formattedMessages.length - 1; i >= 0; i--) {
+      if (formattedMessages[i].role === "user") {
+        const existing = formattedMessages[i].content;
+        const textPart =
+          typeof existing === "string"
+            ? existing
+            : "Configure the page to match the attached wireframe/design image.";
+        formattedMessages[i].content = [
+          { type: "text", text: textPart },
+          ...safeImages.map((img: any) => ({
+            type: "image",
+            format: img.format || "png",
+            dataBase64: img.dataBase64,
+          })),
+        ];
+        break;
+      }
+    }
+    logger.info("Attached wireframe images to user message", {
+      imageCount: safeImages.length,
+    });
+  }
+
   const userId = getUserId(req);
 
   // The client-supplied sessionId (canonical if session/restore ran, else the
@@ -93,14 +127,24 @@ export async function POST(req: Request) {
       .catch((e: Error) => logger.error("Failed to bump session", { error: e.message }));
   }
 
-  // Save the latest user message
+  // Save the latest user message (text-only — never persist image bytes to
+  // session history; extract the text part if content was made multimodal).
   const lastUserMsg = formattedMessages
     .slice()
     .reverse()
     .find((m) => m.role === "user");
   if (lastUserMsg) {
     try {
-      await sessionOps.saveMessage(userId, micrositeId, lastUserMsg);
+      const textContent = Array.isArray(lastUserMsg.content)
+        ? (lastUserMsg.content as any[])
+            .filter((p) => p?.type === "text")
+            .map((p) => p.text)
+            .join("\n")
+        : lastUserMsg.content;
+      await sessionOps.saveMessage(userId, micrositeId, {
+        ...lastUserMsg,
+        content: textContent,
+      });
     } catch (e) {
       logger.warn("Failed to save user message", { error: (e as Error).message });
     }

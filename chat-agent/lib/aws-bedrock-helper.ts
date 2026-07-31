@@ -1,6 +1,50 @@
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { TOOL_CAPABLE_MODEL } from "./freellm-client";
 import { DSL_TOOLS } from "./tool-definitions";
+import { logger } from "./logger";
+
+const SUPPORTED_IMAGE_FORMATS = new Set(["png", "jpeg", "gif", "webp"]);
+
+/**
+ * Convert a message's `content` into Bedrock Converse content blocks.
+ * A string becomes a single text block. An array may interleave
+ * `{ type: "text", text }` and `{ type: "image", format, dataBase64 }` items —
+ * the latter become Converse `{ image: { format, source: { bytes } } }` blocks,
+ * enabling wireframe / design-image input to the vision-capable model.
+ */
+function toBedrockContentBlocks(content: unknown): any[] {
+  if (typeof content === "string") {
+    return content ? [{ text: content }] : [];
+  }
+  if (!Array.isArray(content)) {
+    return content ? [{ text: JSON.stringify(content) }] : [];
+  }
+
+  const blocks: any[] = [];
+  for (const part of content) {
+    if (!part) continue;
+    if (typeof part === "string") {
+      if (part) blocks.push({ text: part });
+      continue;
+    }
+    if (part.type === "text" && typeof part.text === "string") {
+      if (part.text) blocks.push({ text: part.text });
+    } else if (part.type === "image" && typeof part.dataBase64 === "string") {
+      const format = String(part.format || "png").toLowerCase();
+      if (!SUPPORTED_IMAGE_FORMATS.has(format)) {
+        logger.warn("Skipping image with unsupported format", { format });
+        continue;
+      }
+      blocks.push({
+        image: {
+          format,
+          source: { bytes: Buffer.from(part.dataBase64, "base64") },
+        },
+      });
+    }
+  }
+  return blocks;
+}
 
 export async function callBedrockWithTools(client: BedrockRuntimeClient, finalMessages: any[]) {
   // Convert OpenAI tools to Bedrock tools
@@ -41,9 +85,7 @@ export async function callBedrockWithTools(client: BedrockRuntimeClient, finalMe
       }
       pendingToolUseIds = []; // clear them
 
-      if (msg.content) {
-        contentBlocks.push({ text: msg.content });
-      }
+      contentBlocks.push(...toBedrockContentBlocks(msg.content));
     } else if (msg.role === "assistant") {
       if (msg.content) {
         contentBlocks.push({ text: msg.content });

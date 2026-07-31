@@ -2,7 +2,7 @@ import React from 'react';
 import { DslDiffViewer } from './DslDiffViewer';
 import { DslBatchDiffViewer } from './DslBatchDiffViewer';
 import { RollbackPanel } from './RollbackPanel';
-import { Bot, User, AlertTriangle, RotateCcw, Clock, CheckCircle2, Undo2 } from 'lucide-react';
+import { Bot, User, AlertTriangle, RotateCcw, Clock, CheckCircle2, Undo2, ImageIcon } from 'lucide-react';
 import styles from './ChatMessage.module.scss';
 
 const CHANGE_STATUS_CONFIG: Record<
@@ -62,6 +62,18 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
             </span>
           )}
         </div>
+
+        {Array.isArray(message._attachedImageNames) &&
+          message._attachedImageNames.length > 0 && (
+            <div className={styles.attachmentNote}>
+              <ImageIcon size={12} />
+              <span>
+                {message._attachedImageNames.length === 1
+                  ? message._attachedImageNames[0]
+                  : `${message._attachedImageNames.length} images attached`}
+              </span>
+            </div>
+          )}
 
         {isError && typeof onRetry === 'function' && (
           <button

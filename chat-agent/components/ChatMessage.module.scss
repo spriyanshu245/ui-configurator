@@ -17,7 +17,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
 
   &.headerUser {
     flex-direction: row-reverse;
@@ -36,17 +36,17 @@
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.bubbleUser {
-    background: #2563eb;
-    color: #ffffff;
+    background: var(--secondary, #1c75bc);
+    color: var(--background, #ffffff);
     border: none;
     border-radius: 16px 16px 4px 16px;
     box-shadow: none;
   }
 
   &.bubbleAgent {
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #e2e8f0;
+    background: var(--background, #ffffff);
+    color: var(--text, #0f172a);
+    border: 1px solid var(--background-3, #e2e8f0);
     border-radius: 16px 16px 16px 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
@@ -54,7 +54,7 @@
   &.bubbleError {
     background: #fffbeb;
     border: 1px solid #fde68a;
-    color: #7c2d12;
+    color: var(--error-dark, #7c2d12);
   }
 
   &.bubbleStreaming {
@@ -101,15 +101,15 @@
   letter-spacing: 0.02em;
 
   &.chipProposed {
-    background: #eff6ff;
-    color: #2563eb;
-    border: 1px solid #bfdbfe;
+    background: var(--ocean-blue-2, #eff6ff);
+    color: var(--secondary, #1c75bc);
+    border: 1px solid var(--ocean-blue-3, #bfdbfe);
   }
 
   &.chipApplied {
-    background: #ecfdf5;
-    color: #047857;
-    border: 1px solid #a7f3d0;
+    background: var(--cyan-green-2, #ecfdf5);
+    color: var(--primary-dark, #047857);
+    border: 1px solid var(--cyan-green-3, #a7f3d0);
   }
 
   &.chipReverted {
@@ -135,7 +135,7 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: #94a3b8;
+    background: var(--light-gray-2, #94a3b8);
     animation: typing-dot 1.2s ease-in-out infinite;
 
     &:nth-child(2) { animation-delay: 0.2s; }
@@ -150,17 +150,17 @@
   margin-top: 8px;
   padding: 5px 12px;
   border-radius: 8px;
-  border: 1px solid #ef4444;
-  background: #ffffff;
-  color: #ef4444;
+  border: 1px solid var(--error, #bf4342);
+  background: var(--background, #ffffff);
+  color: var(--error, #bf4342);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background: #ef4444;
-    color: #ffffff;
+    background: var(--error, #bf4342);
+    color: var(--background, #ffffff);
   }
 }
 
@@ -176,4 +176,24 @@
 @keyframes typing-dot {
   0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.attachmentNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--secondary-transparent-bg, rgba(22, 94, 150, 0.1));
+  color: var(--secondary, #1c75bc);
+  max-width: 100%;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

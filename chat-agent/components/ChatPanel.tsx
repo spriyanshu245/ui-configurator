@@ -8,7 +8,7 @@ import {
 } from "../lib/eventsource-parser-wrapper";
 import type { ChatMessage as ChatMessageType } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
-import { X, ArrowUp, Bot, Loader2 } from "lucide-react";
+import { X, ArrowUp, Bot, Loader2, ImagePlus } from "lucide-react";
 import styles from "./ChatPanel.module.scss";
 
 type ToolCall = {
@@ -26,6 +26,22 @@ type PendingPatch = {
   patchedDsl: unknown;
   description?: string;
   previewHint?: string;
+};
+
+type AttachedImage = {
+  id: string;
+  name: string;
+  format: string; // png | jpeg | gif | webp
+  dataBase64: string; // raw base64 (no data: prefix)
+  previewUrl: string; // data: URL for thumbnail rendering
+};
+
+const SUPPORTED_IMAGE_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpeg",
+  "image/jpg": "jpeg",
+  "image/gif": "gif",
+  "image/webp": "webp",
 };
 
 type ProposedRollback = {
@@ -66,6 +82,7 @@ type ChatPanelMessage = ChatMessageType & {
   _isError?: boolean;
   _retryMessages?: ChatPanelMessage[];
   _changeStatus?: "proposed" | "applied" | "reverted";
+  _attachedImageNames?: string[];
 };
 
 type RouteMessage = Pick<
@@ -187,6 +204,9 @@ export function ChatPanel() {
   const restorePillTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Wireframe / design-image attachments for the next message.
+  const [pendingImages, setPendingImages] = useState<AttachedImage[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!dslInputText.trim()) return;
@@ -363,7 +383,10 @@ export function ChatPanel() {
     ]);
   };
 
-  const triggerAgent = async (currentMessages: ChatPanelMessage[]) => {
+  const triggerAgent = async (
+    currentMessages: ChatPanelMessage[],
+    images?: AttachedImage[],
+  ) => {
     if (!micrositeId) {
       appendAssistantMessage(
         "Open a microsite configurator page before using the assistant.",
@@ -391,6 +414,13 @@ export function ChatPanel() {
           clientSessionId: sessionIdRef.current,
           taskContext: sessionContextRef.current?.taskContext,
           pageOps: sessionContextRef.current?.pageOps,
+          images:
+            images && images.length
+              ? images.map((img) => ({
+                  format: img.format,
+                  dataBase64: img.dataBase64,
+                }))
+              : undefined,
         }),
       });
       if (!response.ok) {
@@ -544,19 +574,81 @@ export function ChatPanel() {
 
   const sendMessage = () => {
     const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) return;
+    const hasImages = pendingImages.length > 0;
+    // A wireframe image on its own is valid input, even with no text.
+    if ((!trimmedInput && !hasImages) || isLoading) return;
 
-    const userMessage = createMessage({ role: "user", content: trimmedInput });
+    const displayContent =
+      trimmedInput ||
+      (hasImages
+        ? `Configure this page to match the attached ${
+            pendingImages.length > 1 ? "designs" : "design"
+          }.`
+        : "");
+
+    const userMessage = createMessage({
+      role: "user",
+      content: displayContent,
+      _attachedImageNames: hasImages ? pendingImages.map((i) => i.name) : undefined,
+    });
     const nextMessages = [
       ...messages.filter((message) => !message._isStatus),
       userMessage,
     ];
 
+    const imagesForSend = hasImages ? pendingImages : undefined;
+
     setMessages(nextMessages);
     setInput("");
+    setPendingImages([]);
     setShowSlashMenu(false);
 
-    void triggerAgent(nextMessages);
+    void triggerAgent(nextMessages, imagesForSend);
+  };
+
+  // Read attached image files → base64 for vision input. Skips unsupported
+  // types and files over ~4MB (Bedrock image limit headroom).
+  const handleImageFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const MAX_BYTES = 4 * 1024 * 1024;
+    const next: AttachedImage[] = [];
+    for (const file of Array.from(files)) {
+      const format = SUPPORTED_IMAGE_MIME[file.type];
+      if (!format) {
+        appendAssistantMessage(
+          `"${file.name}" is not a supported image type (use PNG, JPEG, GIF, or WebP).`,
+        );
+        continue;
+      }
+      if (file.size > MAX_BYTES) {
+        appendAssistantMessage(
+          `"${file.name}" is too large (max 4MB). Please attach a smaller image.`,
+        );
+        continue;
+      }
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const dataBase64 = dataUrl.split(",")[1] ?? "";
+      next.push({
+        id: createMessageId(),
+        name: file.name,
+        format,
+        dataBase64,
+        previewUrl: dataUrl,
+      });
+    }
+    if (next.length) {
+      setPendingImages((prev) => [...prev, ...next]);
+    }
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const removePendingImage = (id: string) => {
+    setPendingImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   // Retry affordance for error-styled bubbles: re-sends the same message set
@@ -1183,6 +1275,42 @@ export function ChatPanel() {
             ))}
           </div>
         )}
+        {pendingImages.length > 0 && (
+          <div className={styles.imageStrip}>
+            {pendingImages.map((img) => (
+              <div key={img.id} className={styles.imageThumb} title={img.name}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.previewUrl} alt={img.name} />
+                <button
+                  type="button"
+                  className={styles.imageThumbRemove}
+                  onClick={() => removePendingImage(img.id)}
+                  aria-label={`Remove ${img.name}`}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => void handleImageFiles(e.target.files)}
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          disabled={isLoading || !micrositeId}
+          className={styles.attachButton}
+          aria-label="Attach a wireframe or design image"
+          title="Attach a wireframe / design image"
+        >
+          <ImagePlus size={18} />
+        </button>
         <textarea
           ref={textareaRef}
           className={`${styles.mainTextarea} ${isLoading ? styles.mainTextareaDisabled : ""}`}
@@ -1193,7 +1321,9 @@ export function ChatPanel() {
             isLoading
               ? "Waiting for the agent to respond..."
               : micrositeId
-                ? "Ask me to modify the layout..."
+                ? pendingImages.length > 0
+                  ? "Describe changes, or send the design as-is..."
+                  : "Ask me to modify the layout, or attach a wireframe..."
                 : "Open a microsite configurator page to start chatting..."
           }
           disabled={isLoading || !micrositeId}
@@ -1201,12 +1331,18 @@ export function ChatPanel() {
         />
         <button
           onClick={sendMessage}
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || (!input.trim() && pendingImages.length === 0)}
           className={`${styles.sendButton} ${isLoading ? styles.sendButtonLoading : ""}`}
           aria-busy={isLoading}
           style={{
-            background: input.trim() && !isLoading ? "#2563eb" : "#94a3b8",
-            cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
+            background:
+              (input.trim() || pendingImages.length > 0) && !isLoading
+                ? "var(--secondary, #1c75bc)"
+                : "var(--light-gray-2, #94a3b8)",
+            cursor:
+              (input.trim() || pendingImages.length > 0) && !isLoading
+                ? "pointer"
+                : "not-allowed",
           }}
         >
           {isLoading ? (
