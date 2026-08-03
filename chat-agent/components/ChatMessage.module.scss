@@ -68,7 +68,7 @@
       background: linear-gradient(
         100deg,
         rgba(255, 255, 255, 0) 30%,
-        rgba(59, 130, 246, 0.12) 50%,
+        rgba(var(--primary-rgb, 0, 167, 157), 0.12) 50%,
         rgba(255, 255, 255, 0) 70%
       );
       background-size: 200% 100%;

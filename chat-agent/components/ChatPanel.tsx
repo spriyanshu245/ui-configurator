@@ -8,7 +8,7 @@ import {
 } from "../lib/eventsource-parser-wrapper";
 import type { ChatMessage as ChatMessageType } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
-import { X, ArrowUp, Bot, Loader2, ImagePlus } from "lucide-react";
+import { X, Send, Bot, Loader2, ImagePlus } from "lucide-react";
 import styles from "./ChatPanel.module.scss";
 
 type ToolCall = {
@@ -1348,7 +1348,7 @@ export function ChatPanel() {
           {isLoading ? (
             <Loader2 size={18} className={styles.spinIcon} />
           ) : (
-            <ArrowUp size={18} />
+            <Send size={18} />
           )}
         </button>
       </div>

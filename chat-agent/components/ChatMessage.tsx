@@ -34,7 +34,7 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
     <div className={`${styles.messageWrapper} ${isUser ? styles.wrapperUser : styles.wrapperAgent}`}>
       <div className={`${styles.header} ${isUser ? styles.headerUser : styles.headerAgent}`}>
         {isUser ? <User size={14} /> : <Bot size={14} />}
-        <span>{isUser ? 'You' : 'Agent'}</span>
+        <span>{isUser ? 'You' : 'LayoutX'}</span>
       </div>
 
       <div className={bubbleClassNames}>
