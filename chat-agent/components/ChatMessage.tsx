@@ -2,6 +2,7 @@ import React from 'react';
 import { DslDiffViewer } from './DslDiffViewer';
 import { DslBatchDiffViewer } from './DslBatchDiffViewer';
 import { RollbackPanel } from './RollbackPanel';
+import { CreatePageCard } from './CreatePageCard';
 import { Bot, User, AlertTriangle, RotateCcw, Clock, CheckCircle2, Undo2, ImageIcon } from 'lucide-react';
 import styles from './ChatMessage.module.scss';
 
@@ -14,7 +15,7 @@ const CHANGE_STATUS_CONFIG: Record<
   reverted: { label: 'Reverted', icon: Undo2, className: 'chipReverted' },
 };
 
-export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch, onRetry }: any) {
+export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch, onCreatePage, onCancelCreatePage, onRetry }: any) {
   const isUser = message.role === 'user';
   const isError = Boolean(message._isError);
   const isStreaming = Boolean(message._isStreaming);
@@ -111,6 +112,17 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
               onRejectBatch={onRejectBatch}
             />
           </div>
+        )}
+
+        {message.type === 'page_creation_proposed' && message.pageCreation && (
+          <CreatePageCard
+            micrositeId={message.pageCreation.micrositeId}
+            suggestedName={message.pageCreation.suggestedName}
+            purpose={message.pageCreation.purpose}
+            toolCallId={message.tool_call_id}
+            onCreate={onCreatePage}
+            onCancel={onCancelCreatePage}
+          />
         )}
 
         {message.type === 'rollback_proposed' && message.rollback && (

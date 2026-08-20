@@ -36,6 +36,28 @@ export async function executeTool(
           error: `Could not list microsites from the backend: ${(e as Error).message}`,
         };
       }
+    case "navigate_to_page": {
+      // Verify the page exists before asking the UI to navigate to it. The chat
+      // route detects `navigate: true` in this result and emits a `navigate` SSE
+      // event that the client handles via MicrositeContext.setActivePage.
+      try {
+        const micrositeData = await fetchMicrositePages(args.microsite_id);
+        const exists = micrositeData?.pages?.some(
+          (p: any) => p.pageCode === args.page_path,
+        );
+        if (!exists) {
+          return { error: `Page "${args.page_path}" not found in microsite "${args.microsite_id}".` };
+        }
+        return {
+          navigate: true,
+          pageCode: args.page_path,
+          reason: args.reason ?? null,
+          message: `Navigating the editor to "${args.page_path}".`,
+        };
+      } catch (e) {
+        return { error: `Could not navigate: ${(e as Error).message}` };
+      }
+    }
     case "get_page_dsl": {
       const micrositeData = await fetchMicrositePages(args.microsite_id);
       const page = micrositeData.pages?.find(

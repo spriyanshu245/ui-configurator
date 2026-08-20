@@ -2,6 +2,7 @@ import { db } from '../client';
 
 export interface PendingBatchOperation {
   pagePath: string;
+  pageVersion: number;
   description: string;
   previewHint?: string;
   affectedComponents?: string[];

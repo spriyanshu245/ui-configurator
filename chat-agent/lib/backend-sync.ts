@@ -13,6 +13,12 @@ export interface PutPageDslOptions {
    * ("Failed to get User Id from context") if it is missing.
    */
   userId?: string | null;
+  /**
+   * The page's REAL backend version (from the microsite's pages[].pageVersion),
+   * used as the `?version=` slot on the PUT/GET. Callers must pass the page's
+   * actual version — the `1` fallback is only a last-resort default and writing
+   * to the wrong version slot silently fails or corrupts a different version.
+   */
   version?: number;
 }
 
@@ -80,7 +86,7 @@ export async function putPageDsl(
     });
     if (getResponse.ok) {
       latestDsl = await getResponse.json();
-      updateDslCache(pagePath, latestDsl);
+      updateDslCache(pagePath, latestDsl, version);
       logger.info("Updated in-memory DSL cache", { pagePath });
     }
   } catch (e) {

@@ -130,6 +130,7 @@ describe("POST /api/patch/approve — integrity fix", () => {
       id: "patch2",
       micrositeId: "m1",
       pagePath: "/home",
+      pageVersion: 4,
       patch: originalPatch,
       currentDsl,
       description: "Change text",
@@ -151,11 +152,11 @@ describe("POST /api/patch/approve — integrity fix", () => {
     expect(snapshotArg.wasEdited).toBe(true);
 
     // putPageDsl must have been called with the edited DSL, not a re-derivation
-    // of the original patch.
+    // of the original patch, and at the page's real version (4), not a hardcoded 1.
     expect(putPageDslMock).toHaveBeenCalledWith(
       "/home",
       editedDsl,
-      expect.objectContaining({ version: 1 }),
+      expect.objectContaining({ version: 4 }),
     );
   });
 

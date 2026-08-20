@@ -26,6 +26,13 @@ jest.mock("../lib/backend-sync", () => ({
   putPageDsl: jest.fn().mockResolvedValue({ latestDsl: {} }),
 }));
 
+jest.mock("../lib/microsite-loader", () => ({
+  // Page /home is at backend version 5 — the rollback GET/PUT must use it, not 1.
+  fetchMicrositePages: jest
+    .fn()
+    .mockResolvedValue({ pages: [{ pageCode: "/home", pageVersion: 5 }] }),
+}));
+
 jest.mock("../../src/app/utils/utils", () => ({
   getApiBaseUrl: () => "https://api.test.example",
 }));
@@ -127,9 +134,11 @@ describe("POST /api/patch/rollback", () => {
     expect(data.success).toBe(true);
 
     expect(putPageDslMock).toHaveBeenCalledTimes(1);
-    const [pagePathArg, dslArg] = putPageDslMock.mock.calls[0];
+    const [pagePathArg, dslArg, optsArg] = putPageDslMock.mock.calls[0];
     expect(pagePathArg).toBe("/home");
     expect(dslArg).toEqual(targetSnapshot);
+    // The PUT must use the page's real backend version (5), not a hardcoded 1.
+    expect(optsArg).toEqual(expect.objectContaining({ version: 5 }));
 
     expect(saveSnapshotMock).toHaveBeenCalledTimes(1);
     const snapshotArg = saveSnapshotMock.mock.calls[0][0];

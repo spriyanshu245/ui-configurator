@@ -75,6 +75,7 @@ function makeBatch(overrides: Partial<any> = {}) {
     operations: [
       {
         pagePath: "/home",
+        pageVersion: 2,
         description: "Update home",
         previewHint: "hint1",
         currentDsl: { page: "home-old" },
@@ -84,6 +85,7 @@ function makeBatch(overrides: Partial<any> = {}) {
       },
       {
         pagePath: "/about",
+        pageVersion: 3,
         description: "Update about",
         previewHint: "hint2",
         currentDsl: { page: "about-old" },
@@ -145,17 +147,18 @@ describe("POST /api/patch/approve-batch", () => {
     expect(data.navigateTo).toBe("/about");
 
     expect(putPageDslMock).toHaveBeenCalledTimes(2);
+    // Each page must be PUT at its OWN backend version, not a hardcoded 1.
     expect(putPageDslMock).toHaveBeenNthCalledWith(
       1,
       "/home",
       { page: "home-new" },
-      expect.objectContaining({ version: 1 }),
+      expect.objectContaining({ version: 2 }),
     );
     expect(putPageDslMock).toHaveBeenNthCalledWith(
       2,
       "/about",
       { page: "about-new" },
-      expect.objectContaining({ version: 1 }),
+      expect.objectContaining({ version: 3 }),
     );
 
     expect(saveSnapshotMock).toHaveBeenCalledTimes(2);
@@ -210,6 +213,7 @@ describe("POST /api/patch/approve-batch", () => {
       operations: [
         {
           pagePath: "/home",
+          pageVersion: 1,
           description: "Update home",
           previewHint: "h1",
           currentDsl: { page: "home-old" },
@@ -219,6 +223,7 @@ describe("POST /api/patch/approve-batch", () => {
         },
         {
           pagePath: "/about",
+          pageVersion: 1,
           description: "Update about",
           previewHint: "h2",
           currentDsl: { page: "about-old" },
@@ -228,6 +233,7 @@ describe("POST /api/patch/approve-batch", () => {
         },
         {
           pagePath: "/contact",
+          pageVersion: 1,
           description: "Update contact",
           previewHint: "h3",
           currentDsl: { page: "contact-old" },

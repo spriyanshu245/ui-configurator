@@ -37,6 +37,7 @@ describe("pendingBatchesDB", () => {
     operations: [
       {
         pagePath: "/home",
+        pageVersion: 1,
         description: "d",
         previewHint: "h",
         affectedComponents: [],

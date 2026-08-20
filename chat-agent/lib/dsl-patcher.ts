@@ -94,25 +94,47 @@ export function applyPatch(currentDsl: unknown, patch: Operation[]) {
 }
 
 const dslCache = new Map<string, any>();
+// Per-page backend version, resolved from the microsite's pages[] list. Kept
+// separate from dslCache so updateDslCache (which stores raw DSL after a PUT)
+// doesn't have to know about versions. This version MUST be carried through to
+// the PUT so writes hit the page's real version slot, not a hardcoded 1.
+const pageVersionCache = new Map<string, number>();
 
-export function updateDslCache(pagePath: string, dsl: any) {
+export function updateDslCache(pagePath: string, dsl: any, pageVersion?: number) {
   dslCache.set(pagePath, dsl);
+  if (typeof pageVersion === "number") {
+    pageVersionCache.set(pagePath, pageVersion);
+  }
 }
 
 /**
- * Load the current DSL for a page: cache first, else fetch the microsite's
- * page list to resolve the pageVersion, then fetch the page DSL and populate
- * the cache. Shared by queuePatch and queueBatch. Read-only w.r.t. the cache
- * beyond this population step — callers must NOT write intermediate applied
- * state into dslCache themselves.
+ * Load the current DSL for a page AND its real backend pageVersion: cache
+ * first, else fetch the microsite's page list to resolve the pageVersion, then
+ * fetch the page DSL and populate the caches. Shared by queuePatch and
+ * queueBatch. Read-only w.r.t. the DSL cache beyond this population step —
+ * callers must NOT write intermediate applied state into dslCache themselves.
+ *
+ * Returns { dsl, pageVersion }. The pageVersion is later persisted on the
+ * pending patch/batch operation and passed to putPageDsl so the PUT targets the
+ * correct `?version=` slot (fixes multi-page batches writing to version 1).
  *
  * Throws on failure (page not found / fetch error) — callers decide how to
  * surface that (queuePatch/queueBatch both translate it into an {error} return).
  */
-async function loadCurrentDsl(microsite_id: string, page_path: string): Promise<any> {
-  const cached = dslCache.get(page_path);
-  if (cached) return cached;
+async function loadCurrentDsl(
+  microsite_id: string,
+  page_path: string,
+): Promise<{ dsl: any; pageVersion: number }> {
+  // Cache short-circuit: a cached DSL means no re-fetch. Use the cached version
+  // if we recorded one (from a prior fetch or a versioned updateDslCache);
+  // otherwise fall back to 1 without forcing a microsite round-trip.
+  const cachedDsl = dslCache.get(page_path);
+  if (cachedDsl) {
+    return { dsl: cachedDsl, pageVersion: pageVersionCache.get(page_path) ?? 1 };
+  }
 
+  // Cache miss: resolve the page's real version from the microsite page list,
+  // then fetch its DSL, caching both.
   const micrositeData = await fetchMicrositePages(microsite_id);
   const page = micrositeData?.pages?.find(
     (p: any) => p.pageCode === page_path,
@@ -120,10 +142,11 @@ async function loadCurrentDsl(microsite_id: string, page_path: string): Promise<
   if (!page) {
     throw new Error(`Page "${page_path}" not found in microsite "${microsite_id}"`);
   }
-  const version = page.pageVersion || 1;
-  const currentDsl = await fetchPageDsl(page_path, version);
-  dslCache.set(page_path, currentDsl);
-  return currentDsl;
+  const pageVersion = page.pageVersion || 1;
+  const dsl = await fetchPageDsl(page_path, pageVersion);
+  dslCache.set(page_path, dsl);
+  pageVersionCache.set(page_path, pageVersion);
+  return { dsl, pageVersion };
 }
 
 export async function queuePatch(args: any, sessionId: string) {
@@ -137,8 +160,11 @@ export async function queuePatch(args: any, sessionId: string) {
   } = args;
 
   let currentDsl: any;
+  let pageVersion: number;
   try {
-    currentDsl = await loadCurrentDsl(microsite_id, page_path);
+    const loaded = await loadCurrentDsl(microsite_id, page_path);
+    currentDsl = loaded.dsl;
+    pageVersion = loaded.pageVersion;
   } catch (err: any) {
     return { error: err.message.startsWith("Page ") ? err.message : "Failed to fetch current DSL: " + err.message };
   }
@@ -160,6 +186,7 @@ export async function queuePatch(args: any, sessionId: string) {
     id: uuidv4(),
     micrositeId: microsite_id,
     pagePath: page_path,
+    pageVersion,
     patch,
     description,
     previewHint: preview_hint,
@@ -182,6 +209,7 @@ export interface BatchOperationInput {
 
 export interface QueuedBatchOperation {
   pagePath: string;
+  pageVersion: number;
   description: string;
   previewHint?: string;
   affectedComponents?: string[];
@@ -237,8 +265,11 @@ export async function queueBatch(
     const { page_path, patch, description, preview_hint, affected_components } = op;
 
     let currentDsl: any;
+    let pageVersion: number;
     try {
-      currentDsl = await loadCurrentDsl(microsite_id, page_path);
+      const loaded = await loadCurrentDsl(microsite_id, page_path);
+      currentDsl = loaded.dsl;
+      pageVersion = loaded.pageVersion;
     } catch (err: any) {
       const msg = err?.message?.startsWith("Page ")
         ? err.message
@@ -261,6 +292,7 @@ export async function queueBatch(
 
     validated.push({
       pagePath: page_path,
+      pageVersion,
       description,
       previewHint: preview_hint,
       affectedComponents: affected_components,

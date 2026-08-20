@@ -408,6 +408,32 @@ export async function POST(req: Request) {
                 controller.close();
                 return;
               }
+            } else if (toolCall.function.name === "propose_create_page") {
+              // Open the Create-Page input card (name + "Open as popup" checkbox)
+              // on the client; the client submits to /api/page/create.
+              send({
+                type: "sync_messages",
+                messages: [
+                  ...currentMessages,
+                  assistantMsg,
+                  {
+                    role: "tool",
+                    tool_call_id: toolCall.id,
+                    content:
+                      "Page creation card shown to the user. Wait for confirmation before continuing.",
+                  },
+                ],
+              });
+              send({
+                type: "page_creation_proposed",
+                micrositeId: args.microsite_id ?? micrositeId,
+                suggestedName: args.suggested_name ?? "",
+                purpose: args.purpose ?? null,
+                tool_call_id: toolCall.id,
+              });
+              send({ type: "awaiting_approval" });
+              controller.close();
+              return;
             } else {
               logger.debug("Executing tool", {
                 toolName: toolCall.function.name,
@@ -443,6 +469,20 @@ export async function POST(req: Request) {
                   type: "rollback_proposed",
                   rollback: result.rollback,
                   tool_call_id: toolCall.id,
+                });
+              }
+
+              // Non-destructive UI navigation: tell the client to switch the
+              // active page. The agent loop continues (no approval gate).
+              if (
+                toolCall.function.name === "navigate_to_page" &&
+                result?.navigate &&
+                result?.pageCode
+              ) {
+                send({
+                  type: "navigate",
+                  pageCode: result.pageCode,
+                  reason: result.reason ?? null,
                 });
               }
             }

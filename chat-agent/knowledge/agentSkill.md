@@ -66,6 +66,56 @@
 
 - Pages are identified primarily by `pageCode`. Internal routing relies heavily on this property to point actions directly to another page's ID.
 
+## Creating a New Page
+
+- To add a page, call the `propose_create_page` tool with a `suggested_name` inferred from the user's request (they can edit it). This opens an input card where the user confirms the NAME and ticks an "Open as popup" checkbox, then submits.
+- You do NOT choose the page `code` or `slug` — they are derived server-side from the name: `slug = lowercase, non-alphanumerics → dashes`; `code = "<micrositeId>_<slug>"`. The code is the page's unique identifier.
+- After the user submits, the page is created (POST /config/pages + the microsite's page list is updated) and the editor AUTO-NAVIGATES to the new page. You then receive a tool result with the real `pageCode` — use THAT exact code for any subsequent routing/config.
+- Do NOT call `get_page_dsl` or try to patch a page you have only *proposed* — wait until it is actually created (you'll get the pageCode back).
+- If the user ticked "Open as popup", the new page is already configured as a popup (right-aligned, 40% width, close-on-backdrop) — you don't need to patch those unless the user wants different values.
+
+## Navigating the Editor
+
+- Use the `navigate_to_page` tool to switch the configurator to an existing page by its `pageCode` (e.g. "show me the overview page", or to let the user see a change you just made). This is non-destructive and needs no approval. The page must already exist.
+
+## Routing a Control to a Page (assign a page as a route target)
+
+Routing config lives in the SOURCE component's `properties` (except tabs). To point a control at a page, set:
+- **Button (`button-v2`), `form`, `stack`, `repeatable-sub-section`**:
+  ```json
+  "actionType": "routing",
+  "routingType": "Internal",
+  "routePage": "<target pageCode>",
+  "navigateWithoutDataTransfer": true   // optional: skip passing session data
+  ```
+  (For a submit button that routes only after its API succeeds, use `actionType: "submit"` + `routeOnActionSuccess: true` instead of `actionType: "routing"`.)
+- **Table column** — two shapes:
+  - Single clickable column: `properties.isClickable: true`, `properties.routingType: "Internal"`, `properties.routePage: "<pageCode>"`.
+  - Multi-action column (`columnInputType: "multiple-actions"`): the route is nested per action — `properties.multipleActions[i].routeConfig = { "routingType": "Internal", "routePage": "<pageCode>" }`.
+- **Tabs** — each tab in a `tabs` component references its page via a BARE `pageCode` field on the tab object (a sibling of `properties`, NOT inside it, and with NO `routingType`):
+  ```json
+  { "id": "<uuid>", "pageCode": "<target pageCode>", "properties": { "title": "Tab label" } }
+  ```
+- **Dynamic / conditional routing** (advanced): `isDynamicRouting: true` + `routeKey: "<session key>"` resolves the target page from session at runtime; or `isConditional: true` + `conditionalRoutes: [{ condition, route, onCloseAction? }]` to route based on a runtime condition.
+
+## Configuring a Page as a Popup
+
+Popup config is a PAGE-LEVEL property on the TARGET page's DSL (`properties`), NOT part of the routing action. There is NO `routingType: "Popup"` — you route to a `pageCode` and that page's own `showAsPopup` decides whether it renders as a popup.
+- Set on the popup page's top-level `properties`:
+  ```json
+  "showAsPopup": true,
+  "panePosition": "right",        // alignment: "left" | "right" | "center" | "bottom"
+  "popupWidth": 40,                // size: 0-100 (%)
+  "closeOnBackdropClick": true,    // close when clicking outside
+  "showTitle": true
+  ```
+- Defaults when created via the popup checkbox: right / 40% / close-on-backdrop on / show title. If the user asks to change alignment ("center it"), size ("make it 60%"), or backdrop behavior, patch just those `properties` on the page.
+- The routing control gains an `onCloseAction` option only when its target page is a popup.
+
+## Multi-Page Changes (routing + popup together)
+
+- "Add a page, route a button to it, and make it a popup" spans two pages: the SOURCE page (where the button gets its routing config) and the NEW page (popup config). After the page is created, use `propose_dsl_batch` to change BOTH pages atomically in one approved batch — do NOT try to do them as two separate single-page patches. Each batch operation targets a different `page_path`.
+
 ## Common Operations
 
 - To update form values automatically: configure the form's `prefillApiUrl` with session interpolated paths.

@@ -8,6 +8,7 @@ import { logger } from "../../../../../chat-agent/lib/logger";
 
 interface AppliedEntry {
   pagePath: string;
+  pageVersion: number;
   preImage: any;
 }
 
@@ -73,10 +74,14 @@ export async function POST(req: Request) {
           cookieHeader,
           userIdHeader,
           userId,
-          version: 1,
+          version: op.pageVersion ?? 1,
         });
         await pendingBatchesDB.updateOpStatus(batchId, op.pagePath, "applied");
-        applied.push({ pagePath: op.pagePath, preImage: op.currentDsl });
+        applied.push({
+          pagePath: op.pagePath,
+          pageVersion: op.pageVersion ?? 1,
+          preImage: op.currentDsl,
+        });
       } catch (err) {
         await pendingBatchesDB.updateOpStatus(batchId, op.pagePath, "failed");
         forwardError = err as Error;
@@ -95,7 +100,7 @@ export async function POST(req: Request) {
             cookieHeader,
             userIdHeader,
             userId,
-            version: 1,
+            version: entry.pageVersion ?? 1,
           });
           await pendingBatchesDB.updateOpStatus(
             batchId,

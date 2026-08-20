@@ -1,0 +1,123 @@
+.card {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--background-4, #e5e7eb);
+  border-radius: 10px;
+  background: var(--background, #ffffff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+}
+
+.purpose {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.nameInput {
+  padding: 8px 10px;
+  border: 1px solid var(--light-gray, #cbd5e1);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: var(--primary, #00a79d);
+  }
+
+  &:disabled {
+    background: var(--background-3, #f1f5f9);
+    cursor: not-allowed;
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-placeholder, #7a8088);
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text, #0f172a);
+  cursor: pointer;
+
+  input {
+    accent-color: var(--primary, #00a79d);
+  }
+}
+
+.popupHint {
+  font-size: 11px;
+  color: var(--secondary, #1c75bc);
+  background: var(--secondary-transparent-bg, rgba(22, 94, 150, 0.1));
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.createBtn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary, #00a79d);
+  color: var(--white, #ffffff);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-dark, #00867e);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.cancelBtn {
+  padding: 7px 14px;
+  border: 1px solid var(--light-gray, #cbd5e1);
+  border-radius: 8px;
+  background: var(--background, #ffffff);
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--background-2, #f8fafc);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

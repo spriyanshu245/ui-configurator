@@ -8,6 +8,7 @@ import {
 } from "../lib/eventsource-parser-wrapper";
 import type { ChatMessage as ChatMessageType } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
+import { useParams } from "next/navigation";
 import { X, Send, Bot, Loader2, ImagePlus } from "lucide-react";
 import styles from "./ChatPanel.module.scss";
 
@@ -26,6 +27,12 @@ type PendingPatch = {
   patchedDsl: unknown;
   description?: string;
   previewHint?: string;
+};
+
+type PageCreationProposal = {
+  micrositeId: string;
+  suggestedName: string;
+  purpose?: string | null;
 };
 
 type AttachedImage = {
@@ -73,10 +80,15 @@ type PendingBatch = {
 type ChatPanelMessage = ChatMessageType & {
   tool_call_id?: string;
   tool_calls?: ToolCall[];
-  type?: "patch_proposed" | "rollback_proposed" | "batch_proposed";
+  type?:
+    | "patch_proposed"
+    | "rollback_proposed"
+    | "batch_proposed"
+    | "page_creation_proposed";
   patch?: PendingPatch;
   rollback?: ProposedRollback;
   batch?: PendingBatch;
+  pageCreation?: PageCreationProposal;
   _isStatus?: boolean;
   _isStreaming?: boolean;
   _isError?: boolean;
@@ -172,7 +184,10 @@ const toRouteMessages = (messages: ChatPanelMessage[]): RouteMessage[] =>
   }));
 
 export function ChatPanel() {
-  const { microsite, activePageCode, setActivePage } = useMicrosite();
+  const { microsite, activePageCode, setActivePage, addPage } = useMicrosite();
+  const routeParams = useParams();
+  const workspaceCode =
+    (routeParams?.workspaceCode as string | undefined) ?? undefined;
   const micrositeId = microsite.code?.trim();
   // Per-tab id — only ever logged (tool_call_log provenance), never used as the
   // query key for session state.
@@ -412,6 +427,7 @@ export function ChatPanel() {
           id: activePageCode,
           sessionId: canonicalSessionIdRef.current ?? sessionIdRef.current,
           clientSessionId: sessionIdRef.current,
+          workspaceCode,
           taskContext: sessionContextRef.current?.taskContext,
           pageOps: sessionContextRef.current?.pageOps,
           images:
@@ -464,6 +480,11 @@ export function ChatPanel() {
               tool_call_id?: string;
               message?: string;
               messages?: Partial<ChatPanelMessage>[];
+              pageCode?: string;
+              reason?: string | null;
+              micrositeId?: string;
+              suggestedName?: string;
+              purpose?: string | null;
             };
 
             if (
@@ -529,6 +550,40 @@ export function ChatPanel() {
                 hasSyncedMessages
                   ? replaceAssistantMessage(syncedMessages, assistantMessage)
                   : [...syncedMessages, assistantMessage],
+              );
+              return;
+            }
+
+            if (
+              data.type === "page_creation_proposed" &&
+              typeof data.suggestedName === "string"
+            ) {
+              assistantMessage = {
+                ...assistantMessage,
+                type: "page_creation_proposed",
+                pageCreation: {
+                  micrositeId: data.micrositeId ?? (micrositeId as string),
+                  suggestedName: data.suggestedName,
+                  purpose: data.purpose ?? null,
+                },
+                tool_call_id: data.tool_call_id,
+                _isStreaming: false,
+              };
+              setMessages(
+                hasSyncedMessages
+                  ? replaceAssistantMessage(syncedMessages, assistantMessage)
+                  : [...syncedMessages, assistantMessage],
+              );
+              return;
+            }
+
+            if (data.type === "navigate" && data.pageCode) {
+              // Agent-driven, non-destructive UI navigation.
+              setActivePage(data.pageCode);
+              addStatusMessage(
+                data.reason
+                  ? `Navigated to "${data.pageCode}" — ${data.reason}`
+                  : `Navigated to "${data.pageCode}".`,
               );
               return;
             }
@@ -978,6 +1033,89 @@ export function ChatPanel() {
     }
   };
 
+  const handleCreatePage = async (
+    proposalMicrositeId: string,
+    name: string,
+    isPopup: boolean,
+    toolCallId?: string,
+  ) => {
+    const trimmed = (name || "").trim();
+    if (!trimmed) {
+      appendAssistantMessage("Please enter a page name.");
+      return;
+    }
+    addStatusMessage(`Creating page "${trimmed}"...`);
+
+    try {
+      const headers = buildAuthHeaders({ "Content-Type": "application/json" });
+      const response = await fetch("/api/page/create", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          micrositeId: proposalMicrositeId || micrositeId,
+          name: trimmed,
+          isPopup,
+          workspaceCode,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          typeof data?.error === "string" ? data.error : "Page creation failed.",
+        );
+      }
+
+      // Sync the editor: add the page to the dropdown and navigate to it.
+      addPage(data.pageCode);
+      setActivePage(data.pageCode);
+
+      const popupNote = data.isPopup
+        ? " It is configured as a popup (right-aligned, 40% width, closes on backdrop click)."
+        : data.popupWarning
+          ? ` Note: ${data.popupWarning}`
+          : "";
+
+      // Feed the result back to the agent so it can continue the workflow
+      // (e.g. route a control to the new page), then let it respond.
+      const toolMessage = createMessage({
+        role: "tool",
+        tool_call_id: toolCallId,
+        name: "propose_create_page",
+        content: JSON.stringify({
+          success: true,
+          pageCode: data.pageCode,
+          pageVersion: data.pageVersion,
+          isPopup: data.isPopup,
+        }),
+      });
+      const assistantMessage = createMessage({
+        role: "assistant",
+        content: `Created page "${trimmed}" (code: ${data.pageCode}) and navigated to it.${popupNote}`,
+        _changeStatus: "applied",
+      });
+
+      const nextMessages = [
+        ...messages.filter((message) => !message._isStatus),
+        toolMessage,
+        assistantMessage,
+      ];
+      setMessages(nextMessages);
+
+      await triggerAgent(nextMessages);
+    } catch (error) {
+      console.error(error);
+      appendErrorMessage(
+        error instanceof Error ? error.message : "Page creation failed.",
+      );
+    }
+  };
+
+  const handleCancelCreatePage = () => {
+    const nextMessages = messages.filter((message) => !message._isStatus);
+    setMessages(nextMessages);
+  };
+
   const handleRollback = async (historyId: string) => {
     if (!micrositeId || !activePageCode) {
       appendAssistantMessage(
@@ -1128,6 +1266,8 @@ export function ChatPanel() {
               onRollback={handleRollback}
               onApproveBatch={handleApproveBatch}
               onRejectBatch={handleRejectBatch}
+              onCreatePage={handleCreatePage}
+              onCancelCreatePage={handleCancelCreatePage}
               onRetry={handleRetryMessage}
             />
           ))}
@@ -1337,7 +1477,7 @@ export function ChatPanel() {
           style={{
             background:
               (input.trim() || pendingImages.length > 0) && !isLoading
-                ? "var(--secondary, #1c75bc)"
+                ? "var(--primary, #1c75bc)"
                 : "var(--light-gray-2, #94a3b8)",
             cursor:
               (input.trim() || pendingImages.length > 0) && !isLoading
@@ -1348,7 +1488,7 @@ export function ChatPanel() {
           {isLoading ? (
             <Loader2 size={18} className={styles.spinIcon} />
           ) : (
-            <Send size={18} />
+            <Send size={18} color="white" />
           )}
         </button>
       </div>

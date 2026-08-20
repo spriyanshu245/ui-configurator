@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       cookieHeader,
       userIdHeader,
       userId,
-      version: 1,
+      version: (pending as any).pageVersion ?? 1,
     });
 
     const historyId = await dslHistory.saveSnapshot({

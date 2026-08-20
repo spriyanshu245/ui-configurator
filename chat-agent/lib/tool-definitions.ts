@@ -207,6 +207,64 @@ export const DSL_TOOLS = [
   {
     type: "function",
     function: {
+      name: "propose_create_page",
+      description: `Propose creating a NEW page in the microsite. Use this when the user
+        asks to add a page. Suggest a sensible page name from their request (they can edit it).
+        This does NOT create the page directly — it opens a small input card in the chat where
+        the user confirms the page NAME and ticks an "Open as popup" checkbox, then submits to
+        create it. After creation the editor auto-navigates to the new page. The page code is
+        derived from the name (lowercased, hyphenated, prefixed with the microsite id) — you do
+        NOT choose the code. Once the page exists you can route a control to it and/or configure
+        its DSL (e.g. with propose_dsl_batch). Do NOT call get_page_dsl on a page you have just
+        proposed but that has not been created/confirmed yet.`,
+      parameters: {
+        type: "object",
+        properties: {
+          microsite_id: { type: "string" },
+          suggested_name: {
+            type: "string",
+            description:
+              "A human-readable page name to pre-fill (e.g. 'Customer Update Banks'). The user can edit it before creating.",
+          },
+          purpose: {
+            type: "string",
+            description: "Optional short note on what the page is for (shown to the user).",
+          },
+        },
+        required: ["microsite_id", "suggested_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "navigate_to_page",
+      description: `Navigate the configurator editor UI to a specific page by its pageCode.
+        Use this to take the user to a page so they can see it — e.g. after creating a
+        page, or when the user asks "show me / go to <page>", or before/after applying a
+        patch so they can review the result. This is a non-destructive UI action (it just
+        switches the active page); it does NOT require approval and does NOT modify any DSL.
+        The page_path must be an existing pageCode in the microsite.`,
+      parameters: {
+        type: "object",
+        properties: {
+          microsite_id: { type: "string" },
+          page_path: {
+            type: "string",
+            description: "The pageCode to navigate to (must already exist in the microsite).",
+          },
+          reason: {
+            type: "string",
+            description: "Short human-readable reason for navigating (shown to the user).",
+          },
+        },
+        required: ["microsite_id", "page_path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_dsl_history",
       description:
         "Get the last N DSL snapshots for a page. Use to understand recent changes or to prepare a rollback.",

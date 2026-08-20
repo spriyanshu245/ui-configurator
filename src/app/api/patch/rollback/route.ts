@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dslHistory, sessionOps } from "../../../../../chat-agent/db/queries/dsl-history";
 import { validateAndAssignIds } from "../../../../../chat-agent/lib/dsl-patcher";
 import { putPageDsl } from "../../../../../chat-agent/lib/backend-sync";
+import { fetchMicrositePages } from "../../../../../chat-agent/lib/microsite-loader";
 import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
 import { getApiBaseUrl } from "../../../utils/utils";
@@ -45,11 +46,26 @@ export async function POST(req: Request) {
     const authHeader = req.headers.get("authorization");
     const userIdHeader = req.headers.get("x-user-id");
 
+    // Resolve the page's REAL backend version so the GET/PUT hit the right
+    // version slot (not a hardcoded 1).
+    let pageVersion = 1;
+    try {
+      const micrositeData = await fetchMicrositePages(micrositeId);
+      const page = micrositeData?.pages?.find(
+        (p: any) => p.pageCode === pagePath,
+      );
+      if (page?.pageVersion) pageVersion = page.pageVersion;
+    } catch (e) {
+      logger.warn("Failed to resolve page version for rollback; defaulting to 1", {
+        error: (e as Error).message,
+      });
+    }
+
     // Fetch the CURRENT dsl first, so the rollback's own pre-image (the state
     // being reverted FROM) is what gets recorded in history — not the target snapshot.
     let currentDslBeforeRollback: any = null;
     try {
-      const getUrl = `${getApiBaseUrl()}/api/v1/config/pages/${pagePath}?version=1`;
+      const getUrl = `${getApiBaseUrl()}/api/v1/config/pages/${pagePath}?version=${pageVersion}`;
       const getResponse = await fetch(getUrl, {
         method: "GET",
         headers: {
@@ -74,7 +90,7 @@ export async function POST(req: Request) {
       cookieHeader,
       userIdHeader,
       userId,
-      version: 1,
+      version: pageVersion,
     });
 
     const historyEntryId = await dslHistory.saveSnapshot({

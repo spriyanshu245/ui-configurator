@@ -59,7 +59,9 @@ describe("putPageDsl", () => {
     const getCall = fetchMock.mock.calls[1];
     expect(getCall[1].method).toBe("GET");
 
-    expect(updateDslCacheMock).toHaveBeenCalledWith("/home", latestDsl);
+    // The cache refresh now records the page version too, so a later patch on
+    // this page uses the correct version.
+    expect(updateDslCacheMock).toHaveBeenCalledWith("/home", latestDsl, 1);
     expect(result.latestDsl).toEqual(latestDsl);
   });
 
