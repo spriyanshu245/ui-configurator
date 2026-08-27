@@ -41,6 +41,64 @@
   - For example, if a Form has `storePrefillInSession: true` and `prefillApiName: "loanAccountOverview"`, you can access `loanTenure` like so: `${micrositeNav.loan-accounts.selected.loanTenure}` or `${loan-accounts.loan-overview.loanAccountOverview.loanTenure}`.
 - Components fetching data (like Table/DataGrid) can setup their `apiUrl` with session interpolation: `"/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}"`.
 
+## Session Data: store an API/table response and reuse it on another page
+
+This is the end-to-end recipe for "click a row on a list page → carry that row → use one of its fields as an API path variable (or body param) on the routed-to page." There are TWO distinct ways data gets into the session; use the right one.
+
+### A. Whole-table WRITE — store the entire fetched list (`storeDataInSession`)
+On a **Table** / **DataGrid** that fetches a list, persist the whole response into session so any page can read it:
+```json
+"storeDataInSession": true,
+"apiName": "loanAccountsList",         // the session key the response is stored under
+"pathToTableData": "data.accounts",     // dot-path inside the API response to the row array
+"nameKeyIds": [                          // which row fields become addressable session fields
+  { "id": "lan", "label": "lan" },
+  { "id": "loanTenure", "label": "loanTenure" }
+]
+```
+- `apiName` names the stored bucket; you later read a field as `${<microsite>.<page>.<apiName>.<field>}`.
+- `pathToTableData` points at the array of rows within the raw response.
+- `nameKeyIds[i].label` = the session field name; `nameKeyIds[i].id` = the row/foreign key it maps to. A table column binds to one of these by setting its own `tableColumns[i].properties.name` equal to that `id` (same `name`↔`id` rule as Form `nameKeyIds`).
+
+### B. Clickable column TRANSFER — carry just the CLICKED row (`dataTransfer`)
+When a specific column is clickable and routes to a detail page, attach the clicked row as a payload on that column's `properties`:
+```json
+"isClickable": true,
+"routingType": "Internal",
+"routePage": "loan-accounts_loan-overview",
+"dataTransfer": {
+  "name": "selected",                    // session key the payload lands under (→ micrositeNav.<microsite>.selected)
+  "body": "{ \"lan\": \"$lan\", \"tenure\": \"$loanTenure\" }"
+},
+"sessionKeys": "selected"                // optional: which session keys to CLEAR first
+```
+- `dataTransfer.name` is the session key; `dataTransfer.body` is a JSON template describing what to store.
+- Body placeholder grammar: **`$field`** pulls a field from the CLICKED ROW (or a sibling form field); **`${...}`** pulls an already-stored session/API value. (Same grammar as a form's `requestBodySpecs`/`body`.)
+
+**A vs B:** `storeDataInSession` (A) writes the WHOLE fetched list under `apiName`; a clickable column's `dataTransfer` (B) writes only the ONE row the user clicked, under `dataTransfer.name`. For "click a row then use its id on the next page", you want B (it's what populates `micrositeNav.<microsite>.selected`).
+
+### C. CONSUME the stored data on the destination page
+Two interpolation shapes — pick by what you stored:
+- **Current selection** (from a clickable column's `dataTransfer.name: "selected"`): `${micrositeNav.<microsite>.selected.<field>}`. This is the usual "use the clicked row's id as a path variable":
+  ```json
+  "apiUrl": "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}"
+  ```
+- **Named stored response** (from `storeDataInSession`+`apiName`, or a Form's `prefillApiName`): `${<microsite>.<page>.<apiName>.<field>}`, e.g. `${loan-accounts.loan-overview.loanAccountOverview.loanTenure}`.
+- In a request BODY (form submit / action), reuse the same placeholder grammar: `$siblingFormField` for a value typed on the current page, `${...}` for a stored session value.
+
+### D. Other session read/write knobs
+- `storePrefillInSession: true` + `prefillApiName` (on a **Form**) — persist the form's prefill response; read children as `${...apiName.field}` (see Form Rules).
+- `fetchFromSession: true` + `sessionPath: "<micrositeNav...path>"` — read a previously stored value straight into a component.
+- `storeInputApiInSession` — persist an input's own API result into session.
+- `storeSelectedInSession` — persist the user's current selection into session.
+
+### E. Worked example — list → detail via a path variable
+1. **List page** `loan-accounts_list`: a Table fetches `/api/v1/loan-accounts`. Its `lan` column is clickable:
+   `isClickable: true`, `routingType: "Internal"`, `routePage: "loan-accounts_loan-overview"`, `dataTransfer: { "name": "selected", "body": "{ \"lan\": \"$lan\" }" }`.
+2. User clicks a row → the clicked row's `lan` is stored at `micrositeNav.loan-accounts.selected.lan`, and the editor routes to the overview page.
+3. **Detail page** `loan-accounts_loan-overview`: a Form/Table/DataGrid sets `apiUrl: "/api/v1/loan-accounts/${micrositeNav.loan-accounts.selected.lan}"` — the clicked `lan` flows in as the path variable.
+Because this spans two pages, apply it with `propose_dsl_batch` (one operation per page).
+
 ## Navigation Patterns
 
 - Components like buttons or table columns can act as navigators by configuring specific routing properties.
@@ -120,6 +178,13 @@ Popup config is a PAGE-LEVEL property on the TARGET page's DSL (`properties`), N
 
 - To update form values automatically: configure the form's `prefillApiUrl` with session interpolated paths.
 - To clear form session: set `Clear session on click` via `sessionKeys`.
+
+## Improving the Knowledge Base (learn as you work)
+
+You have two tools for making future sessions smarter — use them judiciously, not on every turn:
+- **`record_skill`** — after you work out a NOVEL, reusable DSL recipe that WORKED and isn't already covered here (e.g. a multi-step session-data binding, a routing+popup wiring, a fix for a non-obvious error), save a concise how-to that names the exact property keys. One high-quality entry beats several thin ones. Do NOT record trivial edits (label/text/color), one-off page-specific facts, or things already in this document.
+- **`log_user_preference`** — when the user states a DURABLE choice about how they like things done (naming convention, default styling/spacing, a preferred component, a workflow habit like "always confirm before deleting"), persist it with a stable snake_case `key`. Do NOT log one-off, page-specific facts.
+- Learned entries are compiled into a separate "LEARNED FROM PAST SESSIONS" layer and are treated as helpful priors — this curated base and the user's explicit instructions always win.
 
 ## Error Fixes
 

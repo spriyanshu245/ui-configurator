@@ -394,7 +394,7 @@ export const getBaseUrl = (prefix: string, env: string): string => {
 
 export const getApiBaseUrl = () => {
   if (!globalThis.window) {
-    return "https://api.dev.rahi.cloud";
+    return "https://api.rahi-dev.rahi.cloud";
   }
 
   const currentHost = globalThis.window.location.hostname;
@@ -405,7 +405,7 @@ export const getApiBaseUrl = () => {
   const protocol = globalThis.window.location.protocol;
 
   return appEnv === "development"
-    ? "https://api.dev.rahi.cloud"
+    ? "https://api.rahi-dev.rahi.cloud"
     : `${protocol}//${apiHost.join(".")}`;
 };
 

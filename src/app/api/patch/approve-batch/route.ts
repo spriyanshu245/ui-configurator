@@ -5,6 +5,7 @@ import { sessionsOps } from "../../../../../chat-agent/db/queries/sessions";
 import { putPageDsl } from "../../../../../chat-agent/lib/backend-sync";
 import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
+import { runSkillReflection } from "../../../../../chat-agent/lib/skill-updater";
 
 interface AppliedEntry {
   pagePath: string;
@@ -209,6 +210,20 @@ export async function POST(req: Request) {
 
     await pendingBatchesDB.updateStatus(batchId, "committed");
     await pendingBatchesDB.delete(batchId);
+
+    for (const op of batch.operations) {
+      void runSkillReflection({
+        userRequest: op.description,
+        patchApplied: op.patch,
+        patchedDsl: op.patchedDsl,
+        sourcePatchId: `${batch.id}:${op.pagePath}`,
+      }).catch((e) =>
+        logger.error("batch skill reflection failed", {
+          pagePath: op.pagePath,
+          error: (e as Error).message,
+        }),
+      );
+    }
 
     return NextResponse.json({
       success: true,

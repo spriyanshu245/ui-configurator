@@ -32,7 +32,7 @@ export interface CreatePageResult {
 }
 
 /** Default popup page properties applied when the popup checkbox is ticked. */
-const POPUP_DEFAULTS = {
+export const POPUP_DEFAULTS = {
   showAsPopup: true,
   panePosition: "right", // left | right | center | bottom
   popupWidth: 40, // 0-100 (%)

@@ -6,8 +6,9 @@ import {
   fetchPageDsl,
 } from "./microsite-loader";
 import { tempDslOps } from "../db/queries/temp-dsl";
+import { skillEntries } from "../db/queries/skill-entries";
+import { compileAgentSkill } from "./skill-compiler";
 import { logger } from "./logger";
-import { v4 as uuidv4 } from "uuid";
 
 export interface ToolExecutionContext {
   userId?: string;
@@ -69,7 +70,7 @@ export async function executeTool(
       const version = page.pageVersion || 1;
       const dsl = await fetchPageDsl(args.page_path, version);
 
-      const tempDslId = uuidv4();
+      const tempDslId = `dsl:${args.microsite_id}:${args.page_path}`;
       await tempDslOps.storeDsl(tempDslId, dsl);
 
       return {
@@ -102,6 +103,27 @@ export async function executeTool(
       const micrositeId = ctx.micrositeId || "__global__";
       await userPreferences.set(userId, micrositeId, args.key, args.value);
       return { success: true };
+    }
+    case "record_skill": {
+      const { category, title, content } = args;
+      if (!title || !content) {
+        return { error: "record_skill requires a title and content." };
+      }
+      try {
+        await skillEntries.upsert({
+          category: category || "component_pattern",
+          title,
+          content,
+          confidence: 0.8,
+          source: "agent_reflection",
+        });
+        await compileAgentSkill();
+        await skillEntries.enforceBounds();
+        return { success: true, message: `Recorded skill: "${title}".` };
+      } catch (e) {
+        logger.error("record_skill failed", { error: (e as Error).message });
+        return { error: `Failed to record skill: ${(e as Error).message}` };
+      }
     }
     case "propose_rollback": {
       const { microsite_id, page_path, steps_back, reason } = args;

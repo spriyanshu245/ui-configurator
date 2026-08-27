@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { createPage } from "../../../../../chat-agent/lib/page-creator";
+import {
+  createPage,
+  POPUP_DEFAULTS,
+} from "../../../../../chat-agent/lib/page-creator";
 import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
+import { runSkillReflection } from "../../../../../chat-agent/lib/skill-updater";
 
 export async function POST(req: Request) {
   try {
@@ -36,6 +40,29 @@ export async function POST(req: Request) {
         workspaceCode: workspaceCode ?? null,
       },
     });
+
+    if (result.isPopup) {
+      const patchApplied = Object.keys(POPUP_DEFAULTS).map((k) => ({
+        op: "add" as const,
+        path: `/properties/${k}`,
+        value: (POPUP_DEFAULTS as Record<string, unknown>)[k],
+      }));
+      const patchedDsl = {
+        id: result.pageCode,
+        type: "page",
+        properties: { ...POPUP_DEFAULTS },
+      };
+      void runSkillReflection({
+        userRequest: `Create page "${result.name}" as a popup`,
+        patchApplied,
+        patchedDsl,
+        sourcePatchId: `page-create:${result.pageCode}`,
+      }).catch((e) =>
+        logger.error("page-create skill reflection failed", {
+          error: (e as Error).message,
+        }),
+      );
+    }
 
     return NextResponse.json({ success: true, ...result });
   } catch (error) {

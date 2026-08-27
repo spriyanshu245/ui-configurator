@@ -39,6 +39,10 @@ jest.mock("../lib/backend-sync", () => ({
   putPageDsl: jest.fn().mockResolvedValue({ latestDsl: {} }),
 }));
 
+jest.mock("../lib/skill-updater", () => ({
+  runSkillReflection: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { POST } from "../../src/app/api/patch/approve-batch/route";
 import { pendingBatchesDB } from "../db/queries/pending-batches";
 import { dslHistory, sessionOps } from "../db/queries/dsl-history";

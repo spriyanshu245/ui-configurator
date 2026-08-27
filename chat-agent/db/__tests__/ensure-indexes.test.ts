@@ -29,7 +29,6 @@ const COLLECTION_NAMES = [
   "skill_entries",
   "user_preferences",
   "temp_dsl",
-  "tool_call_log",
 ];
 
 jest.mock("../client", () => {
@@ -68,7 +67,6 @@ describe("ensureIndexes", () => {
       { collection: "user_preferences", name: "user_preferences_key" },
       { collection: "temp_dsl", name: "temp_dsl_lookup" },
       { collection: "temp_dsl", name: "temp_dsl_ttl" },
-      { collection: "tool_call_log", name: "tool_call_log_lookup" },
     ];
 
     for (const { collection, name } of expected) {
@@ -105,7 +103,7 @@ describe("ensureIndexes", () => {
     const tempDslTtlCall = tempDslCalls.find(
       (call) => call[1]?.name === "temp_dsl_ttl",
     );
-    expect(tempDslTtlCall?.[1]?.expireAfterSeconds).toBe(3600);
+    expect(tempDslTtlCall?.[1]?.expireAfterSeconds).toBe(900);
 
     const pendingBatchesCalls =
       collections["pending_batches"].createIndex.mock.calls;

@@ -26,6 +26,8 @@ yarn-debug.log*
 yarn-error.log*
 chat-agent.log*
 
+chat-agent/knowledge/learnedSkills.md
+
 # local env files
 .env*.local
 .env

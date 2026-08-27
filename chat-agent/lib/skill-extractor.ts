@@ -271,6 +271,51 @@ function classifyPrimitive(
     }
   }
 
+  if (
+    lastKey === "routingType" ||
+    lastKey === "routePage" ||
+    lastKey === "navigateWithoutDataTransfer" ||
+    (lastKey === "actionType" && value === "routing") ||
+    props?.routingType !== undefined ||
+    props?.routePage !== undefined ||
+    (props?.actionType === "routing" && props?.routePage !== undefined)
+  ) {
+    return {
+      primitive: "routing_action",
+      exampleValue: stringifyExample({
+        actionType: props?.actionType,
+        routingType: props?.routingType,
+        routePage: props?.routePage ?? (lastKey === "routePage" ? value : undefined),
+        navigateWithoutDataTransfer: props?.navigateWithoutDataTransfer,
+      }),
+    };
+  }
+
+  if (
+    lastKey === "showAsPopup" ||
+    lastKey === "panePosition" ||
+    lastKey === "popupWidth" ||
+    lastKey === "closeOnBackdropClick" ||
+    props?.showAsPopup === true
+  ) {
+    return {
+      primitive: "popup_page",
+      exampleValue: stringifyExample({
+        showAsPopup: props?.showAsPopup ?? (lastKey === "showAsPopup" ? value : true),
+        panePosition: props?.panePosition,
+        popupWidth: props?.popupWidth,
+        closeOnBackdropClick: props?.closeOnBackdropClick,
+      }),
+    };
+  }
+
+  if (lastKey === "pageCode") {
+    return {
+      primitive: "tab_page_link",
+      exampleValue: stringifyExample(value),
+    };
+  }
+
   // 1 / 11. Plain ${...} interpolation fallback — catches anything else.
   if (containsInterpolation(value)) {
     return {
@@ -279,8 +324,43 @@ function classifyPrimitive(
     };
   }
 
+  if (
+    (op.op === "add" || op.op === "replace") &&
+    segments.includes("properties") &&
+    typeof lastKey === "string" &&
+    !BORING_LEAF_KEYS.has(lastKey) &&
+    !/^\d+$/.test(lastKey)
+  ) {
+    return {
+      primitive: "component_config",
+      exampleValue: stringifyExample(value),
+    };
+  }
+
   return null;
 }
+
+const BORING_LEAF_KEYS = new Set<string>([
+  "id",
+  "type",
+  "key",
+  "label",
+  "text",
+  "title",
+  "name",
+  "placeholder",
+  "value",
+  "showLabel",
+  "showTitle",
+  "children",
+  "components",
+  "color",
+  "backgroundColor",
+  "className",
+  "style",
+  "margin",
+  "padding",
+]);
 
 /**
  * Mine session-data binding candidates out of a confirmed patch. For each
@@ -338,6 +418,9 @@ const PRIMITIVE_TITLES: Record<string, string> = {
   session_keys_clear: "Clear session keys on action",
   dynamic_routing: "Dynamic routing via session routeKey",
   conditional_visibility_session: "Conditional visibility driven by session data",
+  routing_action: "Route a control to a page",
+  popup_page: "Configure a page as a popup",
+  tab_page_link: "Link a tab to a page",
   session_interpolation: "Session value interpolation",
 };
 
@@ -351,7 +434,11 @@ const PRIMITIVE_CATEGORY: Record<string, SkillEntryDraft["category"]> = {
   session_keys_clear: "common_operation",
   dynamic_routing: "routing_pattern",
   conditional_visibility_session: "dsl_rule",
+  routing_action: "routing_pattern",
+  popup_page: "component_pattern",
+  tab_page_link: "routing_pattern",
   session_interpolation: "dsl_rule",
+  component_config: "component_pattern",
 };
 
 /**
@@ -360,7 +447,11 @@ const PRIMITIVE_CATEGORY: Record<string, SkillEntryDraft["category"]> = {
  * desired and as the fallback when the LLM call fails/unavailable.
  */
 export function candidateToSkillEntry(c: SessionBindingCandidate): SkillEntryDraft {
-  const title = PRIMITIVE_TITLES[c.primitive] ?? `Session binding pattern (${c.primitive})`;
+  const leafKey = c.pathTemplate.split("/").filter(Boolean).pop() ?? "property";
+  const title =
+    c.primitive === "component_config"
+      ? `${c.componentType}: set ${leafKey}`
+      : PRIMITIVE_TITLES[c.primitive] ?? `Session binding pattern (${c.primitive})`;
   const category = PRIMITIVE_CATEGORY[c.primitive] ?? "component_pattern";
 
   let content: string;
@@ -414,16 +505,39 @@ export function candidateToSkillEntry(c: SessionBindingCandidate): SkillEntryDra
         `values via \`\${...}\` interpolation to drive conditional visibility. Example at \`${c.pathTemplate}\`: ` +
         `\`${JSON.stringify(c.exampleValue)}\`.`;
       break;
-    default:
+    case "routing_action":
+      content =
+        `To route a **${c.componentType}** control to another page, set \`actionType: "routing"\`, ` +
+        `\`routingType: "Internal"\`, and \`routePage: "<pageCode>"\` (add \`navigateWithoutDataTransfer: true\` ` +
+        `to navigate without carrying a payload). Example at \`${c.pathTemplate}\`: \`${JSON.stringify(c.exampleValue)}\`.`;
+      break;
+    case "popup_page":
+      content =
+        `A page is shown as a popup via page-level \`properties\`: \`showAsPopup: true\` with ` +
+        `\`panePosition\` (left|right|center|bottom), \`popupWidth\` (0-100), and \`closeOnBackdropClick\`. ` +
+        `Popup is page-level config — there is no \`routingType: "Popup"\`. Example at \`${c.pathTemplate}\`: ` +
+        `\`${JSON.stringify(c.exampleValue)}\`.`;
+      break;
+    case "tab_page_link":
+      content =
+        `A tab links to a page through a bare \`pageCode\` field (not routing props). Example at ` +
+        `\`${c.pathTemplate}\`: \`${JSON.stringify(c.exampleValue)}\`.`;
+      break;
+    case "session_interpolation":
       content =
         `On a **${c.componentType}** component, a value at \`${c.pathTemplate}\` uses \`\${...}\` session ` +
         `interpolation. Example: \`${JSON.stringify(c.exampleValue)}\`.`;
+      break;
+    default:
+      content =
+        `On a **${c.componentType}** component, \`${leafKey}\` was set at \`${c.pathTemplate}\`. ` +
+        `Example: \`${JSON.stringify(c.exampleValue)}\`.`;
   }
 
   return {
     category,
     title,
     content,
-    confidence: 0.7,
+    confidence: c.primitive === "component_config" ? 0.4 : 0.7,
   };
 }

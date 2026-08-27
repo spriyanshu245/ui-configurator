@@ -64,6 +64,7 @@ import {
   candidateToSkillEntry,
 } from "../skill-extractor";
 import { runSkillReflection } from "../skill-updater";
+import { compileAgentSkill } from "../skill-compiler";
 
 const realFs = jest.requireActual("fs") as typeof fs;
 
@@ -99,18 +100,40 @@ const patchApplied = [
   },
 ];
 
-describe("BEFORE: agentSkill.md seed gap", () => {
-  it("the seed knowledge base documents form prefill but NOT the table-data-write pattern", () => {
-    const seedPath = path.join(process.cwd(), "chat-agent/knowledge/agentSkill.md");
-    const seed = realFs.readFileSync(seedPath, "utf-8");
+describe("curated agentSkill.md now covers the session-data grammar (Q2 gap closed)", () => {
+  it("documents both the form-prefill READ side and the table-data-WRITE / clicked-row side", () => {
+    const curatedPath = path.join(process.cwd(), "chat-agent/knowledge/agentSkill.md");
+    const curated = realFs.readFileSync(curatedPath, "utf-8");
 
-    // Documents the read/prefill side already.
-    expect(seed).toContain("storePrefillInSession");
-    expect(seed).toContain("prefillApiName");
+    expect(curated).toContain("storePrefillInSession");
+    expect(curated).toContain("prefillApiName");
 
-    // Does NOT document the write-side table binding — this is the gap.
-    expect(seed).not.toContain("storeDataInSession");
-    expect(seed).not.toContain("pathToTableData");
+    expect(curated).toContain("storeDataInSession");
+    expect(curated).toContain("pathToTableData");
+    expect(curated).toContain("nameKeyIds");
+    expect(curated).toContain("dataTransfer");
+    expect(curated).toContain("micrositeNav.");
+    expect(curated).toContain("fetchFromSession");
+  });
+});
+
+describe("compileAgentSkill writes the LEARNED layer, never the curated base", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    findAllMock.mockResolvedValue([]);
+    markUsedMock.mockResolvedValue(undefined);
+  });
+
+  it("writes learnedSkills.md and leaves agentSkill.md untouched", async () => {
+    await compileAgentSkill();
+
+    const writtenPaths = [
+      ...writeFileSyncMock.mock.calls.map((c) => String(c[0])),
+      ...renameSyncMock.mock.calls.flatMap((c) => [String(c[0]), String(c[1])]),
+    ];
+
+    expect(writtenPaths.some((p) => p.includes("learnedSkills.md"))).toBe(true);
+    expect(writtenPaths.some((p) => p.includes("agentSkill.md"))).toBe(false);
   });
 });
 
@@ -145,6 +168,77 @@ describe("mineSessionBindingCandidates", () => {
     };
     const plainPatch = [{ op: "replace", path: "/components/0/properties/text", value: "Hello" }];
     const candidates = mineSessionBindingCandidates(plainPatch as any, plainDsl);
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe("broadened recognizers (routing / popup / general fallback)", () => {
+  it("recognizes a routing action on a button-v2 (routePage + routingType)", () => {
+    const dsl = {
+      id: "root",
+      type: "page",
+      components: [
+        {
+          id: "b1",
+          type: "button-v2",
+          properties: { actionType: "routing", routingType: "Internal", routePage: "m1_detail" },
+          components: [],
+        },
+      ],
+    };
+    const patch = [{ op: "add", path: "/components/0/properties/routePage", value: "m1_detail" }];
+    const candidates = mineSessionBindingCandidates(patch as any, dsl);
+    const routing = candidates.find((c) => c.primitive === "routing_action");
+    expect(routing).toBeDefined();
+    expect(routing!.componentType).toBe("button-v2");
+
+    const entry = candidateToSkillEntry(routing!);
+    expect(entry.category).toBe("routing_pattern");
+    expect(entry.content).toContain("routePage");
+  });
+
+  it("recognizes popup page config from a page-level showAsPopup", () => {
+    const dsl = {
+      id: "m1_popup",
+      type: "page",
+      properties: { showAsPopup: true, panePosition: "right", popupWidth: 40 },
+      components: [],
+    };
+    const patch = [{ op: "add", path: "/properties/showAsPopup", value: true }];
+    const candidates = mineSessionBindingCandidates(patch as any, dsl);
+    const popup = candidates.find((c) => c.primitive === "popup_page");
+    expect(popup).toBeDefined();
+    expect(candidateToSkillEntry(popup!).content).toContain("showAsPopup");
+  });
+
+  it("falls back to a conservative component_config entry for an otherwise-unrecognized property (low confidence, per-prop title)", () => {
+    const dsl = {
+      id: "root",
+      type: "page",
+      components: [
+        { id: "t1", type: "Table", properties: { pageSize: 25 }, components: [] },
+      ],
+    };
+    const patch = [{ op: "replace", path: "/components/0/properties/pageSize", value: 25 }];
+    const candidates = mineSessionBindingCandidates(patch as any, dsl);
+    const general = candidates.find((c) => c.primitive === "component_config");
+    expect(general).toBeDefined();
+
+    const entry = candidateToSkillEntry(general!);
+    expect(entry.confidence).toBe(0.4);
+    expect(entry.title).toBe("Table: set pageSize");
+  });
+
+  it("does NOT emit a general entry for purely presentational leaf keys (label/text)", () => {
+    const dsl = {
+      id: "root",
+      type: "page",
+      components: [
+        { id: "h1", type: "Heading", properties: { text: "Hello" }, components: [] },
+      ],
+    };
+    const patch = [{ op: "replace", path: "/components/0/properties/text", value: "Hello" }];
+    const candidates = mineSessionBindingCandidates(patch as any, dsl);
     expect(candidates).toEqual([]);
   });
 });

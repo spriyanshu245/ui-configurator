@@ -189,8 +189,8 @@ export function ChatPanel() {
   const workspaceCode =
     (routeParams?.workspaceCode as string | undefined) ?? undefined;
   const micrositeId = microsite.code?.trim();
-  // Per-tab id — only ever logged (tool_call_log provenance), never used as the
-  // query key for session state.
+  // Per-tab id — used to keep the canonical session's clientSessionIds list in
+  // sync, never used as the query key for session state.
   const sessionIdRef = useRef(createMessageId());
   // Canonical (userId, micrositeId) session id resolved by /api/session/restore.
   // Falls back to the per-tab id until restore completes.

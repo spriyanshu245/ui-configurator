@@ -105,8 +105,8 @@ export async function POST(req: Request) {
 
     void runSkillReflection({
       userRequest: pending.description,
-      patchApplied: pending.patch,
-      patchedDsl: pending.patchedDsl,
+      patchApplied: actualPatch,
+      patchedDsl,
       sourcePatchId: pending.id,
     }).catch((e) => logger.error("skill reflection failed", { error: e.message }));
 

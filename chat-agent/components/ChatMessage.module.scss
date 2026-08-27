@@ -36,7 +36,7 @@
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.bubbleUser {
-    background: var(--secondary, #1c75bc);
+    background: var(--primary, #1c75bc);
     color: var(--background, #ffffff);
     border: none;
     border-radius: 16px 16px 4px 16px;

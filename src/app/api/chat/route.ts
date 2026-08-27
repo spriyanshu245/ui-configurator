@@ -5,7 +5,6 @@ import {
 } from "../../../../chat-agent/lib/freellm-client";
 import { buildSystemPrompt } from "../../../../chat-agent/lib/prompt-builder";
 import { executeTool } from "../../../../chat-agent/lib/tool-executor";
-import { toolCallLog } from "../../../../chat-agent/db/queries/tool-call-log";
 import { pendingPatchesDB } from "../../../../chat-agent/db/queries/pending-patches";
 import { pendingBatchesDB } from "../../../../chat-agent/db/queries/pending-batches";
 import { queuePatch, queueBatch } from "../../../../chat-agent/lib/dsl-patcher";
@@ -113,10 +112,6 @@ export async function POST(req: Request) {
 
   const userId = getUserId(req);
 
-  // The client-supplied sessionId (canonical if session/restore ran, else the
-  // per-tab id) is what we use for tool_call_log provenance. clientSessionId is
-  // always the per-tab id, used to keep the canonical session's clientSessionIds
-  // list in sync.
   const effectiveSessionId = clientSessionId ?? sessionId;
 
   // Fire-and-forget bump of the canonical (userId, micrositeId) session — do not
@@ -310,7 +305,6 @@ export async function POST(req: Request) {
 
           const toolResults = [];
           for (const toolCall of validToolCalls) {
-            const startTime = Date.now();
             let args;
             try {
               args = JSON.parse(toolCall.function.arguments);
@@ -447,14 +441,6 @@ export async function POST(req: Request) {
                 toolName: toolCall.function.name,
                 resultLength: JSON.stringify(result).length,
               });
-              await toolCallLog.log(
-                effectiveSessionId,
-                toolCall.function.name,
-                args,
-                result,
-                true,
-                Date.now() - startTime,
-              );
               toolResults.push({
                 tool_call_id: toolCall.id,
                 content: JSON.stringify(result),

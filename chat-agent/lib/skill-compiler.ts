@@ -13,7 +13,7 @@ export async function compileAgentSkill() {
   });
 
   const lines: string[] = [];
-  lines.push("# Agent DSL Knowledge Base");
+  lines.push("# Learned DSL Knowledge (compiled from past sessions)");
   lines.push(`_Compiled on ${new Date().toISOString()} from ${entries.length} entries_`);
   lines.push("---");
 
@@ -43,7 +43,7 @@ export async function compileAgentSkill() {
 
   const destPath = path.join(
     process.cwd(),
-    "chat-agent/knowledge/agentSkill.md",
+    "chat-agent/knowledge/learnedSkills.md",
   );
   const dir = path.dirname(destPath);
   if (!fs.existsSync(dir)) {

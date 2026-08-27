@@ -7,8 +7,8 @@ This directory contains a self-contained chat agent overlay for the Next.js UI C
 ## Architecture
 
 - **LLM Integration**: The agent is powered by FreeLLMAPI out-of-the-box using the OpenAI SDK format. It falls back to NVIDIA NIM natively if required.
-- **Storage**: We migrated to **`mongodb`** for local state management (`skill_entries`, `dsl_history`, `tool_call_log`, `user_preferences`). It aligns with the existing MongoDB connection context, allowing for a scalable and consolidated database layer.
-- **Knowledge base**: Driven by auto-compiled markdown (`agentSkill.md`) that self-updates via reflection.
+- **Storage**: We migrated to **`mongodb`** for local state management (`skill_entries`, `dsl_history`, `user_preferences`). It aligns with the existing MongoDB connection context, allowing for a scalable and consolidated database layer.
+- **Knowledge base**: A curated base (`agentSkill.md`, never overwritten) plus an auto-compiled `learnedSkills.md` layer that self-updates via reflection from `skill_entries`. Both are injected into the system prompt.
 
 ## Setup Instructions
 

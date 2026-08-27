@@ -1,4 +1,5 @@
 import { db } from './client';
+import { logger } from '../lib/logger';
 
 /**
  * Creates all required indexes across the 9 Mongo collections used by chat-agent.
@@ -7,87 +8,147 @@ import { db } from './client';
  * the same name, which is the desired fail-fast behavior).
  */
 export async function ensureIndexes(): Promise<void> {
-  await Promise.all([
+  const specs: Array<{ name: string; build: () => Promise<string> }> = [
     // NEVER add expireAfterSeconds here — dsl_history is the revert source of truth;
     // pruning is by-count only.
-    db.collection('dsl_history').createIndex(
-      { micrositeId: 1, pagePath: 1, createdAt: -1 },
-      { name: 'dsl_history_lookup' }
-    ),
+    {
+      name: 'dsl_history_lookup',
+      build: () =>
+        db.collection('dsl_history').createIndex(
+          { micrositeId: 1, pagePath: 1, createdAt: -1 },
+          { name: 'dsl_history_lookup' }
+        ),
+    },
 
-    db.collection('conversations').createIndex(
-      { userId: 1, micrositeId: 1 },
-      { name: 'conversations_lookup', unique: true }
-    ),
+    {
+      name: 'conversations_lookup',
+      build: () =>
+        db.collection('conversations').createIndex(
+          { userId: 1, micrositeId: 1 },
+          { name: 'conversations_lookup', unique: true }
+        ),
+    },
 
     // Backs sessionsOps.resolve's findOneAndUpdate upsert — must be unique so
     // concurrent requests for the same (userId, micrositeId) never race into dupes.
-    db.collection('sessions').createIndex(
-      { userId: 1, micrositeId: 1 },
-      { name: 'sessions_lookup', unique: true }
-    ),
+    {
+      name: 'sessions_lookup',
+      build: () =>
+        db.collection('sessions').createIndex(
+          { userId: 1, micrositeId: 1 },
+          { name: 'sessions_lookup', unique: true }
+        ),
+    },
 
-    db.collection('page_ops').createIndex(
-      { userId: 1, micrositeId: 1, pagePath: 1 },
-      { name: 'page_ops_lookup', unique: true }
-    ),
+    {
+      name: 'page_ops_lookup',
+      build: () =>
+        db.collection('page_ops').createIndex(
+          { userId: 1, micrositeId: 1, pagePath: 1 },
+          { name: 'page_ops_lookup', unique: true }
+        ),
+    },
 
-    db.collection('pending_patches').createIndex(
-      { id: 1 },
-      { name: 'pending_patches_id', unique: true }
-    ),
-    db.collection('pending_patches').createIndex(
-      { expiresAt: 1 },
-      { name: 'pending_patches_ttl', expireAfterSeconds: 0 }
-    ),
+    {
+      name: 'pending_patches_id',
+      build: () =>
+        db.collection('pending_patches').createIndex(
+          { id: 1 },
+          { name: 'pending_patches_id', unique: true }
+        ),
+    },
+    {
+      name: 'pending_patches_ttl',
+      build: () =>
+        db.collection('pending_patches').createIndex(
+          { expiresAt: 1 },
+          { name: 'pending_patches_ttl', expireAfterSeconds: 0 }
+        ),
+    },
 
-    db.collection('pending_batches').createIndex(
-      { id: 1 },
-      { name: 'pending_batches_id', unique: true }
-    ),
-    db.collection('pending_batches').createIndex(
-      { expiresAt: 1 },
-      { name: 'pending_batches_ttl', expireAfterSeconds: 0 }
-    ),
+    {
+      name: 'pending_batches_id',
+      build: () =>
+        db.collection('pending_batches').createIndex(
+          { id: 1 },
+          { name: 'pending_batches_id', unique: true }
+        ),
+    },
+    {
+      name: 'pending_batches_ttl',
+      build: () =>
+        db.collection('pending_batches').createIndex(
+          { expiresAt: 1 },
+          { name: 'pending_batches_ttl', expireAfterSeconds: 0 }
+        ),
+    },
     // Backs the concurrent-lock check in the atomic batch-approve route: find any
     // other batch for this microsite that is currently mid-flight ("applying").
-    db.collection('pending_batches').createIndex(
-      { micrositeId: 1, status: 1 },
-      { name: 'pending_batches_microsite_status' }
-    ),
+    {
+      name: 'pending_batches_microsite_status',
+      build: () =>
+        db.collection('pending_batches').createIndex(
+          { micrositeId: 1, status: 1 },
+          { name: 'pending_batches_microsite_status' }
+        ),
+    },
 
     // sparse:true so existing docs without mergeKey don't break the unique build.
-    // NOTE: mergeKey is not yet populated by skill-entries.ts logic — that's Workstream D's job.
-    db.collection('skill_entries').createIndex(
-      { mergeKey: 1 },
-      { name: 'skill_entries_mergekey', unique: true, sparse: true }
-    ),
-    db.collection('skill_entries').createIndex(
-      { category: 1, confidence: -1, usageCount: -1 },
-      { name: 'skill_entries_compile_order' }
-    ),
+    {
+      name: 'skill_entries_mergekey',
+      build: () =>
+        db.collection('skill_entries').createIndex(
+          { mergeKey: 1 },
+          { name: 'skill_entries_mergekey', unique: true, sparse: true }
+        ),
+    },
+    {
+      name: 'skill_entries_compile_order',
+      build: () =>
+        db.collection('skill_entries').createIndex(
+          { category: 1, confidence: -1, usageCount: -1 },
+          { name: 'skill_entries_compile_order' }
+        ),
+    },
 
     // Compound unique per (userId, micrositeId, key) — rescoped from the former
     // global-only {key:1} index as part of per-user preferences (Workstream C).
-    db.collection('user_preferences').createIndex(
-      { userId: 1, micrositeId: 1, key: 1 },
-      { name: 'user_preferences_key', unique: true }
-    ),
+    {
+      name: 'user_preferences_key',
+      build: () =>
+        db.collection('user_preferences').createIndex(
+          { userId: 1, micrositeId: 1, key: 1 },
+          { name: 'user_preferences_key', unique: true }
+        ),
+    },
 
-    db.collection('temp_dsl').createIndex(
-      { toolCallId: 1 },
-      { name: 'temp_dsl_lookup', unique: true }
-    ),
-    db.collection('temp_dsl').createIndex(
-      { createdAt: 1 },
-      { name: 'temp_dsl_ttl', expireAfterSeconds: 3600 }
-    ),
+    {
+      name: 'temp_dsl_lookup',
+      build: () =>
+        db.collection('temp_dsl').createIndex(
+          { toolCallId: 1 },
+          { name: 'temp_dsl_lookup', unique: true }
+        ),
+    },
+    {
+      name: 'temp_dsl_ttl',
+      build: () =>
+        db.collection('temp_dsl').createIndex(
+          { createdAt: 1 },
+          { name: 'temp_dsl_ttl', expireAfterSeconds: 900 }
+        ),
+    },
+  ];
 
-    db.collection('tool_call_log').createIndex(
-      { sessionId: 1, createdAt: -1 },
-      { name: 'tool_call_log_lookup' }
-    ),
-  ]);
+  const results = await Promise.allSettled(specs.map((s) => s.build()));
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      logger.warn('Failed to ensure MongoDB index', {
+        index: specs[i].name,
+        error: (result.reason as Error)?.message ?? String(result.reason),
+      });
+    }
+  });
 
   // Defensive startup assertion: guard against manual TTL mistakes on dsl_history,
   // which must never expire since it is the revert source of truth.

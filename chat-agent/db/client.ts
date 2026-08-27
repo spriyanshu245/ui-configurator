@@ -1,5 +1,6 @@
 import { MongoClient, Db } from "mongodb";
 import { ensureIndexes } from "./ensure-indexes";
+import { logger } from "../lib/logger";
 
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const dbName = process.env.MONGODB_DB_NAME || "layoutX";
@@ -7,27 +8,27 @@ const dbName = process.env.MONGODB_DB_NAME || "layoutX";
 let activeClient: MongoClient;
 let activeDb: Db;
 
-console.log("Connecting to MongoDB at:", uri);
+logger.info("Connecting to MongoDB", { uriConfigured: Boolean(process.env.MONGODB_URI), dbName });
 
 try {
   // Primary attempt
   activeClient = new MongoClient(uri);
   await activeClient.connect();
   activeDb = activeClient.db(dbName);
-  console.log("Connected to MongoDB successfully!");
+  logger.info("Connected to MongoDB");
 } catch (err) {
-  console.error("First connection attempt failed:", (err as Error).message);
-  
+  logger.error("First MongoDB connection attempt failed", { error: (err as Error).message });
+
   if (uri.includes("localhost")) {
     const fallbackUri = uri.replace("localhost", "127.0.0.1");
-    console.log("Attempting fallback connection to:", fallbackUri);
+    logger.info("Attempting MongoDB fallback connection (127.0.0.1)");
     try {
       activeClient = new MongoClient(fallbackUri);
       await activeClient.connect();
       activeDb = activeClient.db(dbName);
-      console.log("Connected to MongoDB via fallback URI successfully!");
+      logger.info("Connected to MongoDB via fallback URI");
     } catch (fallbackErr) {
-      console.error("Fallback connection attempt also failed:", (fallbackErr as Error).message);
+      logger.error("MongoDB fallback connection also failed", { error: (fallbackErr as Error).message });
       throw fallbackErr;
     }
   } else {
@@ -38,24 +39,17 @@ try {
 export const client = activeClient;
 export const db = activeDb;
 
-// Try to initialize/create the database by performing an idempotent write/touch
 try {
-  console.log(`Initializing/ensuring database "${dbName}" exists...`);
-  await db.collection("system_init").updateOne(
-    { name: "status" },
-    { $set: { initializedAt: new Date(), status: "active" } },
-    { upsert: true }
-  );
-  console.log(`Database "${dbName}" initialized successfully!`);
-} catch (initErr) {
-  console.error("Warning: Failed to perform database initialization write:", (initErr as Error).message);
+  await db.command({ ping: 1 });
+  logger.info("MongoDB connection verified", { dbName });
+} catch (pingErr) {
+  logger.warn("MongoDB ping failed", { error: (pingErr as Error).message });
 }
 
 // Ensure all required indexes exist across collections (idempotent, safe to re-run).
 try {
-  console.log("Ensuring MongoDB indexes...");
   await ensureIndexes();
-  console.log("MongoDB indexes ensured successfully!");
+  logger.info("MongoDB indexes ensured");
 } catch (indexErr) {
-  console.error("Warning: Failed to ensure MongoDB indexes:", (indexErr as Error).message);
+  logger.warn("Failed to ensure MongoDB indexes", { error: (indexErr as Error).message });
 }

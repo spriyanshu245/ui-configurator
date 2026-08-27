@@ -13,6 +13,8 @@ jest.mock("../microsite-loader", () => ({
 jest.mock("../../db/queries/user-preferences", () => ({ userPreferences: {} }));
 jest.mock("../../db/queries/dsl-history", () => ({ dslHistory: {} }));
 jest.mock("../../db/queries/temp-dsl", () => ({ tempDslOps: {} }));
+jest.mock("../../db/queries/skill-entries", () => ({ skillEntries: {} }));
+jest.mock("../skill-compiler", () => ({ compileAgentSkill: jest.fn() }));
 
 import { executeTool } from "../tool-executor";
 import { fetchMicrositePages } from "../microsite-loader";

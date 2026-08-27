@@ -311,19 +311,64 @@ export const DSL_TOOLS = [
     type: "function",
     function: {
       name: "log_user_preference",
-      description:
-        "Store a user preference learned from this conversation for future sessions.",
+      description: `Persist a DURABLE user preference so future sessions honor it without being re-told.
+        Call this the moment the user states a lasting choice about HOW they want things done —
+        e.g. a naming convention, a default styling/spacing/color, a preferred component for a job,
+        or a workflow habit ("always ask before deleting"). Do NOT log one-off, page-specific facts
+        or anything already obvious from the DSL. Keep the key stable (snake_case) so a later value
+        overwrites the same preference instead of piling up duplicates.`,
       parameters: {
         type: "object",
         properties: {
-          key: { type: "string", description: "Preference key in snake_case" },
+          key: { type: "string", description: "Stable preference key in snake_case (e.g. 'default_button_variant')" },
           value: { type: "string", description: "Preference value" },
           reason: {
             type: "string",
-            description: "Why this preference was inferred",
+            description: "Why this preference was inferred (what the user said/did)",
           },
         },
         required: ["key", "value", "reason"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "record_skill",
+      description: `Save a NOVEL, REUSABLE configuration pattern into the agent's long-term knowledge
+        base so future sessions start already knowing it. Use your own judgement: call this after you
+        work out a non-obvious DSL recipe that WORKED and would help on a similar future task — e.g. a
+        multi-step session-data binding, a routing/popup setup, or a component wiring that wasn't
+        already covered by your knowledge base. Write the content as a concise, self-contained
+        how-to that names the EXACT property/field keys involved (someone should be able to reproduce
+        it from the entry alone). Do NOT record: trivial edits (label/text/color tweaks), one-off
+        page-specific facts, user preferences (use log_user_preference), or anything already in your
+        knowledge base. Prefer one high-quality entry over many small ones.`,
+      parameters: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: [
+              "component_pattern",
+              "dsl_rule",
+              "common_operation",
+              "error_fix",
+              "routing_pattern",
+            ],
+            description: "Which kind of knowledge this is.",
+          },
+          title: {
+            type: "string",
+            description: "Short, specific title (e.g. 'Store clicked table row as API path variable').",
+          },
+          content: {
+            type: "string",
+            description:
+              "Markdown how-to, 2-6 sentences, naming the exact property/field keys. Self-contained and reproducible.",
+          },
+        },
+        required: ["category", "title", "content"],
       },
     },
   },

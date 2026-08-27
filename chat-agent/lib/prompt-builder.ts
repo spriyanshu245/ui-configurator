@@ -21,6 +21,22 @@ export async function buildSystemPrompt(context: any): Promise<string> {
     skillContent = "# No knowledge base compiled yet.";
   }
 
+  let learnedContent = "";
+  try {
+    const learnedPath = path.join(
+      process.cwd(),
+      "chat-agent/knowledge/learnedSkills.md",
+    );
+    if (fs.existsSync(learnedPath)) {
+      learnedContent = fs.readFileSync(learnedPath, "utf-8").trim();
+    }
+  } catch (e) {
+    logger.warn("Failed to read learned skills", { error: (e as Error).message });
+  }
+  const learnedSection = learnedContent
+    ? `\n═══ LEARNED FROM PAST SESSIONS ═══\nPatterns distilled from previously approved changes. Treat as helpful priors, not overrides of the curated knowledge base or the user's explicit instructions.\n${learnedContent}\n`
+    : "";
+
   let preferences: { key: string; value: string }[] = [];
   try {
     const preferencesCollection = db.collection("user_preferences");
@@ -93,6 +109,7 @@ You help users read, understand, and modify microsite pages described as JSON DS
 7. One logical change per patch proposal. Break multi-section changes into sequential proposals.
 8. To ADD a page, use propose_create_page (the user confirms the name + a popup checkbox); do NOT invent page codes or try to patch a page before it exists. Use navigate_to_page to move the editor to an existing page.
 9. When a request spans more than one page (e.g. route a button on page A to a new page B, or configure B as a popup), use propose_dsl_batch to change all affected pages atomically. See the knowledge base sections on Creating a New Page, Routing a Control to a Page, and Configuring a Page as a Popup.
+10. LEARN as you work. When the user states a durable preference (a naming convention, a default style, a preferred component, a workflow habit), call log_user_preference. After you work out a NOVEL, reusable DSL recipe that succeeded and isn't already in your knowledge base, call record_skill with a concise how-to that names the exact property keys. Be selective — skip trivial edits, one-off facts, and anything already documented here.
 
 ═══ WIREFRAME / DESIGN IMAGE INPUT ═══
 When the user attaches a wireframe, mock-up, or design image (e.g. a Figma export):
@@ -111,7 +128,7 @@ When the user attaches a wireframe, mock-up, or design image (e.g. a Figma expor
 
 ═══ YOUR KNOWLEDGE BASE ═══
 ${skillContent}
-
+${learnedSection}
 ═══ COMPONENTS ═══
 Only use these types. Match props exactly. Never invent props.
 ${componentRegistryContent}
