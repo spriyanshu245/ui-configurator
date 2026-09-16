@@ -168,6 +168,27 @@
   margin-top: 12px;
 }
 
+.previewButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ocean-blue-3, #bfdbfe);
+  background: var(--ocean-blue-2, #eff6ff);
+  color: var(--secondary, #1c75bc);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+
+  &:hover {
+    background: var(--secondary, #1c75bc);
+    color: var(--white, #ffffff);
+  }
+}
+
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

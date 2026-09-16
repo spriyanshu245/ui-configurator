@@ -471,6 +471,25 @@ export async function POST(req: Request) {
                   reason: result.reason ?? null,
                 });
               }
+
+              if (
+                toolCall.function.name === "suggest_next_actions" &&
+                Array.isArray(result?.suggestions) &&
+                result.suggestions.length > 0
+              ) {
+                send({ type: "suggestions", suggestions: result.suggestions });
+              }
+
+              if (
+                toolCall.function.name === "show_page_map" &&
+                result?.pageMap
+              ) {
+                send({
+                  type: "page_map",
+                  pageMap: result.pageMap,
+                  tool_call_id: toolCall.id,
+                });
+              }
             }
           }
 

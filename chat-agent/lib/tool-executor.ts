@@ -8,6 +8,7 @@ import {
 import { tempDslOps } from "../db/queries/temp-dsl";
 import { skillEntries } from "../db/queries/skill-entries";
 import { compileAgentSkill } from "./skill-compiler";
+import { buildPageMap } from "./page-map";
 import { logger } from "./logger";
 
 export interface ToolExecutionContext {
@@ -103,6 +104,28 @@ export async function executeTool(
       const micrositeId = ctx.micrositeId || "__global__";
       await userPreferences.set(userId, micrositeId, args.key, args.value);
       return { success: true };
+    }
+    case "show_page_map": {
+      try {
+        const micrositeId = args.microsite_id || ctx.micrositeId;
+        if (!micrositeId) return { error: "No microsite id available for the page map." };
+        const pageMap = await buildPageMap(micrositeId);
+        return { pageMap };
+      } catch (e) {
+        return { error: `Could not build the page map: ${(e as Error).message}` };
+      }
+    }
+    case "suggest_next_actions": {
+      const raw = Array.isArray(args?.suggestions) ? args.suggestions : [];
+      const suggestions = raw
+        .filter((s: any) => s && typeof s.label === "string" && typeof s.value === "string")
+        .slice(0, 4)
+        .map((s: any, i: number) => ({
+          id: `sg-${i}`,
+          label: s.label.slice(0, 60),
+          value: s.value,
+        }));
+      return { suggestions };
     }
     case "record_skill": {
       const { category, title, content } = args;

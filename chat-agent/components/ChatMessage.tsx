@@ -3,7 +3,9 @@ import { DslDiffViewer } from './DslDiffViewer';
 import { DslBatchDiffViewer } from './DslBatchDiffViewer';
 import { RollbackPanel } from './RollbackPanel';
 import { CreatePageCard } from './CreatePageCard';
-import { Bot, User, AlertTriangle, RotateCcw, Clock, CheckCircle2, Undo2, ImageIcon } from 'lucide-react';
+import { PageMapCard } from './PageMapCard';
+import { MarkdownLite } from './MarkdownLite';
+import { Bot, User, AlertTriangle, RotateCcw, Clock, CheckCircle2, Undo2, ImageIcon, Eye } from 'lucide-react';
 import styles from './ChatMessage.module.scss';
 
 const CHANGE_STATUS_CONFIG: Record<
@@ -15,7 +17,7 @@ const CHANGE_STATUS_CONFIG: Record<
   reverted: { label: 'Reverted', icon: Undo2, className: 'chipReverted' },
 };
 
-export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch, onCreatePage, onCancelCreatePage, onRetry }: any) {
+export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch, onCreatePage, onCancelCreatePage, onRetry, onNavigatePage, activePageCode, onOpenPreview }: any) {
   const isUser = message.role === 'user';
   const isError = Boolean(message._isError);
   const isStreaming = Boolean(message._isStreaming);
@@ -53,16 +55,20 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
           </div>
         )}
 
-        <div className={styles.content}>
-          {message.content}
-          {isStreaming && (
-            <span className={styles.streamingDots} aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </span>
-          )}
-        </div>
+        {!isUser && !isError && !isStreaming ? (
+          <MarkdownLite text={message.content} />
+        ) : (
+          <div className={styles.content}>
+            {message.content}
+            {isStreaming && (
+              <span className={styles.streamingDots} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            )}
+          </div>
+        )}
 
         {Array.isArray(message._attachedImageNames) &&
           message._attachedImageNames.length > 0 && (
@@ -86,6 +92,18 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
             <span>Retry</span>
           </button>
         )}
+
+        {(message.type === 'patch_proposed' || message.type === 'batch_proposed') &&
+          typeof onOpenPreview === 'function' && (
+            <button
+              type="button"
+              className={styles.previewButton}
+              onClick={() => onOpenPreview(message)}
+            >
+              <Eye size={13} />
+              <span>Preview components</span>
+            </button>
+          )}
 
         {message.type === 'patch_proposed' && message.patch && (
           <div className={styles.patchContainer}>
@@ -140,6 +158,14 @@ export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, 
               onRollback={onRollback}
             />
           </div>
+        )}
+
+        {message.type === 'page_map' && message.pageMap && (
+          <PageMapCard
+            pageMap={message.pageMap}
+            activePageCode={activePageCode}
+            onNavigate={onNavigatePage}
+          />
         )}
       </div>
     </div>

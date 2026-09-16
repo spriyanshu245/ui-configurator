@@ -1,0 +1,199 @@
+.panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--background, #ffffff);
+  border-left: 1px solid var(--background-3, #e2e8f0);
+  border-right: 1px solid var(--background-3, #e2e8f0);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+  animation: preview-slide-in 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--background-3, #e2e8f0);
+  color: var(--text, #0f172a);
+}
+
+.title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.modeToggle {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--background-3, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+
+  button {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    background: var(--background, #ffffff);
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+
+    & + button {
+      border-left: 1px solid var(--background-3, #e2e8f0);
+    }
+  }
+}
+
+.modeActive {
+  background: var(--secondary, #1c75bc) !important;
+  color: var(--white, #ffffff) !important;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  border-radius: 6px;
+
+  &:hover {
+    background: var(--background-2, #f1f5f9);
+    color: var(--text, #0f172a);
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.empty {
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  padding: 16px 4px;
+  text-align: center;
+}
+
+.liveNote {
+  font-size: 12px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+/* Structured (fields) view */
+.structured {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.node {
+  border: 1px solid var(--background-3, #e2e8f0);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--background, #ffffff);
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nodeType {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--secondary, #1c75bc);
+}
+
+.nodeLabel {
+  font-size: 12.5px;
+  color: var(--text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opBadge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.fields {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  li {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+  }
+}
+
+.fieldKey {
+  color: var(--text-secondary, #64748b);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.fieldVal {
+  color: var(--text, #0f172a);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.children {
+  margin: 8px 0 0 10px;
+  padding-left: 10px;
+  border-left: 1px dashed var(--background-3, #cbd5e1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Live view — non-interactive canvas mirroring the builder look. */
+.canvas {
+  pointer-events: none;
+  user-select: none;
+  border: 1px solid var(--background-3, #e2e8f0);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--background-2, #f8fafc);
+}
+
+@keyframes preview-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

@@ -1,12 +1,22 @@
 "use client";
 import React, { useRef, useState, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
+import { SuggestionPills } from "./SuggestionPills";
+import { PatchPreviewPanel } from "./PatchPreviewPanel";
+import {
+  extractAddedComponents,
+  extractAddedRawNodes,
+  type PreviewComponent,
+} from "../lib/added-components";
 import {
   createParser,
   ParsedEventLocal,
   ReconnectIntervalLocal,
 } from "../lib/eventsource-parser-wrapper";
-import type { ChatMessage as ChatMessageType } from "../types/types";
+import type {
+  ChatMessage as ChatMessageType,
+  ChatSuggestion,
+} from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
 import { useParams } from "next/navigation";
 import { X, Send, Bot, Loader2, ImagePlus } from "lucide-react";
@@ -51,6 +61,15 @@ const SUPPORTED_IMAGE_MIME: Record<string, string> = {
   "image/webp": "webp",
 };
 
+// Static starter prompts shown on the empty state (hybrid pills: these seed the
+// conversation; the agent emits contextual "next actions" via suggest_next_actions).
+const STARTER_SUGGESTIONS: ChatSuggestion[] = [
+  { id: "starter-explain", label: "Explain this page", value: "Explain what this page does and list its main components." },
+  { id: "starter-form", label: "Add a form", value: "Add a form with a few input fields to this page." },
+  { id: "starter-table", label: "Add a table", value: "Add a table to display a list of records on this page." },
+  { id: "starter-page", label: "Create a page", value: "Create a new page in this microsite." },
+];
+
 type ProposedRollback = {
   historyId: string;
   micrositeId: string;
@@ -84,11 +103,13 @@ type ChatPanelMessage = ChatMessageType & {
     | "patch_proposed"
     | "rollback_proposed"
     | "batch_proposed"
-    | "page_creation_proposed";
+    | "page_creation_proposed"
+    | "page_map";
   patch?: PendingPatch;
   rollback?: ProposedRollback;
   batch?: PendingBatch;
   pageCreation?: PageCreationProposal;
+  pageMap?: unknown;
   _isStatus?: boolean;
   _isStreaming?: boolean;
   _isError?: boolean;
@@ -205,6 +226,16 @@ export function ChatPanel() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<ChatPanelMessage[]>([]);
   const [input, setInput] = useState("");
+  // Agent-emitted "next action" pills for the current turn (hybrid: paired with
+  // static empty-state starters below).
+  const [suggestions, setSuggestions] = useState<ChatSuggestion[]>([]);
+  // Component preview side panel (opened from a patch/batch proposal).
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{
+    title: string;
+    components: PreviewComponent[];
+    rawNodes: Record<string, any>[];
+  }>({ title: "Preview", components: [], rawNodes: [] });
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddDslModal, setShowAddDslModal] = useState(false);
@@ -485,6 +516,8 @@ export function ChatPanel() {
               micrositeId?: string;
               suggestedName?: string;
               purpose?: string | null;
+              pageMap?: unknown;
+              suggestions?: ChatSuggestion[];
             };
 
             if (
@@ -588,6 +621,27 @@ export function ChatPanel() {
               return;
             }
 
+            if (data.type === "page_map" && data.pageMap) {
+              assistantMessage = {
+                ...assistantMessage,
+                type: "page_map",
+                pageMap: data.pageMap,
+                tool_call_id: data.tool_call_id,
+                _isStreaming: false,
+              };
+              setMessages(
+                hasSyncedMessages
+                  ? replaceAssistantMessage(syncedMessages, assistantMessage)
+                  : [...syncedMessages, assistantMessage],
+              );
+              return;
+            }
+
+            if (data.type === "suggestions" && Array.isArray(data.suggestions)) {
+              setSuggestions(data.suggestions as ChatSuggestion[]);
+              return;
+            }
+
             if (data.type === "sync_messages" && Array.isArray(data.messages)) {
               hasSyncedMessages = true;
               syncedMessages = data.messages.map(normalizeIncomingMessage);
@@ -657,8 +711,47 @@ export function ChatPanel() {
     setInput("");
     setPendingImages([]);
     setShowSlashMenu(false);
+    setSuggestions([]);
 
     void triggerAgent(nextMessages, imagesForSend);
+  };
+
+  // Send a specific prompt as the user's next message — used by suggestion pills
+  // (agent "next actions" and the empty-state starters).
+  const sendPrompt = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isLoading) return;
+    const userMessage = createMessage({ role: "user", content: trimmed });
+    const nextMessages = [
+      ...messages.filter((message) => !message._isStatus),
+      userMessage,
+    ];
+    setMessages(nextMessages);
+    setInput("");
+    setShowSlashMenu(false);
+    setSuggestions([]);
+    void triggerAgent(nextMessages);
+  };
+
+  // Open the component preview panel for a patch/batch proposal message.
+  const handleOpenPreview = (message: ChatPanelMessage) => {
+    let components: PreviewComponent[] = [];
+    let rawNodes: Record<string, any>[] = [];
+    let title = "Preview";
+    if (message.type === "patch_proposed" && message.patch) {
+      components = extractAddedComponents((message.patch as any).patch);
+      rawNodes = extractAddedRawNodes((message.patch as any).patch);
+      title = (message.patch as any).description || "Preview";
+    } else if (message.type === "batch_proposed" && message.batch) {
+      const ops = (message.batch as any).operations ?? [];
+      for (const op of ops) {
+        components = components.concat(extractAddedComponents(op.patch));
+        rawNodes = rawNodes.concat(extractAddedRawNodes(op.patch));
+      }
+      title = (message.batch as any).batchDescription || "Preview";
+    }
+    setPreviewData({ title, components, rawNodes });
+    setPreviewOpen(true);
   };
 
   // Read attached image files → base64 for vision input. Skips unsupported
@@ -841,6 +934,7 @@ export function ChatPanel() {
     editedDsl?: any,
   ) => {
     addStatusMessage("Approving patch...");
+    setPreviewOpen(false);
 
     try {
       const headers = buildAuthHeaders({ "Content-Type": "application/json" });
@@ -898,6 +992,7 @@ export function ChatPanel() {
     toolCallId: string,
   ) => {
     addStatusMessage(`Rejecting patch: ${reason}`);
+    setPreviewOpen(false);
 
     try {
       const headers = buildAuthHeaders({ "Content-Type": "application/json" });
@@ -942,6 +1037,7 @@ export function ChatPanel() {
 
   const handleApproveBatch = async (batchId: string, toolCallId?: string) => {
     addStatusMessage("Approving batch...");
+    setPreviewOpen(false);
 
     try {
       const headers = buildAuthHeaders({ "Content-Type": "application/json" });
@@ -1004,6 +1100,7 @@ export function ChatPanel() {
 
   const handleRejectBatch = async (batchId: string, reason?: string) => {
     addStatusMessage(`Rejecting batch: ${reason || "No reason"}`);
+    setPreviewOpen(false);
 
     try {
       const headers = buildAuthHeaders({ "Content-Type": "application/json" });
@@ -1209,6 +1306,16 @@ export function ChatPanel() {
       className={styles.chatPanelContainer}
       style={{ width: `${width}px` }}
     >
+      <PatchPreviewPanel
+        open={previewOpen}
+        title={previewData.title}
+        components={previewData.components}
+        rawNodes={previewData.rawNodes}
+        width={380}
+        offsetRight={width}
+        onClose={() => setPreviewOpen(false)}
+      />
+
       {isResizing && <div className={styles.resizeOverlay} />}
 
       {/* Resize Handle */}
@@ -1269,6 +1376,9 @@ export function ChatPanel() {
               onCreatePage={handleCreatePage}
               onCancelCreatePage={handleCancelCreatePage}
               onRetry={handleRetryMessage}
+              onNavigatePage={setActivePage}
+              activePageCode={activePageCode}
+              onOpenPreview={handleOpenPreview}
             />
           ))}
         {isLoading && (
@@ -1282,6 +1392,22 @@ export function ChatPanel() {
           </div>
         )}
       </div>
+
+      {(() => {
+        const visibleCount = messages.filter(
+          (m) => m.role !== "tool" && !m._isStatus,
+        ).length;
+        if (isLoading) return null;
+        // Agent's contextual next actions take priority; else, on an empty
+        // conversation with a microsite loaded, show static starters.
+        if (suggestions.length > 0) {
+          return <SuggestionPills items={suggestions} onPick={sendPrompt} label="Next" />;
+        }
+        if (visibleCount === 0 && micrositeId) {
+          return <SuggestionPills items={STARTER_SUGGESTIONS} onPick={sendPrompt} label="Try" />;
+        }
+        return null;
+      })()}
 
       <div className={styles.inputContainer}>
         {showSessionModal && (

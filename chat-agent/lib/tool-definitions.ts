@@ -372,4 +372,61 @@ export const DSL_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "suggest_next_actions",
+      description: `Offer the user 2-4 concise, clickable follow-up actions for what to do NEXT.
+        Call this at the END of a turn (after you've answered or after a change is applied/approved)
+        when there are natural next steps — e.g. after adding a form: "Add a validation rule",
+        "Route the Submit button", "Make this a popup". Each suggestion's 'value' is the exact prompt
+        that will be sent as the user's next message if they click it, so phrase it as a first-person
+        instruction ("Add a phone number field"). Keep labels short (2-5 words). Skip this if there is
+        no obvious next step, or while a proposal is still awaiting the user's approval.`,
+      parameters: {
+        type: "object",
+        properties: {
+          suggestions: {
+            type: "array",
+            description: "2-4 next-step suggestions.",
+            items: {
+              type: "object",
+              properties: {
+                label: {
+                  type: "string",
+                  description: "Short button text (2-5 words), e.g. 'Route the Submit button'.",
+                },
+                value: {
+                  type: "string",
+                  description:
+                    "The full prompt sent as the user's message if clicked, e.g. 'Route the Submit button to the confirmation page'.",
+                },
+              },
+              required: ["label", "value"],
+            },
+          },
+        },
+        required: ["suggestions"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "show_page_map",
+      description: `Render an interactive map of the microsite's pages and how they link to each
+        other. Use this when the user asks to see the page structure / hierarchy / sitemap, "how do
+        these pages connect", "show me the pages", or which page a control routes to. It loads each
+        page and derives links from routing config (routePage on buttons/table columns, tabs' pageCode)
+        and marks popup pages. The result is shown to the user as a clickable tree; you do not need to
+        restate the whole tree in prose — a one-line summary is enough.`,
+      parameters: {
+        type: "object",
+        properties: {
+          microsite_id: { type: "string" },
+        },
+        required: ["microsite_id"],
+      },
+    },
+  },
 ];

@@ -1,0 +1,122 @@
+.markdown {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text, #0f172a);
+  word-break: break-word;
+
+  // Collapse outer margins so the bubble padding controls spacing.
+  > :first-child { margin-top: 0; }
+  > :last-child { margin-bottom: 0; }
+}
+
+.paragraph {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+.heading {
+  margin: 12px 0 6px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text, #0f172a);
+}
+
+.list {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+
+  li { margin: 2px 0; }
+}
+
+.blockquote {
+  margin: 6px 0 8px;
+  padding: 4px 10px;
+  border-left: 3px solid var(--secondary, #1c75bc);
+  background: var(--secondary-transparent-bg, rgba(22, 94, 150, 0.08));
+  color: var(--text-secondary, #475569);
+  white-space: pre-wrap;
+}
+
+.hr {
+  margin: 10px 0;
+  border: none;
+  border-top: 1px solid var(--background-3, #e2e8f0);
+}
+
+.link {
+  color: var(--secondary, #1c75bc);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover { color: var(--secondary-dark, #165e96); }
+}
+
+.inlineCode {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--background-2, #f1f5f9);
+  border: 1px solid var(--background-3, #e2e8f0);
+  color: var(--error-dark, #a12c2b);
+}
+
+.codeBlock {
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--rich-black, #0d1116);
+  overflow-x: auto;
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #e6edf3;
+    white-space: pre;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+}
+
+// Tables scroll inside their own container so the bubble never overflows.
+.tableScroll {
+  margin: 6px 0 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--background-3, #e2e8f0);
+  border-radius: 8px;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--background-3, #e2e8f0);
+    border-right: 1px solid var(--background-3, #e2e8f0);
+    vertical-align: top;
+    white-space: nowrap;
+
+    &:last-child { border-right: none; }
+  }
+
+  thead th {
+    background: var(--background-2, #f1f5f9);
+    font-weight: 600;
+    color: var(--text, #0f172a);
+    position: sticky;
+    top: 0;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr:nth-child(even) td {
+    background: var(--background-2, #f8fafc);
+  }
+}
