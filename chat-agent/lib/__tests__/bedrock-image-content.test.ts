@@ -23,12 +23,47 @@ jest.mock("@aws-sdk/client-bedrock-runtime", () => ({
 jest.mock("../freellm-client", () => ({ TOOL_CAPABLE_MODEL: "auto" }));
 jest.mock("../tool-definitions", () => ({ DSL_TOOLS: [] }));
 
-import { callBedrockWithTools } from "../aws-bedrock-helper";
+import { callBedrockWithTools, toBedrockContentBlocks } from "../aws-bedrock-helper";
 
 function getSentMessages() {
   const command = sendMock.mock.calls[0][0];
   return command.input.messages;
 }
+
+describe("toBedrockContentBlocks — document content", () => {
+  const B64 = Buffer.from("hello file").toString("base64");
+
+  it("converts a document part into a Converse document block", () => {
+    const blocks = toBedrockContentBlocks([
+      { type: "text", text: "read this" },
+      { type: "document", format: "pdf", name: "Loan Report.pdf", dataBase64: B64 },
+    ]);
+    const doc = blocks.find((b: any) => b.document);
+    expect(doc).toBeDefined();
+    expect(doc.document.format).toBe("pdf");
+    // Name is sanitized to Bedrock's rules (no dots).
+    expect(doc.document.name).toBe("Loan Report pdf");
+    expect(Buffer.isBuffer(doc.document.source.bytes)).toBe(true);
+    expect(doc.document.source.bytes.equals(Buffer.from(B64, "base64"))).toBe(true);
+  });
+
+  it("skips documents with an unsupported format", () => {
+    const blocks = toBedrockContentBlocks([
+      { type: "document", format: "exe", name: "x", dataBase64: B64 },
+    ]);
+    expect(blocks.some((b: any) => b.document)).toBe(false);
+  });
+
+  it("de-duplicates document names within one request", () => {
+    const blocks = toBedrockContentBlocks([
+      { type: "document", format: "txt", name: "notes", dataBase64: B64 },
+      { type: "document", format: "txt", name: "notes", dataBase64: B64 },
+    ]);
+    const names = blocks.filter((b: any) => b.document).map((b: any) => b.document.name);
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+  });
+});
 
 describe("callBedrockWithTools — image content", () => {
   const client: any = { send: sendMock };

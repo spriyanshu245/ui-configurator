@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     taskContext,
     pageOps,
     images,
+    attachments,
   } = await req.json();
 
   const safeMessages = Array.isArray(messages) ? messages : [];
@@ -77,36 +78,49 @@ export async function POST(req: Request) {
     return formatted;
   });
 
-  // Wireframe / design-image input: attach any uploaded images to the most
-  // recent user message as multimodal content so the vision-capable model can
-  // examine them and propose matching DSL components. Images are for this turn
-  // only — they are NOT persisted to session history (which keeps text-only).
-  const safeImages = Array.isArray(images)
-    ? images.filter(
-        (img: any) => img && typeof img.dataBase64 === "string",
-      )
-    : [];
-  if (safeImages.length > 0) {
+  // File input: attach any uploaded files (wireframe/design images AND documents
+  // such as PDFs, spreadsheets, or text/code) to the most recent user message as
+  // multimodal content so the model can examine them and propose matching DSL.
+  // Attachments are for this turn only — they are NOT persisted to session
+  // history (which stays text-only). Legacy `images` payloads are still honored.
+  const rawAttachments: any[] = Array.isArray(attachments)
+    ? attachments
+    : Array.isArray(images)
+      ? images.map((img: any) => ({ ...img, kind: "image" }))
+      : [];
+  const safeAttachments = rawAttachments.filter(
+    (a: any) => a && typeof a.dataBase64 === "string",
+  );
+  if (safeAttachments.length > 0) {
     for (let i = formattedMessages.length - 1; i >= 0; i--) {
       if (formattedMessages[i].role === "user") {
         const existing = formattedMessages[i].content;
         const textPart =
           typeof existing === "string"
             ? existing
-            : "Configure the page to match the attached wireframe/design image.";
+            : "Use the attached file(s) as input for configuring this page.";
         formattedMessages[i].content = [
           { type: "text", text: textPart },
-          ...safeImages.map((img: any) => ({
-            type: "image",
-            format: img.format || "png",
-            dataBase64: img.dataBase64,
-          })),
+          ...safeAttachments.map((a: any) =>
+            a.kind === "document"
+              ? {
+                  type: "document",
+                  format: a.format,
+                  name: a.name,
+                  dataBase64: a.dataBase64,
+                }
+              : {
+                  type: "image",
+                  format: a.format || "png",
+                  dataBase64: a.dataBase64,
+                },
+          ),
         ];
         break;
       }
     }
-    logger.info("Attached wireframe images to user message", {
-      imageCount: safeImages.length,
+    logger.info("Attached files to user message", {
+      attachmentCount: safeAttachments.length,
     });
   }
 

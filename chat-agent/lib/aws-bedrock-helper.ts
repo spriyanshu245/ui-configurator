@@ -2,17 +2,22 @@ import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-r
 import { TOOL_CAPABLE_MODEL } from "./freellm-client";
 import { DSL_TOOLS } from "./tool-definitions";
 import { logger } from "./logger";
-
-const SUPPORTED_IMAGE_FORMATS = new Set(["png", "jpeg", "gif", "webp"]);
+import {
+  SUPPORTED_IMAGE_FORMATS,
+  SUPPORTED_DOC_FORMATS,
+  sanitizeDocName,
+} from "./attachments";
 
 /**
  * Convert a message's `content` into Bedrock Converse content blocks.
  * A string becomes a single text block. An array may interleave
- * `{ type: "text", text }` and `{ type: "image", format, dataBase64 }` items —
- * the latter become Converse `{ image: { format, source: { bytes } } }` blocks,
- * enabling wireframe / design-image input to the vision-capable model.
+ * `{ type: "text", text }`, `{ type: "image", format, dataBase64 }` and
+ * `{ type: "document", format, name, dataBase64 }` items — images become
+ * Converse `{ image: {...} }` blocks (wireframe/design input) and documents
+ * become `{ document: {...} }` blocks (PDFs, spreadsheets, text/code files).
+ * Document names are sanitized and de-duplicated to satisfy Bedrock's rules.
  */
-function toBedrockContentBlocks(content: unknown): any[] {
+export function toBedrockContentBlocks(content: unknown): any[] {
   if (typeof content === "string") {
     return content ? [{ text: content }] : [];
   }
@@ -21,11 +26,12 @@ function toBedrockContentBlocks(content: unknown): any[] {
   }
 
   const blocks: any[] = [];
-  for (const part of content) {
-    if (!part) continue;
+  const usedDocNames = new Set<string>();
+  content.forEach((part, index) => {
+    if (!part) return;
     if (typeof part === "string") {
       if (part) blocks.push({ text: part });
-      continue;
+      return;
     }
     if (part.type === "text" && typeof part.text === "string") {
       if (part.text) blocks.push({ text: part.text });
@@ -33,7 +39,7 @@ function toBedrockContentBlocks(content: unknown): any[] {
       const format = String(part.format || "png").toLowerCase();
       if (!SUPPORTED_IMAGE_FORMATS.has(format)) {
         logger.warn("Skipping image with unsupported format", { format });
-        continue;
+        return;
       }
       blocks.push({
         image: {
@@ -41,8 +47,29 @@ function toBedrockContentBlocks(content: unknown): any[] {
           source: { bytes: Buffer.from(part.dataBase64, "base64") },
         },
       });
+    } else if (part.type === "document" && typeof part.dataBase64 === "string") {
+      const format = String(part.format || "").toLowerCase();
+      if (!SUPPORTED_DOC_FORMATS.has(format)) {
+        logger.warn("Skipping document with unsupported format", { format });
+        return;
+      }
+      // Ensure a Bedrock-legal, unique name within this request.
+      let name = sanitizeDocName(part.name, index);
+      let n = 2;
+      while (usedDocNames.has(name)) {
+        name = sanitizeDocName(`${part.name} ${n}`, index);
+        n++;
+      }
+      usedDocNames.add(name);
+      blocks.push({
+        document: {
+          format,
+          name,
+          source: { bytes: Buffer.from(part.dataBase64, "base64") },
+        },
+      });
     }
-  }
+  });
   return blocks;
 }
 

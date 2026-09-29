@@ -19,7 +19,14 @@ import type {
 } from "../types/types";
 import { useMicrosite } from "../../src/app/context/MicrositeContext";
 import { useParams } from "next/navigation";
-import { X, Send, Bot, Loader2, ImagePlus } from "lucide-react";
+import { X, Send, Bot, Loader2, Paperclip, FileText, Square } from "lucide-react";
+import {
+  classifyAttachment,
+  maxBytesFor,
+  formatBytes,
+  MAX_ATTACHMENTS,
+  type AttachmentKind,
+} from "../lib/attachments";
 import styles from "./ChatPanel.module.scss";
 
 type ToolCall = {
@@ -45,20 +52,14 @@ type PageCreationProposal = {
   purpose?: string | null;
 };
 
-type AttachedImage = {
+type AttachedFile = {
   id: string;
   name: string;
-  format: string; // png | jpeg | gif | webp
+  kind: AttachmentKind; // image | document
+  format: string; // png|jpeg|gif|webp for images; pdf|csv|txt|md|... for documents
+  size: number; // bytes
   dataBase64: string; // raw base64 (no data: prefix)
-  previewUrl: string; // data: URL for thumbnail rendering
-};
-
-const SUPPORTED_IMAGE_MIME: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpeg",
-  "image/jpg": "jpeg",
-  "image/gif": "gif",
-  "image/webp": "webp",
+  previewUrl?: string; // data: URL for image thumbnail rendering (images only)
 };
 
 // Static starter prompts shown on the empty state (hybrid pills: these seed the
@@ -233,58 +234,20 @@ export function ChatPanel() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{
     title: string;
+    subtitle?: string;
     components: PreviewComponent[];
     rawNodes: Record<string, any>[];
   }>({ title: "Preview", components: [], rawNodes: [] });
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAddDslModal, setShowAddDslModal] = useState(false);
-  const [dslInputText, setDslInputText] = useState("");
-  const [showSessionModal, setShowSessionModal] = useState(false);
-  const [sessionKeys, setSessionKeys] = useState<string[]>([]);
-  const [selectedSessionKeys, setSelectedSessionKeys] = useState<Set<string>>(
-    new Set(),
-  );
   // Declarative session-restore pill (replaces the old imperative DOM hack).
   const [showRestorePill, setShowRestorePill] = useState(false);
   const restorePillTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  // Wireframe / design-image attachments for the next message.
-  const [pendingImages, setPendingImages] = useState<AttachedImage[]>([]);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!dslInputText.trim()) return;
-
-    const timeoutId = setTimeout(() => {
-      try {
-        const parsed = JSON.parse(dslInputText);
-        const formatted = JSON.stringify(parsed, null, 2);
-        if (formatted !== dslInputText) {
-          setDslInputText(formatted);
-        }
-      } catch (e) {
-        // Ignore invalid JSON
-      }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [dslInputText]);
-
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
-  const [slashMenuIndex, setSlashMenuIndex] = useState(0);
-
-  const slashCommands = [
-    { command: "/abort", description: "Interrupt ongoing model request" },
-    { command: "/add-dsl", description: "Attach a reference DSL" },
-    { command: "/session", description: "Append current session data" },
-  ];
-
-  const visibleSlashCommands = slashCommands.filter((c) => {
-    const lastWord = input.split(/\s+/).pop() || "";
-    return c.command.startsWith(lastWord);
-  });
+  // File attachments (images + documents) for the next message.
+  const [pendingFiles, setPendingFiles] = useState<AttachedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [width, setWidth] = useState(450);
   const [isResizing, setIsResizing] = useState(false);
@@ -431,7 +394,7 @@ export function ChatPanel() {
 
   const triggerAgent = async (
     currentMessages: ChatPanelMessage[],
-    images?: AttachedImage[],
+    files?: AttachedFile[],
   ) => {
     if (!micrositeId) {
       appendAssistantMessage(
@@ -461,11 +424,13 @@ export function ChatPanel() {
           workspaceCode,
           taskContext: sessionContextRef.current?.taskContext,
           pageOps: sessionContextRef.current?.pageOps,
-          images:
-            images && images.length
-              ? images.map((img) => ({
-                  format: img.format,
-                  dataBase64: img.dataBase64,
+          attachments:
+            files && files.length
+              ? files.map((f) => ({
+                  kind: f.kind,
+                  format: f.format,
+                  name: f.name,
+                  dataBase64: f.dataBase64,
                 }))
               : undefined,
         }),
@@ -683,37 +648,37 @@ export function ChatPanel() {
 
   const sendMessage = () => {
     const trimmedInput = input.trim();
-    const hasImages = pendingImages.length > 0;
-    // A wireframe image on its own is valid input, even with no text.
-    if ((!trimmedInput && !hasImages) || isLoading) return;
+    const hasFiles = pendingFiles.length > 0;
+    // An attachment on its own is valid input, even with no text.
+    if ((!trimmedInput && !hasFiles) || isLoading) return;
 
+    const hasImages = pendingFiles.some((f) => f.kind === "image");
     const displayContent =
       trimmedInput ||
       (hasImages
         ? `Configure this page to match the attached ${
-            pendingImages.length > 1 ? "designs" : "design"
+            pendingFiles.length > 1 ? "designs" : "design"
           }.`
-        : "");
+        : `Use the attached file${pendingFiles.length > 1 ? "s" : ""} as input.`);
 
     const userMessage = createMessage({
       role: "user",
       content: displayContent,
-      _attachedImageNames: hasImages ? pendingImages.map((i) => i.name) : undefined,
+      _attachedImageNames: hasFiles ? pendingFiles.map((f) => f.name) : undefined,
     });
     const nextMessages = [
       ...messages.filter((message) => !message._isStatus),
       userMessage,
     ];
 
-    const imagesForSend = hasImages ? pendingImages : undefined;
+    const filesForSend = hasFiles ? pendingFiles : undefined;
 
     setMessages(nextMessages);
     setInput("");
-    setPendingImages([]);
-    setShowSlashMenu(false);
+    setPendingFiles([]);
     setSuggestions([]);
 
-    void triggerAgent(nextMessages, imagesForSend);
+    void triggerAgent(nextMessages, filesForSend);
   };
 
   // Send a specific prompt as the user's next message — used by suggestion pills
@@ -728,7 +693,6 @@ export function ChatPanel() {
     ];
     setMessages(nextMessages);
     setInput("");
-    setShowSlashMenu(false);
     setSuggestions([]);
     void triggerAgent(nextMessages);
   };
@@ -737,40 +701,53 @@ export function ChatPanel() {
   const handleOpenPreview = (message: ChatPanelMessage) => {
     let components: PreviewComponent[] = [];
     let rawNodes: Record<string, any>[] = [];
-    let title = "Preview";
+    let subtitle: string | undefined;
     if (message.type === "patch_proposed" && message.patch) {
       components = extractAddedComponents((message.patch as any).patch);
       rawNodes = extractAddedRawNodes((message.patch as any).patch);
-      title = (message.patch as any).description || "Preview";
+      subtitle = (message.patch as any).description;
     } else if (message.type === "batch_proposed" && message.batch) {
       const ops = (message.batch as any).operations ?? [];
       for (const op of ops) {
         components = components.concat(extractAddedComponents(op.patch));
         rawNodes = rawNodes.concat(extractAddedRawNodes(op.patch));
       }
-      title = (message.batch as any).batchDescription || "Preview";
+      subtitle = (message.batch as any).batchDescription;
     }
-    setPreviewData({ title, components, rawNodes });
+    // Short, stable header title; the (possibly long) change description rides
+    // along as a truncated subtitle so the header never overflows.
+    const count = components.length;
+    const title = count > 0 ? `Preview · ${count} component${count > 1 ? "s" : ""}` : "Preview";
+    setPreviewData({ title, subtitle, components, rawNodes });
     setPreviewOpen(true);
   };
 
-  // Read attached image files → base64 for vision input. Skips unsupported
-  // types and files over ~4MB (Bedrock image limit headroom).
-  const handleImageFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const MAX_BYTES = 4 * 1024 * 1024;
-    const next: AttachedImage[] = [];
-    for (const file of Array.from(files)) {
-      const format = SUPPORTED_IMAGE_MIME[file.type];
-      if (!format) {
+  // Read attached files (images + documents) → base64 for the model. Skips
+  // unsupported types, oversized files, and anything beyond MAX_ATTACHMENTS,
+  // surfacing a short note for each rejection.
+  const handleFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const next: AttachedFile[] = [];
+    let slotsLeft = MAX_ATTACHMENTS - pendingFiles.length;
+
+    for (const file of Array.from(fileList)) {
+      if (slotsLeft <= 0) {
         appendAssistantMessage(
-          `"${file.name}" is not a supported image type (use PNG, JPEG, GIF, or WebP).`,
+          `You can attach up to ${MAX_ATTACHMENTS} files at a time. "${file.name}" was skipped.`,
+        );
+        break;
+      }
+      const classified = classifyAttachment(file.type, file.name);
+      if (!classified) {
+        appendAssistantMessage(
+          `"${file.name}" is not a supported file type (images, PDF, CSV, HTML, Word/Excel, or text/code files).`,
         );
         continue;
       }
-      if (file.size > MAX_BYTES) {
+      const limit = maxBytesFor(classified.kind);
+      if (file.size > limit) {
         appendAssistantMessage(
-          `"${file.name}" is too large (max 4MB). Please attach a smaller image.`,
+          `"${file.name}" is too large (max ${formatBytes(limit)} for ${classified.kind}s).`,
         );
         continue;
       }
@@ -784,19 +761,22 @@ export function ChatPanel() {
       next.push({
         id: createMessageId(),
         name: file.name,
-        format,
+        kind: classified.kind,
+        format: classified.format,
+        size: file.size,
         dataBase64,
-        previewUrl: dataUrl,
+        previewUrl: classified.kind === "image" ? dataUrl : undefined,
       });
+      slotsLeft--;
     }
     if (next.length) {
-      setPendingImages((prev) => [...prev, ...next]);
+      setPendingFiles((prev) => [...prev, ...next]);
     }
-    if (imageInputRef.current) imageInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removePendingImage = (id: string) => {
-    setPendingImages((prev) => prev.filter((img) => img.id !== id));
+  const removePendingFile = (id: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   // Retry affordance for error-styled bubbles: re-sends the same message set
@@ -809,98 +789,17 @@ export function ChatPanel() {
     void triggerAgent(retryMessages && retryMessages.length ? retryMessages : fallback);
   };
 
-  const executeCommand = (cmd: string) => {
-    const lastWordMatch = input.match(/\S+$/);
-    const replaceStart = lastWordMatch ? lastWordMatch.index! : input.length;
-    let baseInput = input.substring(0, replaceStart).trimEnd();
-
-    if (cmd === "/abort") {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-        appendAssistantMessage("Request aborted by user.");
-        setIsLoading(false);
-      }
-      setInput(baseInput);
-    } else if (cmd === "/add-dsl") {
-      setInput(baseInput);
-      setShowAddDslModal(true);
-    } else if (cmd === "/session") {
-      setInput(baseInput);
-      setSessionKeys(Object.keys(sessionStorage));
-      setSelectedSessionKeys(new Set());
-      setShowSessionModal(true);
-    }
-
-    setShowSlashMenu(false);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
+  // Interrupt an in-flight model request (the Stop button shown while loading).
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      appendAssistantMessage("Request stopped.");
+      setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showSlashMenu && visibleSlashCommands.length > 0) {
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSlashMenuIndex((prev) =>
-          prev > 0 ? prev - 1 : visibleSlashCommands.length - 1,
-        );
-        return;
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSlashMenuIndex((prev) =>
-          prev < visibleSlashCommands.length - 1 ? prev + 1 : 0,
-        );
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        executeCommand(visibleSlashCommands[slashMenuIndex].command);
-        return;
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setShowSlashMenu(false);
-        return;
-      }
-    }
-
-    if (e.key === "ArrowDown" && !showSlashMenu) {
-      const cursor = e.currentTarget.selectionStart;
-      const textBefore = input.substring(0, cursor);
-      const textAfter = input.substring(cursor);
-
-      const lastOpen = textBefore.lastIndexOf("```json");
-      const nextClose = textAfter.indexOf("```");
-
-      if (lastOpen !== -1 && nextClose !== -1) {
-        e.preventDefault();
-        const target = cursor + nextClose + 3;
-        e.currentTarget.setSelectionRange(target, target);
-        return;
-      }
-    }
-
-    if (e.key === "{" && e.ctrlKey) {
-      e.preventDefault();
-      const val = input;
-      const start = e.currentTarget.selectionStart;
-      const end = e.currentTarget.selectionEnd;
-
-      const insertText = "```json\n\n```";
-      const newVal = val.substring(0, start) + insertText + val.substring(end);
-      setInput(newVal);
-
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(start + 8, start + 8);
-        }
-      }, 0);
-      return;
-    }
-
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -908,24 +807,7 @@ export function ChatPanel() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setInput(val);
-
-    const lastWord = val.split(/\s+/).pop();
-    if (lastWord === "/") {
-      setShowSlashMenu(true);
-      setSlashMenuIndex(0);
-    } else if (lastWord?.startsWith("/")) {
-      setShowSlashMenu(true);
-      setSlashMenuIndex((prev) => {
-        const nextCount = slashCommands.filter((c) =>
-          c.command.startsWith(lastWord),
-        ).length;
-        return prev >= nextCount ? Math.max(0, nextCount - 1) : prev;
-      });
-    } else {
-      setShowSlashMenu(false);
-    }
+    setInput(e.target.value);
   };
 
   const handleApprove = async (
@@ -1309,6 +1191,7 @@ export function ChatPanel() {
       <PatchPreviewPanel
         open={previewOpen}
         title={previewData.title}
+        subtitle={previewData.subtitle}
         components={previewData.components}
         rawNodes={previewData.rawNodes}
         width={380}
@@ -1410,172 +1293,61 @@ export function ChatPanel() {
       })()}
 
       <div className={styles.inputContainer}>
-        {showSessionModal && (
-          <div className={styles.modalContainer}>
-            <span className={styles.modalTitle}>Select Session Data</span>
-            <div className={styles.sessionScrollArea}>
-              {sessionKeys.length === 0 ? (
-                <span className={styles.emptyText}>
-                  No session data available.
-                </span>
+        {pendingFiles.length > 0 && (
+          <div className={styles.attachmentStrip}>
+            {pendingFiles.map((f) =>
+              f.kind === "image" ? (
+                <div key={f.id} className={styles.imageThumb} title={f.name}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f.previewUrl} alt={f.name} />
+                  <button
+                    type="button"
+                    className={styles.imageThumbRemove}
+                    onClick={() => removePendingFile(f.id)}
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               ) : (
-                sessionKeys.map((key) => (
-                  <label key={key} className={styles.sessionLabel}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSessionKeys.has(key)}
-                      onChange={(e) => {
-                        const next = new Set(selectedSessionKeys);
-                        if (e.target.checked) next.add(key);
-                        else next.delete(key);
-                        setSelectedSessionKeys(next);
-                      }}
-                    />
-                    <span className={styles.sessionKey}>{key}</span>
-                  </label>
-                ))
-              )}
-            </div>
-            <div className={styles.modalButtons}>
-              <button
-                onClick={() => setShowSessionModal(false)}
-                className={styles.cancelButton}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const selectedData: Record<string, string | null> = {};
-                  selectedSessionKeys.forEach((k) => {
-                    selectedData[k] = sessionStorage.getItem(k);
-                  });
-                  const sessionString = JSON.stringify(selectedData, null, 2);
-                  setInput(
-                    (prev) =>
-                      prev +
-                      (prev ? "\n\n" : "") +
-                      `Session Data:\n\`\`\`json\n${sessionString}\n\`\`\``,
-                  );
-                  setShowSessionModal(false);
-                  setTimeout(() => {
-                    if (textareaRef.current) textareaRef.current.focus();
-                  }, 0);
-                }}
-                disabled={selectedSessionKeys.size === 0}
-                className={styles.primaryButton}
-                style={{
-                  background:
-                    selectedSessionKeys.size === 0 ? "#94a3b8" : "#2563eb",
-                  cursor:
-                    selectedSessionKeys.size === 0 ? "not-allowed" : "pointer",
-                }}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        )}
-        {showAddDslModal && (
-          <div className={styles.modalContainer}>
-            <span className={styles.modalTitle}>Add Reference DSL</span>
-            <textarea
-              className={styles.dslTextarea}
-              placeholder="Paste DSL here..."
-              value={dslInputText}
-              onChange={(e) => setDslInputText(e.target.value)}
-              autoFocus
-            />
-            <div className={styles.modalButtonsBasic}>
-              <button
-                onClick={() => {
-                  setShowAddDslModal(false);
-                  setDslInputText("");
-                }}
-                className={styles.cancelButton}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (dslInputText.trim()) {
-                    setInput(
-                      (prev) =>
-                        prev +
-                        (prev ? "\n\n" : "") +
-                        `Reference DSL:\n\`\`\`json\n${dslInputText}\n\`\`\``,
-                    );
-                  }
-                  setShowAddDslModal(false);
-                  setDslInputText("");
-                  setTimeout(() => {
-                    if (textareaRef.current) textareaRef.current.focus();
-                  }, 0);
-                }}
-                className={styles.primaryButtonBasic}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        )}
-        {showSlashMenu && visibleSlashCommands.length > 0 && (
-          <div className={styles.slashMenuContainer}>
-            {visibleSlashCommands.map((cmd, idx) => (
-              <div
-                key={cmd.command}
-                onClick={() => executeCommand(cmd.command)}
-                className={styles.slashMenuItem}
-                style={{
-                  background:
-                    idx === slashMenuIndex ? "#f1f5f9" : "transparent",
-                  borderBottom:
-                    idx < visibleSlashCommands.length - 1
-                      ? "1px solid #f1f5f9"
-                      : "none",
-                }}
-                onMouseEnter={() => setSlashMenuIndex(idx)}
-              >
-                <span className={styles.slashMenuCommand}>{cmd.command}</span>
-                <span className={styles.slashMenuDesc}>{cmd.description}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {pendingImages.length > 0 && (
-          <div className={styles.imageStrip}>
-            {pendingImages.map((img) => (
-              <div key={img.id} className={styles.imageThumb} title={img.name}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.previewUrl} alt={img.name} />
-                <button
-                  type="button"
-                  className={styles.imageThumbRemove}
-                  onClick={() => removePendingImage(img.id)}
-                  aria-label={`Remove ${img.name}`}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
+                <div key={f.id} className={styles.fileChip} title={f.name}>
+                  <FileText size={15} className={styles.fileChipIcon} />
+                  <div className={styles.fileChipMeta}>
+                    <span className={styles.fileChipName}>{f.name}</span>
+                    <span className={styles.fileChipSize}>
+                      {f.format.toUpperCase()} · {formatBytes(f.size)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.fileChipRemove}
+                    onClick={() => removePendingFile(f.id)}
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ),
+            )}
           </div>
         )}
         <input
-          ref={imageInputRef}
+          ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
+          accept="image/png,image/jpeg,image/gif,image/webp,.pdf,.csv,.txt,.md,.markdown,.html,.htm,.json,.log,.xml,.yaml,.yml,.doc,.docx,.xls,.xlsx,.js,.jsx,.ts,.tsx,.css,.scss"
           multiple
           style={{ display: "none" }}
-          onChange={(e) => void handleImageFiles(e.target.files)}
+          onChange={(e) => void handleFiles(e.target.files)}
         />
         <button
           type="button"
-          onClick={() => imageInputRef.current?.click()}
-          disabled={isLoading || !micrositeId}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading || !micrositeId || pendingFiles.length >= MAX_ATTACHMENTS}
           className={styles.attachButton}
-          aria-label="Attach a wireframe or design image"
-          title="Attach a wireframe / design image"
+          aria-label="Attach files"
+          title={`Attach files — images, PDF, docs, or text/code (up to ${MAX_ATTACHMENTS})`}
         >
-          <ImagePlus size={18} />
+          <Paperclip size={18} />
         </button>
         <textarea
           ref={textareaRef}
@@ -1587,36 +1359,43 @@ export function ChatPanel() {
             isLoading
               ? "Waiting for the agent to respond..."
               : micrositeId
-                ? pendingImages.length > 0
-                  ? "Describe changes, or send the design as-is..."
-                  : "Ask me to modify the layout, or attach a wireframe..."
+                ? pendingFiles.length > 0
+                  ? "Describe what to do with the attached file(s)..."
+                  : "Ask me to modify the layout, or attach files..."
                 : "Open a microsite configurator page to start chatting..."
           }
           disabled={isLoading || !micrositeId}
           rows={1}
         />
-        <button
-          onClick={sendMessage}
-          disabled={isLoading || (!input.trim() && pendingImages.length === 0)}
-          className={`${styles.sendButton} ${isLoading ? styles.sendButtonLoading : ""}`}
-          aria-busy={isLoading}
-          style={{
-            background:
-              (input.trim() || pendingImages.length > 0) && !isLoading
-                ? "var(--primary, #1c75bc)"
-                : "var(--light-gray-2, #94a3b8)",
-            cursor:
-              (input.trim() || pendingImages.length > 0) && !isLoading
-                ? "pointer"
-                : "not-allowed",
-          }}
-        >
-          {isLoading ? (
-            <Loader2 size={18} className={styles.spinIcon} />
-          ) : (
+        {isLoading ? (
+          <button
+            onClick={handleStop}
+            className={`${styles.sendButton} ${styles.stopButton}`}
+            aria-label="Stop generating"
+            title="Stop"
+          >
+            <Square size={16} color="white" fill="white" />
+          </button>
+        ) : (
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() && pendingFiles.length === 0}
+            className={styles.sendButton}
+            aria-label="Send message"
+            style={{
+              background:
+                input.trim() || pendingFiles.length > 0
+                  ? "var(--primary, #1c75bc)"
+                  : "var(--light-gray-2, #94a3b8)",
+              cursor:
+                input.trim() || pendingFiles.length > 0
+                  ? "pointer"
+                  : "not-allowed",
+            }}
+          >
             <Send size={18} color="white" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
     </div>
   );

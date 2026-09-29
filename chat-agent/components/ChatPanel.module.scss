@@ -415,6 +415,15 @@
   cursor: wait;
 }
 
+.stopButton {
+  background: var(--error, #bf4342);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--error-dark, #a12c2b);
+  }
+}
+
 .attachButton {
   width: 40px;
   height: 40px;
@@ -441,7 +450,7 @@
   }
 }
 
-.imageStrip {
+.attachmentStrip {
   position: absolute;
   bottom: 100%;
   left: 16px;
@@ -456,6 +465,68 @@
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   z-index: 10000;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.fileChip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  padding: 6px 26px 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--background-4, #e5e7eb);
+  background: var(--background-2, #f8fafc);
+}
+
+.fileChipIcon {
+  flex-shrink: 0;
+  color: var(--secondary, #1c75bc);
+}
+
+.fileChipMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.fileChipName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileChipSize {
+  font-size: 10.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.fileChipRemove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    background: var(--error, #bf4342);
+    color: var(--white, #ffffff);
+  }
 }
 
 .imageThumb {

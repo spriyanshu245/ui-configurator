@@ -388,13 +388,17 @@ export const getBaseUrl = (prefix: string, env: string): string => {
   const protocol = window.location.protocol;
 
   return env === "development"
-    ? `https://${prefix}.dev.rahi.cloud`
+    ? // ? `https://${prefix}.dev.rahi.cloud`
+      // `https://${prefix}.flph-dev.rahi.cloud`
+      `https://${prefix}.uat.flin.ph`
     : `${protocol}//${apiHost.join(".")}`;
 };
 
 export const getApiBaseUrl = () => {
   if (!globalThis.window) {
-    return "https://api.rahi-dev.rahi.cloud";
+    // return "https://api.rahi-dev.rahi.cloud";
+    // return "https://api.flph-dev.rahi.cloud";
+    return "https://api.uat.flin.ph";
   }
 
   const currentHost = globalThis.window.location.hostname;
@@ -405,7 +409,9 @@ export const getApiBaseUrl = () => {
   const protocol = globalThis.window.location.protocol;
 
   return appEnv === "development"
-    ? "https://api.rahi-dev.rahi.cloud"
+    ? // ? "https://api.rahi-dev.rahi.cloud"
+      // ? "https://api.rahi-dev.rahi.cloud"
+      "https://api.uat.flin.ph"
     : `${protocol}//${apiHost.join(".")}`;
 };
 

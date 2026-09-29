@@ -1,6 +1,6 @@
 "use client";
 import React, { Suspense, useState } from "react";
-import { X, Layers, Boxes } from "lucide-react";
+import { X, Layers, Boxes, Minus, Maximize2 } from "lucide-react";
 import type { PreviewComponent } from "../lib/added-components";
 import { DragProvider } from "../../src/app/context/DragContext";
 import { PropertyPaneProvider } from "../../src/app/context/PropertiesContext";
@@ -73,7 +73,10 @@ function StructuredView({ components }: { components: PreviewComponent[] }) {
 
 interface PatchPreviewPanelProps {
   open: boolean;
+  /** Short header title, e.g. "Preview · 3 components". */
   title?: string;
+  /** Optional longer description (e.g. the change summary), shown truncated. */
+  subtitle?: string;
   components: PreviewComponent[];
   rawNodes: Record<string, any>[];
   /** Panel width in px. */
@@ -86,6 +89,7 @@ interface PatchPreviewPanelProps {
 export function PatchPreviewPanel({
   open,
   title,
+  subtitle,
   components,
   rawNodes,
   width,
@@ -93,6 +97,7 @@ export function PatchPreviewPanel({
   onClose,
 }: PatchPreviewPanelProps) {
   const [mode, setMode] = useState<"structured" | "live">("structured");
+  const [collapsed, setCollapsed] = useState(false);
   if (!open) return null;
 
   const empty = components.length === 0;
@@ -105,63 +110,92 @@ export function PatchPreviewPanel({
       aria-label="Component preview"
     >
       <div className={styles.header}>
-        <Layers size={15} />
-        <span className={styles.title}>{title || "Preview"}</span>
-        {!empty && (
-          <div className={styles.modeToggle} role="tablist">
-            <button
-              type="button"
-              className={mode === "structured" ? styles.modeActive : ""}
-              onClick={() => setMode("structured")}
-            >
-              Fields
-            </button>
-            <button
-              type="button"
-              className={mode === "live" ? styles.modeActive : ""}
-              onClick={() => setMode("live")}
-            >
-              Live
-            </button>
+        <div className={styles.headerMain}>
+          <Layers size={15} className={styles.headerIcon} />
+          <div className={styles.titleWrap}>
+            <span className={styles.title}>{title || "Preview"}</span>
+            {subtitle && !collapsed && (
+              <span className={styles.subtitle} title={subtitle}>
+                {subtitle}
+              </span>
+            )}
           </div>
-        )}
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Close preview">
-          <X size={16} />
-        </button>
+        </div>
+
+        <div className={styles.headerControls}>
+          {!empty && !collapsed && (
+            <div className={styles.modeToggle} role="tablist">
+              <button
+                type="button"
+                className={mode === "structured" ? styles.modeActive : ""}
+                onClick={() => setMode("structured")}
+              >
+                Fields
+              </button>
+              <button
+                type="button"
+                className={mode === "live" ? styles.modeActive : ""}
+                onClick={() => setMode("live")}
+              >
+                Live
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Expand preview" : "Minimize preview"}
+            title={collapsed ? "Expand" : "Minimize"}
+          >
+            {collapsed ? <Maximize2 size={15} /> : <Minus size={16} />}
+          </button>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={onClose}
+            aria-label="Close preview"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
-      <div className={styles.body}>
-        {empty ? (
-          <div className={styles.empty}>This change adds no new components.</div>
-        ) : mode === "structured" ? (
-          <StructuredView components={components} />
-        ) : (
-          <RenderErrorBoundary
-            fallback={
-              <div>
-                <div className={styles.liveNote}>
-                  Live preview unavailable for this change — showing fields instead.
-                </div>
-                <StructuredView components={components} />
-              </div>
-            }
-          >
-            <Suspense fallback={<div className={styles.empty}>Loading live preview…</div>}>
-              {/* Fresh providers so the renderer's hooks resolve; the canvas is
-                  non-interactive to avoid touching the real editor state. */}
-              <DragProvider>
-                <PropertyPaneProvider>
-                  <div className={styles.canvas}>
-                    {rawNodes.map((n, i) => (
-                      <LiveComponentRenderer key={i} component={n as any} />
-                    ))}
+      {!collapsed && (
+        <div className={styles.body}>
+          {empty ? (
+            <div className={styles.empty}>This change adds no new components.</div>
+          ) : mode === "structured" ? (
+            <StructuredView components={components} />
+          ) : (
+            <RenderErrorBoundary
+              fallback={
+                <div>
+                  <div className={styles.liveNote}>
+                    Live preview unavailable for this change — showing fields instead.
                   </div>
-                </PropertyPaneProvider>
-              </DragProvider>
-            </Suspense>
-          </RenderErrorBoundary>
-        )}
-      </div>
+                  <StructuredView components={components} />
+                </div>
+              }
+            >
+              <Suspense fallback={<div className={styles.empty}>Loading live preview…</div>}>
+                {/* Fresh providers so the renderer's hooks resolve; the canvas is
+                    non-interactive to avoid touching the real editor state. */}
+                <DragProvider>
+                  <PropertyPaneProvider>
+                    <div className={styles.canvas}>
+                      {rawNodes.map((n, i) => (
+                        <LiveComponentRenderer key={i} component={n as any} />
+                      ))}
+                    </div>
+                  </PropertyPaneProvider>
+                </DragProvider>
+              </Suspense>
+            </RenderErrorBoundary>
+          )}
+        </div>
+      )}
     </div>
   );
 }
