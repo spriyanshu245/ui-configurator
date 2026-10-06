@@ -7,6 +7,38 @@ import { logger } from '../lib/logger';
  * same name/spec is a no-op (and Mongo will error loudly if the spec changed under
  * the same name, which is the desired fail-fast behavior).
  */
+const TEMP_DSL_TTL_SECONDS = 900;
+
+/**
+ * temp_dsl may carry a legacy NON-TTL index on {createdAt: 1} (e.g. "createdAt_1").
+ * Mongo refuses a second index on the same key, so creating the TTL index used
+ * to fail silently and nothing ever expired. Drop any conflicting createdAt
+ * index first, then create the TTL index.
+ */
+export async function ensureTempDslTtl(): Promise<string> {
+  const col = db.collection('temp_dsl');
+  let existing: any[] = [];
+  try {
+    existing = await col.listIndexes().toArray();
+  } catch {
+    // Collection doesn't exist yet — nothing to migrate.
+  }
+  for (const idx of existing) {
+    const onCreatedAt =
+      idx?.key && Object.keys(idx.key).length === 1 && idx.key.createdAt === 1;
+    const isWanted =
+      idx?.name === 'temp_dsl_ttl' && idx?.expireAfterSeconds === TEMP_DSL_TTL_SECONDS;
+    if (onCreatedAt && !isWanted) {
+      await col.dropIndex(idx.name);
+      logger.info('Dropped conflicting temp_dsl createdAt index', { index: idx.name });
+    }
+  }
+  return col.createIndex(
+    { createdAt: 1 },
+    { name: 'temp_dsl_ttl', expireAfterSeconds: TEMP_DSL_TTL_SECONDS }
+  );
+}
+
 export async function ensureIndexes(): Promise<void> {
   const specs: Array<{ name: string; build: () => Promise<string> }> = [
     // NEVER add expireAfterSeconds here — dsl_history is the revert source of truth;
@@ -132,11 +164,7 @@ export async function ensureIndexes(): Promise<void> {
     },
     {
       name: 'temp_dsl_ttl',
-      build: () =>
-        db.collection('temp_dsl').createIndex(
-          { createdAt: 1 },
-          { name: 'temp_dsl_ttl', expireAfterSeconds: 900 }
-        ),
+      build: ensureTempDslTtl,
     },
   ];
 

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     try {
       for (const op of pending.operations) {
         await sessionOps.appendOp(userId, pending.micrositeId, op.pagePath, {
-          summary: `Batch rejected: ${reason || "No reason"}`,
+          summary: `Rejected (batch): ${op.description || "change"} — reason: ${reason || "none given"}`.slice(0, 300),
           outcome: "rejected",
         });
       }

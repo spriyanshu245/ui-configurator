@@ -30,15 +30,26 @@ export const DSL_TOOLS = [
     type: "function",
     function: {
       name: "get_page_dsl",
-      description:
-        "Fetch the current DSL for a specific page. Use to refresh after a patch.",
+      description: `Load the current DSL of one or MORE pages and return a compact OUTLINE per page instead
+        of raw JSON: one line per component, "<JSON Pointer> <type> #<id prefix> \\"label\\" {key props}".
+        Use the pointer directly in propose_dsl_patch paths. Pages already loaded in this session are
+        served from memory (instant); request several pages together with page_paths in ONE call.
+        page_paths ["*"] returns only the page LIST (no outlines) — then request just the pages you need.
+        After an approved change the stored copy is updated automatically; pass refresh: true only if
+        the page may have been edited outside the chat. Then use query_dsl_path / find_components.`,
       parameters: {
         type: "object",
         properties: {
           microsite_id: { type: "string" },
-          page_path: { type: "string", description: "e.g. /home or /about" },
+          page_path: { type: "string", description: "A single pageCode." },
+          page_paths: {
+            type: "array",
+            items: { type: "string" },
+            description: 'Several pageCodes to load in parallel. ["*"] = list all pageCodes only (no outlines).',
+          },
+          refresh: { type: "boolean", description: "Reload from the backend instead of the session cache." },
         },
-        required: ["microsite_id", "page_path"],
+        required: ["microsite_id"],
       },
     },
   },
@@ -46,15 +57,59 @@ export const DSL_TOOLS = [
     type: "function",
     function: {
       name: "query_dsl_path",
-      description:
-        "Query a specific subdocument or property within a large DSL stored in MongoDB to avoid loading the full JSON into context.",
+      description: `Read specific nodes/properties of a page loaded by get_page_dsl. Address a node by path —
+        JSON Pointer ("/components/0/properties"), dot ("components.0.properties") or bracket
+        ("components[0].properties") — or by id (full id or the 8-char #prefix shown in outlines).
+        Returns COMPACT JSON (null, "", [], {} omitted; false/0 kept). A node with many nested
+        components comes back as a "depth-1" view: its own settings, with each nested component as a
+        one-line stub (pointer, type, id, label) to drill into. outline: true returns the subtree
+        outline; full: true returns the untouched JSON (use it before replacing a whole node).
+        Look up several nodes (across pages) at once with queries[].`,
       parameters: {
         type: "object",
         properties: {
-          tempDslId: { type: "string", description: "The temporary DSL ID returned by get_page_dsl" },
-          path: { type: "string", description: "Dot notation path to query (e.g. 'components.0.props.title'). Leave empty to get summary of root." },
+          tempDslId: { type: "string", description: "The DSL id returned by get_page_dsl" },
+          path: { type: "string", description: "Path to read. Empty = the whole page." },
+          id: { type: "string", description: "Component id or its 8-char prefix (alternative to path)." },
+          queries: {
+            type: "array",
+            description: "Several lookups run in parallel; overrides tempDslId/path.",
+            items: {
+              type: "object",
+              properties: {
+                tempDslId: { type: "string" },
+                path: { type: "string" },
+                id: { type: "string" },
+              },
+              required: ["tempDslId"],
+            },
+          },
+          outline: { type: "boolean", description: "Return an outline of the subtree instead of JSON." },
+          full: { type: "boolean", description: "Return uncompacted JSON." },
         },
-        required: ["tempDslId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_components",
+      description: `Search one or more pages for components and get matching outline lines (pointer, type,
+        id prefix, label, key props) — e.g. every button routing to a page, every clickable table
+        column, or a component by its label. Cheaper than reading JSON with query_dsl_path. Filters
+        combine (all must match): type (exact), labelContains (case-insensitive), prop (a property name
+        that must exist) and optionally equals (its exact value).`,
+      parameters: {
+        type: "object",
+        properties: {
+          microsite_id: { type: "string" },
+          page_paths: { type: "array", items: { type: "string" }, description: "pageCodes to search." },
+          type: { type: "string", description: 'Component type, e.g. "button-v2", "table-column".' },
+          labelContains: { type: "string" },
+          prop: { type: "string", description: 'Property name, e.g. "routePage".' },
+          equals: { type: "string", description: "Exact value of prop to match." },
+        },
+        required: ["microsite_id", "page_paths"],
       },
     },
   },
@@ -69,7 +124,9 @@ export const DSL_TOOLS = [
         - One logical change per proposal. Break complex changes into steps.
         - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
         - Always include a clear human-readable description and preview_hint.
-        - Validate all JSON Pointer paths (RFC 6901) before proposing.`,
+        - Validate all JSON Pointer paths (RFC 6901) before proposing.
+        - For NEW components, omit "id" — the server assigns UUIDs. Keep ids of existing ones.
+        - Prefer property-level ops (e.g. replace /components/2/properties/label) over replacing whole components.`,
       parameters: {
         type: "object",
         properties: {
@@ -141,6 +198,8 @@ export const DSL_TOOLS = [
         - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
         - Always include a clear human-readable description and preview_hint per page.
         - Validate all JSON Pointer paths (RFC 6901) before proposing.
+        - For NEW components, omit "id" — the server assigns UUIDs. Keep ids of existing ones.
+        - Prefer property-level ops (e.g. replace /components/2/properties/label) over replacing whole components.
         - Set navigate_to if, after approval, the user should land on a specific page
           (e.g. the last page touched by the batch).`,
       parameters: {
@@ -430,3 +489,18 @@ export const DSL_TOOLS = [
     },
   },
 ];
+
+/**
+ * Tools with no side effects: the chat route may run these concurrently within
+ * one agent step. Anything that writes, navigates, queues a proposal or emits
+ * suggestions must NOT be listed here.
+ */
+export const READ_ONLY_TOOLS = new Set<string>([
+  "get_page_dsl",
+  "query_dsl_path",
+  "find_components",
+  "get_microsite_pages",
+  "list_microsites",
+  "get_dsl_history",
+  "show_page_map",
+]);

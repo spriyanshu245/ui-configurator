@@ -175,6 +175,18 @@ export async function POST(req: Request) {
         });
       }
 
+      // Feeds the agent's "Recent changes" memory (chat history isn't resent).
+      try {
+        await sessionOps.appendOp(userId, batch.micrositeId, op.pagePath, {
+          summary: `${op.description?.trim() || "Batch change"} (batch)`.slice(0, 300),
+          outcome: "approved",
+        });
+      } catch (e) {
+        logger.warn("Failed to append op for batch approval", {
+          error: (e as Error).message,
+        });
+      }
+
       appliedPages.push(op.pagePath);
     }
 

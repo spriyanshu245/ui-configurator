@@ -6,6 +6,7 @@ import {
 import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
 import { runSkillReflection } from "../../../../../chat-agent/lib/skill-updater";
+import { sessionOps } from "../../../../../chat-agent/db/queries/dsl-history";
 
 export async function POST(req: Request) {
   try {
@@ -40,6 +41,18 @@ export async function POST(req: Request) {
         workspaceCode: workspaceCode ?? null,
       },
     });
+
+    // Feeds the agent's "Recent changes" memory (chat history isn't resent).
+    try {
+      await sessionOps.appendOp(userId, micrositeId, result.pageCode, {
+        summary: `Created page "${result.name}"${result.isPopup ? " as a popup" : ""}`,
+        outcome: "created",
+      });
+    } catch (e) {
+      logger.warn("Failed to append op for page creation", {
+        error: (e as Error).message,
+      });
+    }
 
     if (result.isPopup) {
       const patchApplied = Object.keys(POPUP_DEFAULTS).map((k) => ({

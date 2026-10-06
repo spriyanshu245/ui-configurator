@@ -75,10 +75,23 @@ export function validateAndAssignIds(dsl: any) {
   traverse(dsl);
 }
 
+/**
+ * fast-json-patch error messages append `tree: <the entire document>` (often
+ * ~100k chars). That text becomes the tool result sent back to the model, so
+ * keep only the reason, op index and (trimmed) operation.
+ */
+export function conciseJsonPatchError(message: string): string {
+  const withoutTree = message.split(/\ntree:/)[0];
+  return withoutTree
+    .split("\n")
+    .map((line) => (line.length > 500 ? `${line.slice(0, 500)}…` : line))
+    .join("\n");
+}
+
 export function applyPatch(currentDsl: unknown, patch: Operation[]) {
   const validationError = jsonpatch.validate(patch, currentDsl);
   if (validationError) {
-    throw new Error(`Invalid patch format: ${validationError.message}`);
+    throw new Error(`Invalid patch format: ${conciseJsonPatchError(validationError.message)}`);
   }
 
   try {
@@ -87,7 +100,7 @@ export function applyPatch(currentDsl: unknown, patch: Operation[]) {
   } catch (error) {
     throw new Error(
       `Error applying patch: ${
-        error instanceof Error ? error.message : "Unknown patch error"
+        error instanceof Error ? conciseJsonPatchError(error.message) : "Unknown patch error"
       }`,
     );
   }
@@ -100,11 +113,46 @@ const dslCache = new Map<string, any>();
 // the PUT so writes hit the page's real version slot, not a hardcoded 1.
 const pageVersionCache = new Map<string, number>();
 
+type DslCacheListener = (pagePath: string, dsl: any, pageVersion?: number) => void;
+const dslCacheListeners = new Set<DslCacheListener>();
+
+/**
+ * Subscribe to authoritative DSL updates (after every backend PUT: approve,
+ * approve-batch, rollback, popup config). Used by dsl-store to keep its Mongo
+ * copy (temp_dsl) and node index in sync, so reads are never stale.
+ */
+export function onDslCacheUpdate(listener: DslCacheListener): () => void {
+  dslCacheListeners.add(listener);
+  return () => dslCacheListeners.delete(listener);
+}
+
 export function updateDslCache(pagePath: string, dsl: any, pageVersion?: number) {
   dslCache.set(pagePath, dsl);
   if (typeof pageVersion === "number") {
     pageVersionCache.set(pagePath, pageVersion);
   }
+  for (const listener of dslCacheListeners) {
+    try {
+      listener(pagePath, dsl, pageVersion);
+    } catch {
+      // A listener must never break a write path.
+    }
+  }
+}
+
+/** Read the in-process cached DSL (shared with queuePatch/queueBatch). */
+export function getCachedDsl(pagePath: string): { dsl: any; pageVersion: number } | undefined {
+  const dsl = dslCache.get(pagePath);
+  return dsl === undefined ? undefined : { dsl, pageVersion: pageVersionCache.get(pagePath) ?? 1 };
+}
+
+/**
+ * Seed the cache with a DSL loaded by a read path (dsl-store). Unlike
+ * updateDslCache this does NOT notify listeners: it is a read, not a write.
+ */
+export function primeDslCache(pagePath: string, dsl: any, pageVersion: number) {
+  dslCache.set(pagePath, dsl);
+  pageVersionCache.set(pagePath, pageVersion);
 }
 
 /**

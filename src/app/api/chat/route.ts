@@ -1,4 +1,4 @@
-import { DSL_TOOLS } from "../../../../chat-agent/lib/tool-definitions";
+import { DSL_TOOLS, READ_ONLY_TOOLS } from "../../../../chat-agent/lib/tool-definitions";
 import {
   TOOL_CAPABLE_MODEL,
   freeLLMClient,
@@ -22,6 +22,39 @@ type ChatRouteMessage = {
   tool_call_id?: string;
   tool_calls?: unknown[];
 };
+
+/**
+ * Fresh recap of earlier turns for the system prompt: the saved task context
+ * and per-page history (approve/reject/create record real change descriptions).
+ * The client's copy is only captured when the chat panel opens, so it goes
+ * stale within a session; fall back to it only if Mongo is unavailable.
+ */
+async function loadRecap(
+  userId: string,
+  micrositeId: string | undefined,
+  fallbackTaskContext: any,
+  fallbackPageOps: any,
+) {
+  if (!micrositeId) return { taskContext: fallbackTaskContext, pageOps: fallbackPageOps };
+  try {
+    const [conversation, opsDocs] = await Promise.all([
+      db.collection("conversations").findOne(
+        { userId, micrositeId },
+        { projection: { taskContext: 1 } },
+      ),
+      db.collection("page_ops").find({ userId, micrositeId }).toArray(),
+    ]);
+    const pageOps: Record<string, any[]> = {};
+    for (const doc of opsDocs) pageOps[doc.pagePath] = doc.ops || [];
+    return {
+      taskContext: conversation?.taskContext ?? fallbackTaskContext,
+      pageOps,
+    };
+  } catch (e) {
+    logger.warn("Failed to load recap; using client copy", { error: (e as Error).message });
+    return { taskContext: fallbackTaskContext, pageOps: fallbackPageOps };
+  }
+}
 
 export async function GET() {
   logger.info("API CHAT GET INITIATED");
@@ -176,9 +209,20 @@ export async function POST(req: Request) {
         }
       };
 
-      let currentMessages = formattedMessages;
+      // Earlier turns are NOT sent to the model: only the current prompt and
+      // its own tool steps. (They used to be resent in full on every prompt and
+      // every agent step — tool results included — until the 200k window
+      // overflowed.) The client still receives the full history back through
+      // sync_messages (priorMessages + currentMessages), so the chat display is
+      // unchanged. What happened earlier reaches the model as a recap: the fresh
+      // task context + page history loaded from Mongo below.
+      const lastUserIndex = formattedMessages.map((m) => m.role).lastIndexOf("user");
+      const priorMessages = lastUserIndex > 0 ? formattedMessages.slice(0, lastUserIndex) : [];
+      let currentMessages = lastUserIndex > 0 ? formattedMessages.slice(lastUserIndex) : formattedMessages;
       let loopCount = 0;
       const MAX_LOOPS = 10;
+
+      const recap = await loadRecap(userId, micrositeId, taskContext, pageOps);
 
       while (loopCount < MAX_LOOPS) {
         if (isAborted || req.signal.aborted) break;
@@ -190,8 +234,8 @@ export async function POST(req: Request) {
           id,
           referenceDsls,
           sessionContext,
-          taskContext,
-          pageOps,
+          taskContext: recap.taskContext,
+          pageOps: recap.pageOps,
           userId,
         });
 
@@ -200,6 +244,7 @@ export async function POST(req: Request) {
             { role: "system", content: systemPrompt },
             ...(currentMessages as any[]),
           ];
+
           logger.debug("Chat completions initiated", {
             model: TOOL_CAPABLE_MODEL,
             systemPromptLength: systemPrompt.length,
@@ -311,13 +356,38 @@ export async function POST(req: Request) {
           if (!validToolCalls.length) {
             send({
               type: "sync_messages",
-              messages: [...currentMessages, assistantMsg],
+              messages: [...priorMessages, ...currentMessages, assistantMsg],
             });
             send({ type: "done" });
             break;
           }
 
           const toolResults = [];
+
+          // Start every read-only tool call at once (e.g. several get_page_dsl /
+          // query_dsl_path calls in one step); the loop below still handles the
+          // results — and every side-effect/gating tool — in the original order.
+          const prefetched = new Map<
+            string,
+            Promise<{ ok: true; result: any } | { ok: false; error: unknown }>
+          >();
+          for (const toolCall of validToolCalls) {
+            if (!READ_ONLY_TOOLS.has(toolCall.function.name)) continue;
+            let parsedArgs: any;
+            try {
+              parsedArgs = JSON.parse(toolCall.function.arguments);
+            } catch {
+              continue; // reported by the loop below
+            }
+            prefetched.set(
+              toolCall.id,
+              executeTool(toolCall.function.name, parsedArgs, { userId, micrositeId }).then(
+                (result) => ({ ok: true as const, result }),
+                (error) => ({ ok: false as const, error }),
+              ),
+            );
+          }
+
           for (const toolCall of validToolCalls) {
             let args;
             try {
@@ -358,6 +428,7 @@ export async function POST(req: Request) {
                 send({
                   type: "sync_messages",
                   messages: [
+                    ...priorMessages,
                     ...currentMessages,
                     assistantMsg,
                     ...toolResults.map((r) => ({ role: "tool", ...r })),
@@ -401,6 +472,7 @@ export async function POST(req: Request) {
                 send({
                   type: "sync_messages",
                   messages: [
+                    ...priorMessages,
                     ...currentMessages,
                     assistantMsg,
                     ...toolResults.map((r) => ({ role: "tool", ...r })),
@@ -422,6 +494,7 @@ export async function POST(req: Request) {
               send({
                 type: "sync_messages",
                 messages: [
+                  ...priorMessages,
                   ...currentMessages,
                   assistantMsg,
                   {
@@ -447,10 +520,18 @@ export async function POST(req: Request) {
                 toolName: toolCall.function.name,
                 argsLength: toolCall.function.arguments.length,
               });
-              const result = await executeTool(toolCall.function.name, args, {
-                userId,
-                micrositeId,
-              });
+              const started = prefetched.get(toolCall.id);
+              let result: any;
+              if (started) {
+                const outcome = await started;
+                if (!outcome.ok) throw outcome.error;
+                result = outcome.result;
+              } else {
+                result = await executeTool(toolCall.function.name, args, {
+                  userId,
+                  micrositeId,
+                });
+              }
               logger.debug("Tool execution completed", {
                 toolName: toolCall.function.name,
                 resultLength: JSON.stringify(result).length,

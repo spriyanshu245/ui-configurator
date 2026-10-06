@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { ensureIndexes } from "../ensure-indexes";
+import { ensureIndexes, ensureTempDslTtl } from "../ensure-indexes";
 
 type MockCollection = {
   createIndex: jest.Mock;
@@ -137,5 +137,62 @@ describe("ensureIndexes", () => {
     });
 
     await expect(ensureIndexes()).resolves.toBeUndefined();
+  });
+});
+
+describe("ensureTempDslTtl", () => {
+  beforeEach(() => {
+    collections["temp_dsl"] = makeCollection("temp_dsl");
+    (collections["temp_dsl"] as any).dropIndex = jest.fn().mockResolvedValue(undefined);
+  });
+
+  it("drops a legacy non-TTL createdAt index, then creates the TTL index", async () => {
+    const order: string[] = [];
+    const col: any = collections["temp_dsl"];
+    col.listIndexes = jest.fn().mockReturnValue({
+      toArray: jest.fn().mockResolvedValue([
+        { name: "_id_", key: { _id: 1 } },
+        { name: "createdAt_1", key: { createdAt: 1 } },
+        { name: "temp_dsl_lookup", key: { toolCallId: 1 }, unique: true },
+      ]),
+    });
+    col.dropIndex = jest.fn(async (name: string) => { order.push(`drop:${name}`); });
+    col.createIndex = jest.fn(async (_k: any, o: any) => { order.push(`create:${o.name}`); return o.name; });
+
+    await ensureTempDslTtl();
+
+    expect(order).toEqual(["drop:createdAt_1", "create:temp_dsl_ttl"]);
+    expect(col.createIndex).toHaveBeenCalledWith(
+      { createdAt: 1 },
+      { name: "temp_dsl_ttl", expireAfterSeconds: 900 },
+    );
+  });
+
+  it("keeps an already-correct TTL index", async () => {
+    const col: any = collections["temp_dsl"];
+    col.listIndexes = jest.fn().mockReturnValue({
+      toArray: jest.fn().mockResolvedValue([
+        { name: "temp_dsl_ttl", key: { createdAt: 1 }, expireAfterSeconds: 900 },
+      ]),
+    });
+    await ensureTempDslTtl();
+    expect(col.dropIndex).not.toHaveBeenCalled();
+  });
+
+  it("drops a TTL index with a different expiry", async () => {
+    const col: any = collections["temp_dsl"];
+    col.listIndexes = jest.fn().mockReturnValue({
+      toArray: jest.fn().mockResolvedValue([
+        { name: "temp_dsl_ttl", key: { createdAt: 1 }, expireAfterSeconds: 3600 },
+      ]),
+    });
+    await ensureTempDslTtl();
+    expect(col.dropIndex).toHaveBeenCalledWith("temp_dsl_ttl");
+  });
+
+  it("works when the collection does not exist yet", async () => {
+    const col: any = collections["temp_dsl"];
+    col.listIndexes = jest.fn().mockReturnValue({ toArray: jest.fn().mockRejectedValue(new Error("ns not found")) });
+    await expect(ensureTempDslTtl()).resolves.toBe("temp_dsl_index_created");
   });
 });

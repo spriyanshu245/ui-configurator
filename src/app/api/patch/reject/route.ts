@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     try {
       await sessionOps.appendOp(userId, pending.micrositeId, pending.pagePath, {
-        summary: `Patch rejected: ${reason || "No reason"}`,
+        summary: `Rejected: ${pending.description || "patch"} — reason: ${reason || "none given"}`.slice(0, 300),
         outcome: "rejected"
       });
       await sessionOps.saveTask(userId, pending.micrositeId, { intent: "DSL modification rejected", pendingPatch: false });

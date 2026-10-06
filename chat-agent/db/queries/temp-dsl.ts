@@ -1,28 +1,111 @@
-import { db } from '../client';
+import { db } from "../client";
+import { parseDslPath, resolveSegments } from "../../lib/dsl-compact";
 
 export interface TempDslEntry {
   toolCallId: string;
   dsl: any;
   createdAt: Date;
+  micrositeId?: string;
+  pageCode?: string;
+  pageVersion?: number;
 }
 
-const TEMP_COLLECTION = 'temp_dsl';
+export interface DslPathQuery {
+  tempDslId: string;
+  path?: string;
+}
+
+const TEMP_COLLECTION = "temp_dsl";
+
+/**
+ * Mongo projection for a path. Only the FIRST segment can be projected safely:
+ * a numeric segment in dot notation (`dsl.components.2`) is treated by Mongo as
+ * a field name, not an array index, and returns empty objects. So we project
+ * the top-level key (cuts transfer size) and resolve the rest in JS.
+ */
+function projectionFor(segments: string[]): Record<string, number> {
+  const first = segments[0];
+  if (!first || /^\d+$/.test(first)) return { _id: 0, dsl: 1 };
+  return { _id: 0, [`dsl.${first}`]: 1 };
+}
 
 export const tempDslOps = {
   /**
    * Store the full DSL payload keyed by a toolCallId.
    */
-  storeDsl: async (toolCallId: string, dsl: any) => {
+  storeDsl: async (
+    toolCallId: string,
+    dsl: any,
+    meta: Partial<TempDslEntry> = {},
+  ) => {
     const col = db.collection(TEMP_COLLECTION);
     await col.updateOne(
       { toolCallId },
       {
         $set: {
+          ...meta,
           dsl,
           createdAt: new Date(),
         },
       },
-      { upsert: true }
+      { upsert: true },
+    );
+  },
+
+  /**
+   * Store several page DSLs in ONE round trip (bulk upsert).
+   */
+  storeMany: async (
+    entries: Array<{
+      toolCallId: string;
+      dsl: any;
+      meta?: Partial<TempDslEntry>;
+    }>,
+  ) => {
+    if (!entries.length) return;
+    const col = db.collection(TEMP_COLLECTION);
+    const createdAt = new Date();
+    await col.bulkWrite(
+      entries.map((e) => ({
+        updateOne: {
+          filter: { toolCallId: e.toolCallId },
+          update: { $set: { ...(e.meta ?? {}), dsl: e.dsl, createdAt } },
+          upsert: true,
+        },
+      })),
+      { ordered: false },
+    );
+  },
+
+  /**
+   * Fetch several stored pages in ONE query ($in) instead of one findOne each.
+   */
+  getMany: async (toolCallIds: string[]) => {
+    if (!toolCallIds.length) return [];
+    const col = db.collection(TEMP_COLLECTION);
+    return col
+      .find<Pick<TempDslEntry, "toolCallId" | "dsl" | "pageVersion" | "createdAt">>(
+        { toolCallId: { $in: toolCallIds } },
+        { projection: { _id: 0, toolCallId: 1, dsl: 1, pageVersion: 1, createdAt: 1 } },
+      )
+      .toArray();
+  },
+
+  /**
+   * Write-through after an authoritative save (approve/rollback): replace the
+   * stored copy of a page wherever it is cached, so later reads aren't stale.
+   */
+  refreshByPageCode: async (pageCode: string, dsl: any, pageVersion?: number) => {
+    const col = db.collection(TEMP_COLLECTION);
+    await col.updateMany(
+      { pageCode },
+      {
+        $set: {
+          dsl,
+          createdAt: new Date(),
+          ...(typeof pageVersion === "number" ? { pageVersion } : {}),
+        },
+      },
     );
   },
 
@@ -36,22 +119,33 @@ export const tempDslOps = {
   },
 
   /**
-   * Query a specific JSON path or subset using MongoDB projection.
-   * Path format should match MongoDB dot notation (e.g., 'components.2.props').
+   * Resolve a path inside a stored DSL. Accepts JSON Pointer ("/components/0"),
+   * dot ("components.0") or bracket ("components[0]") syntax. Returns
+   * `undefined` when the DSL or the path doesn't exist.
    */
   getDslPath: async (toolCallId: string, path: string) => {
     const col = db.collection(TEMP_COLLECTION);
-    const projection: Record<string, number> = { _id: 0 };
-    projection[`dsl.${path}`] = 1;
-    
+    const segments = parseDslPath(path);
+    const projection = projectionFor(segments);
     const doc = await col.findOne({ toolCallId }, { projection });
-    
-    // Resolve the dot notation path to extract just the target value
-    if (doc && doc.dsl) {
-      return path.split('.').reduce((acc, part) => acc && acc[part], doc.dsl);
-    }
-    return null;
+    const result =
+      !doc || doc.dsl === undefined
+        ? undefined
+        : resolveSegments(doc.dsl, segments);
+    return result;
   },
+
+  /**
+   * Run several path lookups in parallel (across one or many stored pages).
+   */
+  getManyPaths: async (queries: DslPathQuery[]) =>
+    Promise.all(
+      queries.map(async (q) => ({
+        tempDslId: q.tempDslId,
+        path: q.path ?? "",
+        data: await tempDslOps.getDslPath(q.tempDslId, q.path ?? ""),
+      })),
+    ),
 
   /**
    * Update only a specific part of the JSON using MongoDB's $set operator with dot notation.
@@ -59,12 +153,9 @@ export const tempDslOps = {
   updateDslPath: async (toolCallId: string, path: string, newValue: any) => {
     const col = db.collection(TEMP_COLLECTION);
     const updateQuery: Record<string, any> = {};
-    updateQuery[`dsl.${path}`] = newValue;
+    updateQuery[`dsl.${parseDslPath(path).join(".")}`] = newValue;
 
-    await col.updateOne(
-      { toolCallId },
-      { $set: updateQuery }
-    );
+    await col.updateOne({ toolCallId }, { $set: updateQuery });
   },
 
   /**
@@ -73,5 +164,5 @@ export const tempDslOps = {
   deleteDsl: async (toolCallId: string) => {
     const col = db.collection(TEMP_COLLECTION);
     await col.deleteOne({ toolCallId });
-  }
+  },
 };

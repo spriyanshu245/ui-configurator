@@ -9,6 +9,21 @@ import { getUserId } from "../../../../../chat-agent/lib/getUserId";
 import { logger } from "../../../../../chat-agent/lib/logger";
 import { runSkillReflection } from "../../../../../chat-agent/lib/skill-updater";
 
+// Compact, human-readable record of what changed — becomes the agent's
+// "Recent changes" memory, since earlier chat turns aren't resent to the model.
+function describeChange(
+  description: string | undefined,
+  affected: unknown,
+  wasEdited: boolean,
+): string {
+  const parts = [description?.trim() || "Patch applied"];
+  if (Array.isArray(affected) && affected.length) {
+    parts.push(`(components: ${affected.slice(0, 6).join(", ")})`);
+  }
+  if (wasEdited) parts.push("[edited by user before approval]");
+  return parts.join(" ").slice(0, 300);
+}
+
 export async function POST(req: Request) {
   try {
     const { patchId, editedDsl, toolCallId } = await req.json();
@@ -79,8 +94,8 @@ export async function POST(req: Request) {
 
     try {
       await sessionOps.appendOp(userId, pending.micrositeId, pending.pagePath, {
-        summary: "Patch approved and applied",
-        outcome: "success"
+        summary: describeChange(pending.description, (pending as any).affectedComponents, wasEdited),
+        outcome: "approved",
       });
       // Clear pendingPatch state
       await sessionOps.saveTask(userId, pending.micrositeId, { intent: "DSL modification approved", pendingPatch: false });
