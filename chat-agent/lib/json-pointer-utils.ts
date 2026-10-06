@@ -40,25 +40,23 @@ export function toPointer(tokens: string[]): string {
   return "/" + tokens.map(escapeToken).join("/");
 }
 
+function stepInto(current: any, token: string): any {
+  if (current === undefined || current === null) return undefined;
+  if (Array.isArray(current)) {
+    const idx = Number(token);
+    return Number.isInteger(idx) && idx >= 0 ? current[idx] : undefined;
+  }
+  return typeof current === "object" ? current[token] : undefined;
+}
+
 /**
  * Walk `doc` to the value referenced by JSON Pointer `path`.
  * Returns `undefined` if any segment along the way is missing.
  */
 export function resolvePointer(doc: any, path: string): any {
-  const tokens = parsePointer(path);
   let current = doc;
-  for (const token of tokens) {
-    if (current === undefined || current === null) return undefined;
-    if (Array.isArray(current)) {
-      if (token === "-") return undefined;
-      const idx = Number(token);
-      if (!Number.isInteger(idx) || idx < 0) return undefined;
-      current = current[idx];
-    } else if (typeof current === "object") {
-      current = current[token];
-    } else {
-      return undefined;
-    }
+  for (const token of parsePointer(path)) {
+    current = stepInto(current, token);
   }
   return current;
 }
@@ -88,12 +86,4 @@ export function isPointerWithin(path: string, ancestorPath: string): boolean {
     if (pathTokens[i] !== ancestorTokens[i]) return false;
   }
   return true;
-}
-
-/**
- * The last reference token of a pointer, or "" for the root pointer.
- */
-export function lastToken(path: string): string {
-  const tokens = parsePointer(path);
-  return tokens.length > 0 ? tokens[tokens.length - 1] : "";
 }

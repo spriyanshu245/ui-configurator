@@ -168,3 +168,106 @@ describe("find_components", () => {
     expect(res.error).toMatch(/page_paths/);
   });
 });
+
+describe("get_page_dsl edge cases", () => {
+  it("refresh: true bypasses the in-memory copy", async () => {
+    await executeTool("get_page_dsl", { microsite_id: "m", page_path: "m_home" });
+    dslMock.mockClear();
+    await executeTool("get_page_dsl", { microsite_id: "m", page_path: "m_home", refresh: true });
+    expect(dslMock).toHaveBeenCalledWith("m_home", 2);
+  });
+
+  it("returns a pages array with the error when the single requested page is missing", async () => {
+    const res: any = await executeTool("get_page_dsl", { microsite_id: "m", page_path: "m_nope" });
+    expect(res.pages).toEqual([]);
+    expect(res.errors).toEqual([{ pageCode: "m_nope", error: 'Page "m_nope" not found.' }]);
+    expect(res.note).toMatch(/Outline format/);
+  });
+
+  it("omits the errors key when every page loads", async () => {
+    const res: any = await executeTool("get_page_dsl", { microsite_id: "m", page_paths: ["m_home", "m_about"] });
+    expect(res.errors).toBeUndefined();
+  });
+});
+
+describe("query_dsl_path edge cases", () => {
+  it("reports an unknown id as not found", async () => {
+    const res: any = await executeTool("query_dsl_path", { tempDslId: "dsl:m:m_home", id: "zzz" });
+    expect(res).toEqual({ tempDslId: "dsl:m:m_home", id: "zzz", found: false });
+  });
+
+  it("flags an id prefix that matches several components as ambiguous", async () => {
+    const res: any = await executeTool("query_dsl_path", { tempDslId: "dsl:m:m_home", id: "Home-in-" });
+    // matches all twelve Home-in-N inputs
+    expect(res).toMatchObject({ found: true, ambiguous: true });
+    expect(res.pointers).toHaveLength(12);
+    expect(res.data).toBeUndefined();
+  });
+
+  it("cannot look up by id for a legacy key that is not in the store", async () => {
+    const res: any = await executeTool("query_dsl_path", { tempDslId: "legacy-uuid", id: "abc" });
+    expect(res).toEqual({ tempDslId: "legacy-uuid", id: "abc", found: false });
+    expect(getDslPath).not.toHaveBeenCalled();
+  });
+
+  it("returns pointer '/' for the document root", async () => {
+    const res: any = await executeTool("query_dsl_path", { tempDslId: "dsl:m:m_home", path: "/", full: true });
+    expect(res.pointer).toBe("/");
+    expect(res.data.id).toBe("Home-root-id");
+  });
+
+  it("reports found: false for a legacy lookup that returns nothing, passing an empty path through", async () => {
+    getDslPath.mockResolvedValue(undefined);
+    const res: any = await executeTool("query_dsl_path", { tempDslId: "legacy-uuid" });
+    expect(getDslPath).toHaveBeenCalledWith("legacy-uuid", "");
+    expect(res).toEqual({ tempDslId: "legacy-uuid", pointer: "/", found: false });
+  });
+
+  it("keeps an empty node as-is when compaction would drop it entirely", async () => {
+    const res: any = await executeTool("query_dsl_path", {
+      tempDslId: "dsl:m:m_home",
+      path: "/components/0/properties/notes",
+    });
+    expect(res).toMatchObject({ found: true, data: null });
+  });
+
+  it("returns {results} even for a one-element queries array", async () => {
+    const res: any = await executeTool("query_dsl_path", {
+      queries: [{ tempDslId: "dsl:m:m_home", path: "/components/0/type" }],
+    });
+    expect(res.results).toHaveLength(1);
+    expect(res.results[0].data).toBe("button-v2");
+  });
+});
+
+describe("find_components edge cases", () => {
+  it("falls back to ctx.micrositeId and filters by label, matching numeric equals as strings", async () => {
+    const res: any = await executeTool(
+      "find_components",
+      { page_paths: ["m_home"], labelContains: "big", type: "form" },
+      { micrositeId: "m" },
+    );
+    expect(res.results[0]).toMatchObject({ pageCode: "m_home", count: 1 });
+    expect(res.errors).toBeUndefined();
+
+    const nested: any = await executeTool("find_components", {
+      microsite_id: "m",
+      page_paths: ["m_home"],
+      prop: "label",
+      equals: 7,
+    });
+    expect(nested.results[0].count).toBe(0);
+  });
+
+  it("treats equals: null like no equals filter and reports missing pages alongside results", async () => {
+    const res: any = await executeTool("find_components", {
+      microsite_id: "m",
+      page_paths: ["m_home", "m_nope"],
+      prop: "routePage",
+      equals: null,
+    });
+    expect(res.results).toHaveLength(1);
+    expect(res.results[0].count).toBe(1);
+    expect(res.errors).toEqual([{ pageCode: "m_nope", error: 'Page "m_nope" not found.' }]);
+  });
+});

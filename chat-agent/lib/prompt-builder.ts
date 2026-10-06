@@ -5,42 +5,46 @@ import { logger } from "./logger";
 
 import { fetchMicrositePages } from "./microsite-loader";
 
-export async function buildSystemPrompt(context: any): Promise<string> {
-  const skillPath = path.join(
-    process.cwd(),
-    "chat-agent/knowledge/agentSkill.md",
-  );
-  let skillContent = "";
-  try {
-    if (fs.existsSync(skillPath)) {
-      skillContent = fs.readFileSync(skillPath, "utf-8");
-    } else {
-      skillContent = "# No knowledge base compiled yet.";
-    }
-  } catch (e) {
-    skillContent = "# No knowledge base compiled yet.";
-  }
+const NO_KNOWLEDGE_BASE = "# No knowledge base compiled yet.";
 
+function knowledgePath(file: string): string {
+  return path.join(process.cwd(), "chat-agent/knowledge", file);
+}
+
+function readSkillContent(): string {
+  try {
+    const skillPath = knowledgePath("agentSkill.md");
+    return fs.existsSync(skillPath)
+      ? fs.readFileSync(skillPath, "utf-8")
+      : NO_KNOWLEDGE_BASE;
+  } catch {
+    return NO_KNOWLEDGE_BASE;
+  }
+}
+
+function buildLearnedSection(): string {
   let learnedContent = "";
   try {
-    const learnedPath = path.join(
-      process.cwd(),
-      "chat-agent/knowledge/learnedSkills.md",
-    );
+    const learnedPath = knowledgePath("learnedSkills.md");
     if (fs.existsSync(learnedPath)) {
       learnedContent = fs.readFileSync(learnedPath, "utf-8").trim();
     }
   } catch (e) {
-    logger.warn("Failed to read learned skills", { error: (e as Error).message });
+    logger.warn("Failed to read learned skills", {
+      error: (e as Error).message,
+    });
   }
-  const learnedSection = learnedContent
+  return learnedContent
     ? `\n═══ LEARNED FROM PAST SESSIONS ═══\nPatterns distilled from previously approved changes. Treat as helpful priors, not overrides of the curated knowledge base or the user's explicit instructions.\n${learnedContent}\n`
     : "";
+}
 
-  let preferences: { key: string; value: string }[] = [];
+async function fetchPreferences(
+  context: any,
+): Promise<{ key: string; value: string }[]> {
   try {
-    const preferencesCollection = db.collection("user_preferences");
-    preferences = (await preferencesCollection
+    return (await db
+      .collection("user_preferences")
       .find({
         $or: [
           { userId: context.userId, micrositeId: context.micrositeId },
@@ -49,51 +53,75 @@ export async function buildSystemPrompt(context: any): Promise<string> {
       })
       .toArray()) as unknown as { key: string; value: string }[];
   } catch (e) {
-    logger.error("Failed to fetch user preferences", { error: (e as Error).message });
+    logger.error("Failed to fetch user preferences", {
+      error: (e as Error).message,
+    });
+    return [];
   }
+}
 
-  let allPagesContent = "";
+async function buildAllPagesContent(context: any): Promise<string> {
+  if (!context.micrositeId) return "";
   try {
-    if (context.micrositeId) {
-      const micrositeData = await fetchMicrositePages(context.micrositeId);
-      const allPages = micrositeData?.pages || [];
-      allPagesContent = `Total pages: ${allPages.length}\nPage paths: ${allPages.map((p: any) => p.pageCode).join(", ")}\n\n`;
-      allPagesContent += allPages
-        .map(
-          (p: any) => `
+    const micrositeData = await fetchMicrositePages(context.micrositeId);
+    const allPages = micrositeData?.pages || [];
+    const header = `Total pages: ${allPages.length}\nPage paths: ${allPages.map((p: any) => p.pageCode).join(", ")}\n\n`;
+    const body = allPages
+      .map(
+        (p: any) => `
 --- PAGE: ${p.pageCode} ---
 ${JSON.stringify(p, null, 2)}
 `,
-        )
-        .join("\n");
-    }
+      )
+      .join("\n");
+    return header + body;
   } catch (e) {
-    logger.error(
-      "Failed to fetch initial microsite data for system prompt",
-      { error: (e as Error).message },
-    );
+    logger.error("Failed to fetch initial microsite data for system prompt", {
+      error: (e as Error).message,
+    });
+    return "";
   }
+}
 
-  let componentRegistryContent = "{}";
+function readComponentRegistry(): string {
   try {
-    const registryPath = path.join(process.cwd(), "chat-agent/knowledge/component-registry.json");
+    const registryPath = knowledgePath("component-registry.json");
     if (fs.existsSync(registryPath)) {
-      componentRegistryContent = fs.readFileSync(registryPath, "utf-8");
+      return fs.readFileSync(registryPath, "utf-8");
     }
   } catch (e) {
-    logger.error("Failed to read component registry", { error: (e as Error).message });
+    logger.error("Failed to read component registry", {
+      error: (e as Error).message,
+    });
   }
+  return "{}";
+}
+
+/** Renders an optional context section: a string as-is, anything else as pretty JSON. */
+function optionalSection(title: string, data: unknown): string {
+  if (!data) return "";
+  const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  return `\n═══ ${title} ═══\n${text}\n`;
+}
+
+export async function buildSystemPrompt(context: any): Promise<string> {
+  const skillContent = readSkillContent();
+  const learnedSection = buildLearnedSection();
+  const preferences = await fetchPreferences(context);
+  const allPagesContent = await buildAllPagesContent(context);
+  const componentRegistryContent = readComponentRegistry();
 
   const taskContext = context.taskContext || {};
   const pageOps = context.pageOps || {};
 
-  const referenceDslsContent = context.referenceDsls 
-    ? `\n═══ REFERENCE DSLs ═══\n${typeof context.referenceDsls === 'string' ? context.referenceDsls : JSON.stringify(context.referenceDsls, null, 2)}\n`
-    : "";
-
-  const sessionContextData = context.sessionContext
-    ? `\n═══ SESSION DATA ═══\n${typeof context.sessionContext === 'string' ? context.sessionContext : JSON.stringify(context.sessionContext, null, 2)}\n`
-    : "";
+  const referenceDslsContent = optionalSection(
+    "REFERENCE DSLs",
+    context.referenceDsls,
+  );
+  const sessionContextData = optionalSection(
+    "SESSION DATA",
+    context.sessionContext,
+  );
 
   return `
 You are a DSL Page Builder Assistant for a microsite UI configurator.

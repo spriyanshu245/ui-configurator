@@ -25,7 +25,7 @@ export function DiffChunk({ chunk, defaultOpen = true }: DiffChunkProps) {
   const diff = useMemo(() => {
     try {
       return chunkDiffer.diff(chunk.before, chunk.after);
-    } catch (e) {
+    } catch {
       return [[], []] as any;
     }
   }, [chunk.before, chunk.after]);

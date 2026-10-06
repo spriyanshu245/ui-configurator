@@ -41,7 +41,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     if (b.has(tok)) intersection++;
   }
   const union = a.size + b.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+  return intersection / union;
 }
 
 /** Whole-content Jaccard similarity over sentence-token sets (average of the two directions' best matches). */
@@ -209,8 +209,4 @@ export const skillEntries = {
       }
     }
   },
-
-  countSince: async (date: string) => {
-    return await db.collection('skill_entries').countDocuments({ createdAt: { $gt: date } });
-  }
 };

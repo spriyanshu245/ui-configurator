@@ -24,14 +24,23 @@ export interface PageMap {
 
 const MAX_PAGES = 60;
 
+type PageRef = { to: string; via: PageMapEdge["via"] };
+
+/** The routing reference held by one DSL key/value pair, if any. */
+function refFromEntry(key: string, value: unknown): PageRef | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  if (key === "routePage") return { to: value.trim(), via: "route" };
+  if (key === "pageCode") return { to: value.trim(), via: "tab" };
+  return undefined;
+}
+
 /** Deep-walk a page DSL collecting routePage / pageCode references. */
-function collectRefs(dsl: any): Array<{ to: string; via: PageMapEdge["via"] }> {
-  const refs: Array<{ to: string; via: PageMapEdge["via"] }> = [];
+function collectRefs(dsl: any): PageRef[] {
+  const refs: PageRef[] = [];
   const seen = new Set<any>();
 
   const walk = (node: any) => {
-    if (!node || typeof node !== "object") return;
-    if (seen.has(node)) return;
+    if (!node || typeof node !== "object" || seen.has(node)) return;
     seen.add(node);
 
     if (Array.isArray(node)) {
@@ -39,18 +48,27 @@ function collectRefs(dsl: any): Array<{ to: string; via: PageMapEdge["via"] }> {
       return;
     }
     for (const [key, value] of Object.entries(node)) {
-      if (key === "routePage" && typeof value === "string" && value.trim()) {
-        refs.push({ to: value.trim(), via: "route" });
-      } else if (key === "pageCode" && typeof value === "string" && value.trim()) {
-        refs.push({ to: value.trim(), via: "tab" });
-      } else if (value && typeof value === "object") {
-        walk(value);
-      }
+      const ref = refFromEntry(key, value);
+      if (ref) refs.push(ref);
+      else if (value && typeof value === "object") walk(value);
     }
   };
 
   walk(dsl);
   return refs;
+}
+
+/** Best-effort page DSL load: a failure is logged and yields null. */
+async function loadPageDsl(page: any): Promise<any> {
+  try {
+    return await fetchPageDsl(page.pageCode, page.pageVersion || 1);
+  } catch (e) {
+    logger.warn("buildPageMap: failed to load page DSL", {
+      pageCode: page.pageCode,
+      error: (e as Error).message,
+    });
+    return null;
+  }
 }
 
 /**
@@ -73,37 +91,27 @@ export async function buildPageMap(micrositeId: string): Promise<PageMap> {
   const edges: PageMapEdge[] = [];
   const unknown = new Set<string>();
 
-  for (const p of pages.slice(0, MAX_PAGES)) {
-    let dsl: any = null;
-    try {
-      dsl = await fetchPageDsl(p.pageCode, p.pageVersion || 1);
-    } catch (e) {
-      logger.warn("buildPageMap: failed to load page DSL", {
-        pageCode: p.pageCode,
-        error: (e as Error).message,
-      });
+  const recordRef = (from: string, ref: PageRef) => {
+    if (ref.to === from) return; // ignore self-references
+    if (!known.has(ref.to)) {
+      unknown.add(ref.to);
+      return;
     }
+    const key = `${from}->${ref.to}:${ref.via}`;
+    if (edgeKeys.has(key)) return;
+    edgeKeys.add(key);
+    edges.push({ from, to: ref.to, via: ref.via });
+  };
+
+  for (const p of pages.slice(0, MAX_PAGES)) {
+    const dsl = await loadPageDsl(p);
     const pageDsl = dsl?.dslJson ?? dsl;
-    const isPopup = Boolean(pageDsl?.properties?.showAsPopup);
     nodes.push({
       pageCode: p.pageCode,
-      isPopup,
+      isPopup: Boolean(pageDsl?.properties?.showAsPopup),
       isFirst: p.pageCode === firstPageCode,
     });
-
-    if (!pageDsl) continue;
-    for (const ref of collectRefs(pageDsl)) {
-      if (ref.to === p.pageCode) continue; // ignore self-references
-      if (known.has(ref.to)) {
-        const key = `${p.pageCode}->${ref.to}:${ref.via}`;
-        if (!edgeKeys.has(key)) {
-          edgeKeys.add(key);
-          edges.push({ from: p.pageCode, to: ref.to, via: ref.via });
-        }
-      } else {
-        unknown.add(ref.to);
-      }
-    }
+    if (pageDsl) collectRefs(pageDsl).forEach((ref) => recordRef(p.pageCode, ref));
   }
 
   return { firstPageCode, nodes, edges, unknownTargets: [...unknown] };

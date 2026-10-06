@@ -62,8 +62,62 @@ describe("MarkdownLite", () => {
     expect(container.querySelectorAll("ol li")).toHaveLength(2);
   });
 
-  it("renders a heading", () => {
-    render(<MarkdownLite text={"# Title here"} />);
-    expect(screen.getByText("Title here").tagName).toMatch(/^H[1-6]$/);
+  it.each([
+    ["# One", "H3"],
+    ["## Two", "H4"],
+    ["###### Six", "H6"],
+  ])("maps %j to a %s (offset so chat headings stay small)", (md, tag) => {
+    render(<MarkdownLite text={md} />);
+    expect(screen.getByRole("heading").tagName).toBe(tag);
+  });
+
+  it("renders nothing for empty text", () => {
+    const { container } = render(<MarkdownLite text="" />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders blockquotes (grouping consecutive lines) and horizontal rules", () => {
+    const md = ["> first", "> second", "", "---", "after"].join("\n");
+    const { container } = render(<MarkdownLite text={md} />);
+    expect(container.querySelector("blockquote")?.textContent).toBe("first\nsecond");
+    expect(container.querySelectorAll("hr")).toHaveLength(1);
+    expect(screen.getByText("after")).toBeTruthy();
+  });
+
+  it("keeps ordered and unordered lists apart and strips markers", () => {
+    const md = ["1) one", "2) two", "- bullet", "+ plus"].join("\n");
+    const { container } = render(<MarkdownLite text={md} />);
+    expect([...container.querySelectorAll("ol li")].map((li) => li.textContent)).toEqual(["one", "two"]);
+    expect([...container.querySelectorAll("ul li")].map((li) => li.textContent)).toEqual(["bullet", "plus"]);
+  });
+
+  it("joins consecutive lines into one paragraph and splits on blank lines (CRLF tolerated)", () => {
+    const { container } = render(<MarkdownLite text={"line one\r\nline two\r\n\r\nnext"} />);
+    const paragraphs = container.querySelectorAll("p");
+    expect(paragraphs).toHaveLength(2);
+    expect(paragraphs[0].textContent).toBe("line one\nline two");
+  });
+
+  it("ends a paragraph when a block starts and tolerates an unterminated code fence", () => {
+    const { container } = render(<MarkdownLite text={["intro", "```", "never closed"].join("\n")} />);
+    expect(container.querySelector("p")?.textContent).toBe("intro");
+    expect(container.querySelector("pre code")?.textContent).toBe("never closed");
+    expect(container.querySelector("pre code")?.getAttribute("data-lang")).toBeNull();
+  });
+
+  it("fills missing table cells and supports alignment separators and inline markup in cells", () => {
+    const md = ["| A | B |", "|:--|--:|", "| **x** |", "| y | `z` |"].join("\n");
+    render(<MarkdownLite text={md} />);
+    expect(screen.getAllByRole("row")).toHaveLength(3);
+    expect(screen.getByText("x").tagName).toBe("STRONG");
+    expect(screen.getByText("z").tagName).toBe("CODE");
+    expect(screen.getAllByRole("cell")).toHaveLength(4);
+  });
+
+  it("supports alternate emphasis markers and does not parse markup inside inline code", () => {
+    render(<MarkdownLite text={"__bold__ and _it_ and `**not bold**`"} />);
+    expect(screen.getByText("bold").tagName).toBe("STRONG");
+    expect(screen.getByText("it").tagName).toBe("EM");
+    expect(screen.getByText("**not bold**").tagName).toBe("CODE");
   });
 });

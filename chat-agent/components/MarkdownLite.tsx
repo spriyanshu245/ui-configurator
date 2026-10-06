@@ -105,188 +105,198 @@ function splitRow(line: string): string[] {
   return cells.split("|").map((c) => c.trim());
 }
 
-interface Block {
-  render: () => React.ReactNode;
+type BlockResult = { node: React.ReactNode; next: number };
+type BlockParser = (lines: string[], i: number) => BlockResult | null;
+
+const FENCE_OPEN = /^\s*```(\w*)\s*$/;
+const FENCE_CLOSE = /^\s*```\s*$/;
+const BLOCKQUOTE_LINE = /^\s*>\s?/;
+const UL_ITEM = /^\s*[-*+]\s+(.*)$/;
+const OL_ITEM = /^\s*\d+[.)]\s+(.*)$/;
+
+function parseFence(lines: string[], start: number): BlockResult | null {
+  const fence = FENCE_OPEN.exec(lines[start]);
+  if (!fence) return null;
+  const lang = fence[1];
+  const codeLines: string[] = [];
+  let i = start + 1;
+  while (i < lines.length && !FENCE_CLOSE.test(lines[i])) {
+    codeLines.push(lines[i]);
+    i++;
+  }
+  i++; // skip closing fence
+  return {
+    next: i,
+    node: (
+      <pre key={`code${i}`} className={styles.codeBlock}>
+        <code data-lang={lang || undefined}>{codeLines.join("\n")}</code>
+      </pre>
+    ),
+  };
+}
+
+function renderTable(header: string[], rows: string[][], key: number): React.ReactNode {
+  return (
+    <div key={`tbl${key}`} className={styles.tableScroll}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            {header.map((h, hi) => (
+              <th key={hi}>{renderInline(h, `th${key}-${hi}`)}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, ri) => (
+            <tr key={ri}>
+              {header.map((_, ci) => (
+                <td key={ci}>{renderInline(r[ci] ?? "", `td${key}-${ri}-${ci}`)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** GFM table: current line has a pipe and next line is a separator. */
+function parseTable(lines: string[], start: number): BlockResult | null {
+  const line = lines[start];
+  if (!line.includes("|") || start + 1 >= lines.length || !isTableSeparator(lines[start + 1])) {
+    return null;
+  }
+  const header = splitRow(line);
+  let i = start + 2; // skip header + separator
+  const rows: string[][] = [];
+  while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+    rows.push(splitRow(lines[i]));
+    i++;
+  }
+  return { next: i, node: renderTable(header, rows, i) };
+}
+
+function parseHeading(lines: string[], i: number): BlockResult | null {
+  const heading = /^(#{1,6})\s+(.*)$/.exec(lines[i]);
+  if (!heading) return null;
+  const tag = `h${Math.min(heading[1].length + 2, 6)}`;
+  return {
+    next: i + 1,
+    node: React.createElement(
+      tag,
+      { key: `h${i}`, className: styles.heading },
+      renderInline(heading[2], `h${i}`),
+    ),
+  };
+}
+
+function parseRule(lines: string[], i: number): BlockResult | null {
+  if (!/^\s*([-*_])(\s*\1){2,}\s*$/.test(lines[i])) return null;
+  return { next: i + 1, node: <hr key={`hr${i}`} className={styles.hr} /> };
+}
+
+/** Group consecutive blockquote lines. */
+function parseBlockquote(lines: string[], start: number): BlockResult | null {
+  if (!BLOCKQUOTE_LINE.test(lines[start])) return null;
+  const quoteLines: string[] = [];
+  let i = start;
+  while (i < lines.length && BLOCKQUOTE_LINE.test(lines[i])) {
+    quoteLines.push(lines[i].replace(BLOCKQUOTE_LINE, ""));
+    i++;
+  }
+  return {
+    next: i,
+    node: (
+      <blockquote key={`bq${i}`} className={styles.blockquote}>
+        {renderInline(quoteLines.join("\n"), `bq${i}`)}
+      </blockquote>
+    ),
+  };
+}
+
+/** Group consecutive unordered / ordered item lines. */
+function parseList(lines: string[], start: number): BlockResult | null {
+  const ordered = OL_ITEM.test(lines[start]);
+  if (!ordered && !UL_ITEM.test(lines[start])) return null;
+  const itemPattern = ordered ? OL_ITEM : UL_ITEM;
+  const items: string[] = [];
+  let i = start;
+  for (let m = itemPattern.exec(lines[i] ?? ""); m; m = itemPattern.exec(lines[i] ?? "")) {
+    items.push(m[1]);
+    i++;
+  }
+  const children = items.map((it, ii) => (
+    <li key={ii}>{renderInline(it, `li${i}-${ii}`)}</li>
+  ));
+  return {
+    next: i,
+    node: ordered ? (
+      <ol key={`ol${i}`} className={styles.list}>{children}</ol>
+    ) : (
+      <ul key={`ul${i}`} className={styles.list}>{children}</ul>
+    ),
+  };
+}
+
+const BLOCK_PARSERS: BlockParser[] = [
+  parseFence,
+  parseTable,
+  parseHeading,
+  parseRule,
+  parseBlockquote,
+  parseList,
+];
+
+function matchBlock(lines: string[], i: number): BlockResult | null {
+  for (const parse of BLOCK_PARSERS) {
+    const result = parse(lines, i);
+    if (result) return result;
+  }
+  return null;
 }
 
 /** Parse the whole message into block-level elements. */
 function parseBlocks(src: string): React.ReactNode[] {
   const lines = src.replace(/\r\n/g, "\n").split("\n");
-  const blocks: Block[] = [];
-  let i = 0;
-
-  const pushParagraph = (buf: string[], key: number) => {
-    if (buf.length === 0) return;
-    const text = buf.join("\n");
-    blocks.push({
-      render: () => <p key={`p${key}`} className={styles.paragraph}>{renderInline(text, `p${key}`)}</p>,
-    });
-  };
-
+  const blocks: React.ReactNode[] = [];
   let paraBuf: string[] = [];
   let paraStart = 0;
 
+  const flushParagraph = () => {
+    if (paraBuf.length > 0) {
+      const text = paraBuf.join("\n");
+      const key = paraStart;
+      blocks.push(
+        <p key={`p${key}`} className={styles.paragraph}>{renderInline(text, `p${key}`)}</p>,
+      );
+    }
+    paraBuf = [];
+  };
+
+  let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-
-    // Fenced code block
-    const fence = line.match(/^\s*```(\w*)\s*$/);
-    if (fence) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const lang = fence[1];
-      const codeLines: string[] = [];
+    const block = matchBlock(lines, i);
+    if (block) {
+      flushParagraph();
+      blocks.push(block.node);
+      i = block.next;
+    } else if (lines[i].trim() === "") {
+      // Blank line ends a paragraph
+      flushParagraph();
       i++;
-      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      i++; // skip closing fence
-      const key = i;
-      blocks.push({
-        render: () => (
-          <pre key={`code${key}`} className={styles.codeBlock}>
-            <code data-lang={lang || undefined}>{codeLines.join("\n")}</code>
-          </pre>
-        ),
-      });
-      continue;
-    }
-
-    // GFM table: current line has a pipe and next line is a separator
-    if (line.includes("|") && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const header = splitRow(line);
-      i += 2; // skip header + separator
-      const rows: string[][] = [];
-      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
-        rows.push(splitRow(lines[i]));
-        i++;
-      }
-      const key = i;
-      blocks.push({
-        render: () => (
-          <div key={`tbl${key}`} className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  {header.map((h, hi) => (
-                    <th key={hi}>{renderInline(h, `th${key}-${hi}`)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, ri) => (
-                  <tr key={ri}>
-                    {header.map((_, ci) => (
-                      <td key={ci}>{renderInline(r[ci] ?? "", `td${key}-${ri}-${ci}`)}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ),
-      });
-      continue;
-    }
-
-    // Heading
-    const heading = line.match(/^(#{1,6})\s+(.*)$/);
-    if (heading) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const level = heading[1].length;
-      const content = heading[2];
-      const key = i;
-      const tag = `h${Math.min(level + 2, 6)}`;
-      blocks.push({
-        render: () =>
-          React.createElement(
-            tag,
-            { key: `h${key}`, className: styles.heading },
-            renderInline(content, `h${key}`),
-          ),
-      });
+    } else {
+      // Accumulate paragraph text
+      if (paraBuf.length === 0) paraStart = i;
+      paraBuf.push(lines[i]);
       i++;
-      continue;
     }
-
-    // Horizontal rule
-    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const key = i;
-      blocks.push({ render: () => <hr key={`hr${key}`} className={styles.hr} /> });
-      i++;
-      continue;
-    }
-
-    // Blockquote (group consecutive)
-    if (/^\s*>\s?/.test(line)) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const quoteLines: string[] = [];
-      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
-        quoteLines.push(lines[i].replace(/^\s*>\s?/, ""));
-        i++;
-      }
-      const key = i;
-      blocks.push({
-        render: () => (
-          <blockquote key={`bq${key}`} className={styles.blockquote}>
-            {renderInline(quoteLines.join("\n"), `bq${key}`)}
-          </blockquote>
-        ),
-      });
-      continue;
-    }
-
-    // Lists (unordered / ordered), group consecutive item lines
-    const ulItem = line.match(/^\s*[-*+]\s+(.*)$/);
-    const olItem = line.match(/^\s*\d+[.)]\s+(.*)$/);
-    if (ulItem || olItem) {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      const ordered = Boolean(olItem);
-      const items: string[] = [];
-      while (i < lines.length) {
-        const u = lines[i].match(/^\s*[-*+]\s+(.*)$/);
-        const o = lines[i].match(/^\s*\d+[.)]\s+(.*)$/);
-        if (ordered && o) items.push(o[1]);
-        else if (!ordered && u) items.push(u[1]);
-        else break;
-        i++;
-      }
-      const key = i;
-      blocks.push({
-        render: () => {
-          const children = items.map((it, ii) => (
-            <li key={ii}>{renderInline(it, `li${key}-${ii}`)}</li>
-          ));
-          return ordered ? (
-            <ol key={`ol${key}`} className={styles.list}>{children}</ol>
-          ) : (
-            <ul key={`ul${key}`} className={styles.list}>{children}</ul>
-          );
-        },
-      });
-      continue;
-    }
-
-    // Blank line ends a paragraph
-    if (line.trim() === "") {
-      pushParagraph(paraBuf, paraStart); paraBuf = [];
-      i++;
-      continue;
-    }
-
-    // Accumulate paragraph text
-    if (paraBuf.length === 0) paraStart = i;
-    paraBuf.push(line);
-    i++;
   }
-  pushParagraph(paraBuf, paraStart);
+  flushParagraph();
 
-  return blocks.map((b) => b.render());
+  return blocks;
 }
 
-export function MarkdownLite({ text }: { text: string }) {
+export function MarkdownLite({ text }: Readonly<{ text: string }>) {
   if (!text) return null;
   return <div className={styles.markdown}>{parseBlocks(text)}</div>;
 }

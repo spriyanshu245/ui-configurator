@@ -120,4 +120,28 @@ describe("pendingBatchesDB", () => {
       id: { $ne: "batch-1" },
     });
   });
+
+  it("save() defaults navigateTo, expiresAt and status when omitted", async () => {
+    const { navigateTo, expiresAt, status, ...rest } = sampleBatch;
+
+    await pendingBatchesDB.save(rest as any);
+
+    expect(insertOneMock.mock.calls[0][0]).toMatchObject({ navigateTo: null, expiresAt: null, status: "pending" });
+  });
+
+  it("get() defaults missing navigateTo and expiresAt to null", async () => {
+    const { navigateTo, expiresAt, ...legacy } = sampleBatch;
+    findOneMock.mockResolvedValue(legacy);
+
+    await expect(pendingBatchesDB.get("batch-1")).resolves.toMatchObject({ navigateTo: null, expiresAt: null });
+  });
+
+  it("findApplyingForMicrosite() maps the found batch, defaulting nullable fields", async () => {
+    const { navigateTo, expiresAt, ...legacy } = sampleBatch;
+    findOneMock.mockResolvedValue({ ...legacy, status: "applying" });
+
+    const result = await pendingBatchesDB.findApplyingForMicrosite("m1");
+
+    expect(result).toMatchObject({ id: "batch-1", status: "applying", navigateTo: null, expiresAt: null });
+  });
 });

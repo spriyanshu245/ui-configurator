@@ -17,7 +17,7 @@ const CHANGE_STATUS_CONFIG: Record<
   reverted: { label: 'Reverted', icon: Undo2, className: 'chipReverted' },
 };
 
-export function ChatMessage({ message, onApprove, onReject, onEdit, onRollback, onApproveBatch, onRejectBatch, onCreatePage, onCancelCreatePage, onRetry, onNavigatePage, activePageCode, onOpenPreview }: any) {
+export function ChatMessage({ message, onApprove, onReject, onRollback, onApproveBatch, onRejectBatch, onCreatePage, onCancelCreatePage, onRetry, onNavigatePage, activePageCode, onOpenPreview }: any) {
   const isUser = message.role === 'user';
   const isError = Boolean(message._isError);
   const isStreaming = Boolean(message._isStreaming);

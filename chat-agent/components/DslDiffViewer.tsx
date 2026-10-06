@@ -76,7 +76,7 @@ export function DslDiffViewer({
   const diff = useMemo(() => {
     try {
       return differ.diff(currentDsl, parsedEditedDsl);
-    } catch (e) {
+    } catch {
       return [[], []] as any;
     }
   }, [currentDsl, parsedEditedDsl, differ]);
@@ -88,24 +88,10 @@ export function DslDiffViewer({
     if (!patch || patch.length === 0) return null;
     try {
       return scopeDiffToPatch(currentDsl, parsedEditedDsl, patch);
-    } catch (e) {
+    } catch {
       return null;
     }
   }, [currentDsl, parsedEditedDsl, patch]);
-
-  // Component ids/types touched by the scoped chunks, derived from the real
-  // chunk data (replaces the previous empty no-op stub).
-  const affectedComponents = useMemo(() => {
-    if (!chunks) return [];
-    const ids = new Set<string>();
-    for (const chunk of chunks) {
-      const node = (chunk.after ?? chunk.before) as any;
-      if (node && typeof node === "object" && typeof node.id === "string") {
-        ids.add(node.type ? `${node.id} (${node.type})` : node.id);
-      }
-    }
-    return Array.from(ids);
-  }, [chunks]);
 
   useEffect(() => {
     if (activeTab === "diff" && diffContainerRef.current) {
@@ -155,7 +141,7 @@ export function DslDiffViewer({
       const parsed = JSON.parse(value);
       setParsedEditedDsl(parsed);
       setIsJsonValid(true);
-    } catch (e) {
+    } catch {
       setIsJsonValid(false);
     }
   };
@@ -222,18 +208,14 @@ export function DslDiffViewer({
       <div className={styles.diffArea} ref={diffContainerRef}>
         {activeTab === "diff" && (
           <div className={styles.diffTabContent}>
-            {chunks ? (
-              chunks.length > 0 ? (
-                chunks.map((chunk) => (
-                  <DiffChunk
-                    key={chunk.key}
-                    chunk={chunk}
-                    defaultOpen={chunks.length <= 3}
-                  />
-                ))
-              ) : (
-                <Viewer diff={diff} />
-              )
+            {chunks?.length ? (
+              chunks.map((chunk) => (
+                <DiffChunk
+                  key={chunk.key}
+                  chunk={chunk}
+                  defaultOpen={chunks.length <= 3}
+                />
+              ))
             ) : (
               <Viewer diff={diff} />
             )}
@@ -242,18 +224,10 @@ export function DslDiffViewer({
 
         {activeTab === "edit" && (
           <div className={styles.editTabContent}>
-            {!isJsonValid && (
-              <div className={styles.invalidWarning}>
-                <AlertTriangle size={16} /> You are editing the raw patch.
-                Invalid JSON will block approval.
-              </div>
-            )}
-            {isJsonValid && (
-              <div className={styles.validWarning}>
-                <AlertTriangle size={16} /> You are editing the raw patch.
-                Invalid JSON will block approval.
-              </div>
-            )}
+            <div className={isJsonValid ? styles.validWarning : styles.invalidWarning}>
+              <AlertTriangle size={16} /> You are editing the raw patch.
+              Invalid JSON will block approval.
+            </div>
             <CodeMirror
               value={editedDsl}
               height="100%"

@@ -1,7 +1,17 @@
 /**
  * @jest-environment node
  */
-import { compactDsl, parseDslPath, toPointer, resolveSegments, outlineDsl } from "../dsl-compact";
+import {
+  compactDsl,
+  parseDslPath,
+  toPointer,
+  resolveSegments,
+  outlineDsl,
+  buildNodeIndex,
+  findComponents,
+  depthOneView,
+  countDescendants,
+} from "../dsl-compact";
 
 const page = {
   id: "11111111-aaaa-bbbb-cccc-000000000000",
@@ -144,5 +154,73 @@ describe("node index / search / depth-1 view", () => {
       '/components/0/components/0 button-v2 #33333333 "Submit" {actionType=routing, routingType=Internal, routePage=m_overview}',
     ]);
     expect(JSON.stringify(view)).not.toContain("routingType\":");
+  });
+});
+
+describe("path and node helpers edge cases", () => {
+  it("parseDslPath treats null/undefined/blank as the root", () => {
+    expect(parseDslPath(null)).toEqual([]);
+    expect(parseDslPath(undefined)).toEqual([]);
+    expect(parseDslPath("  ")).toEqual([]);
+  });
+
+  it("resolveSegments stops at a null on the way down", () => {
+    expect(resolveSegments({ a: null }, ["a", "b"])).toBeUndefined();
+    expect(resolveSegments({ a: [1, 2] }, ["a", "1"])).toBe(2);
+  });
+});
+
+describe("describeNode / findComponents / depthOneView edge cases", () => {
+  const root = {
+    id: "root-0000",
+    type: "page",
+    pageCode: "m_home",
+    components: [
+      { id: "aaaaaaaa-1", type: "button", properties: { label: "L".repeat(80), routePage: "m_x", flag: false } },
+      { id: "bbbbbbbb-2", type: "table", properties: { name: "orders", columns: [{ a: 1 }], meta: { k: "v" } } },
+    ],
+  };
+
+  it("truncates long labels, shows pageCode, and does not repeat the label key inline", () => {
+    const outline = outlineDsl(root);
+    expect(outline).toContain(`"${"L".repeat(60)}…"`);
+    expect(outline).toContain("page #root-000 pageCode=m_home");
+    expect(outline).toContain('table #bbbbbbbb "orders"');
+    expect(outline).not.toContain("name=orders");
+    expect(outline).toContain("{routePage=m_x}");
+  });
+
+  it("findComponents matches object-valued props by their JSON", () => {
+    const index = buildNodeIndex(root);
+    expect(findComponents(index, { prop: "meta", equals: '{"k":"v"}' })).toHaveLength(1);
+    expect(findComponents(index, { prop: "meta", equals: "nope" })).toHaveLength(0);
+    expect(findComponents(index, { prop: "missing" })).toHaveLength(0);
+    expect(findComponents(index, { type: "table", labelContains: "ORD" })).toHaveLength(1);
+    expect(findComponents(index, { labelContains: "zzz" })).toHaveLength(0);
+  });
+
+  it("depthOneView stubs nested nodes and defaults to a root pointer", () => {
+    const view: any = depthOneView(root);
+    expect(view.id).toBe("root-0000");
+    expect(view.components[0]).toMatch(/^\/components\/0 button #aaaaaaaa/);
+  });
+
+  it("depthOneView of a nested node uses its segments for stub pointers", () => {
+    const view: any = depthOneView({ id: "x", type: "stack", components: [{ id: "y", type: "button" }] }, ["a", "0"]);
+    expect(view.components[0]).toBe("/a/0/components/0 button #y");
+  });
+
+  it("walks nodes held in properties (e.g. table columns) with their pointers", () => {
+    const outline = outlineDsl({
+      id: "t",
+      type: "table",
+      properties: { columns: [{ id: "col1", type: "column", properties: { label: "A" } }] },
+    });
+    expect(outline).toContain("/properties/columns/0 column #col1");
+  });
+
+  it("countDescendants excludes the node itself and counts bare containers fully", () => {
+    expect(countDescendants(root)).toBe(2);
+    expect(countDescendants([{ id: "a", type: "x" }, { id: "b", type: "x" }])).toBe(2);
   });
 });

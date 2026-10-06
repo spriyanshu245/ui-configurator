@@ -135,6 +135,30 @@ describe("putPageDsl", () => {
     expect(updateDslCacheMock).not.toHaveBeenCalled();
   });
 
+  it("still throws a descriptive error when the PUT error body cannot be read", async () => {
+    globalThis.fetch = jest.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      text: () => Promise.reject(new Error("stream closed")),
+    }) as any;
+
+    await expect(putPageDsl("/home", {})).rejects.toThrow(
+      "Failed to apply patch to backend API (Status: 400 Bad Request): ",
+    );
+  });
+
+  it("keeps the submitted dsl and skips the cache update when the re-GET is not ok", async () => {
+    globalThis.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK" })
+      .mockResolvedValueOnce({ ok: false, status: 404, statusText: "Not Found" }) as any;
+
+    const result = await putPageDsl("/home", { a: 1 });
+    expect(result.latestDsl).toEqual({ a: 1 });
+    expect(updateDslCacheMock).not.toHaveBeenCalled();
+  });
+
   it("does not throw if the re-GET fails (best-effort cache refresh)", async () => {
     const fetchMock = jest
       .fn()

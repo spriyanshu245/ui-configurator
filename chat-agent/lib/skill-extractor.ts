@@ -100,28 +100,33 @@ function findEnclosingComponent(
   let node = root;
   let lastComponent: { type: string; properties: any } | null = null;
 
-  if (node && typeof node === "object" && typeof node.type === "string") {
-    lastComponent = { type: node.type, properties: node.properties ?? {} };
-  }
-
-  for (const seg of segments) {
-    if (node === null || node === undefined) break;
-    if (Array.isArray(node)) {
-      const idx = Number(seg);
-      if (Number.isNaN(idx)) break;
-      node = node[idx];
-    } else if (typeof node === "object") {
-      node = node[seg];
-    } else {
-      break;
-    }
-
+  const remember = () => {
     if (node && typeof node === "object" && typeof node.type === "string") {
       lastComponent = { type: node.type, properties: node.properties ?? {} };
     }
+  };
+
+  remember();
+  for (const seg of segments) {
+    if (node === null || node === undefined) break;
+    const next = descend(node, seg);
+    if (next === CANNOT_DESCEND) break;
+    node = next;
+    remember();
   }
 
   return lastComponent;
+}
+
+const CANNOT_DESCEND = Symbol("cannot-descend");
+
+/** One step down a (non-null) node; CANNOT_DESCEND for non-container or bad index. */
+function descend(node: any, seg: string): any {
+  if (Array.isArray(node)) {
+    const idx = Number(seg);
+    return Number.isNaN(idx) ? CANNOT_DESCEND : node[idx];
+  }
+  return typeof node === "object" ? node[seg] : CANNOT_DESCEND;
 }
 
 const INTERPOLATION_RE = /\$\{[^}]+\}/;
@@ -142,188 +147,224 @@ function stringifyExample(value: unknown): unknown {
   return value;
 }
 
-/**
- * Classify a single (op, resolved value, enclosing component properties)
- * triple against the 11 session-data-binding primitives. Returns the FIRST
- * primitive that matches (most specific checks first), or null if none
- * recognized.
- */
-function classifyPrimitive(
-  op: Operation,
-  value: unknown,
-  props: Record<string, any>,
-  segments: string[],
-): { primitive: string; exampleValue: unknown } | null {
-  const lastKey = segments[segments.length - 1];
+interface ClassifyCtx {
+  op: Operation;
+  value: unknown;
+  props: Record<string, any>;
+  segments: string[];
+  lastKey: string;
+}
 
-  // 3. Table/DataGrid session-data WRITE pattern.
-  if (
-    props?.storeDataInSession === true ||
+type Classification = { primitive: string; exampleValue: unknown };
+type PrimitiveRule = (ctx: ClassifyCtx) => Classification | null;
+
+const TABLE_BINDING_KEYS = new Set([
+  "storeDataInSession",
+  "apiName",
+  "pathToTableData",
+  "nameKeyIds",
+]);
+
+/** 3. Table/DataGrid session-data WRITE pattern. */
+const tableBindingRule: PrimitiveRule = ({ props, lastKey }) => {
+  const triggered =
+    props.storeDataInSession === true ||
     lastKey === "storeDataInSession" ||
-    (props?.apiName !== undefined && props?.pathToTableData !== undefined)
-  ) {
-    if (
-      "apiName" in (props || {}) ||
-      "pathToTableData" in (props || {}) ||
-      "nameKeyIds" in (props || {}) ||
-      lastKey === "storeDataInSession" ||
-      lastKey === "apiName" ||
-      lastKey === "pathToTableData" ||
-      lastKey === "nameKeyIds"
-    ) {
-      return {
-        primitive: "table_binding",
-        exampleValue: stringifyExample({
-          storeDataInSession: props?.storeDataInSession ?? true,
-          apiName: props?.apiName,
-          pathToTableData: props?.pathToTableData,
-          nameKeyIds: props?.nameKeyIds,
-        }),
-      };
-    }
-  }
+    (props.apiName !== undefined && props.pathToTableData !== undefined);
+  if (!triggered) return null;
+  const hasTableKey =
+    "apiName" in props ||
+    "pathToTableData" in props ||
+    "nameKeyIds" in props ||
+    TABLE_BINDING_KEYS.has(lastKey);
+  if (!hasTableKey) return null;
+  return {
+    primitive: "table_binding",
+    exampleValue: stringifyExample({
+      storeDataInSession: props.storeDataInSession ?? true,
+      apiName: props.apiName,
+      pathToTableData: props.pathToTableData,
+      nameKeyIds: props.nameKeyIds,
+    }),
+  };
+};
 
-  // 2. Form prefill-read pattern.
+/** 2. Form prefill-read pattern. */
+const formPrefillRule: PrimitiveRule = ({ props, lastKey }) => {
   if (
-    lastKey === "storePrefillInSession" ||
-    lastKey === "prefillApiName" ||
-    props?.storePrefillInSession === true
+    lastKey !== "storePrefillInSession" &&
+    lastKey !== "prefillApiName" &&
+    props.storePrefillInSession !== true
   ) {
-    return {
-      primitive: "form_prefill",
-      exampleValue: stringifyExample({
-        storePrefillInSession: props?.storePrefillInSession ?? true,
-        prefillApiName: props?.prefillApiName,
-      }),
-    };
+    return null;
   }
+  return {
+    primitive: "form_prefill",
+    exampleValue: stringifyExample({
+      storePrefillInSession: props.storePrefillInSession ?? true,
+      prefillApiName: props.prefillApiName,
+    }),
+  };
+};
 
-  // 4. fetchFromSession + sessionPath.
-  if (lastKey === "fetchFromSession" || lastKey === "sessionPath" || props?.fetchFromSession !== undefined) {
-    return {
-      primitive: "fetch_from_session",
-      exampleValue: stringifyExample({
-        fetchFromSession: props?.fetchFromSession,
-        sessionPath: props?.sessionPath,
-      }),
-    };
-  }
-
-  // 5. storeInputApiInSession.
-  if (lastKey === "storeInputApiInSession" || props?.storeInputApiInSession !== undefined) {
-    return {
-      primitive: "store_input_api_in_session",
-      exampleValue: stringifyExample(props?.storeInputApiInSession ?? value),
-    };
-  }
-
-  // 6. storeSelectedInSession.
-  if (lastKey === "storeSelectedInSession" || props?.storeSelectedInSession !== undefined) {
-    return {
-      primitive: "store_selected_in_session",
-      exampleValue: stringifyExample(props?.storeSelectedInSession ?? value),
-    };
-  }
-
-  // 7. dataTransfer: { name, body }.
-  if (lastKey === "dataTransfer" || (value && typeof value === "object" && ("name" in (value as any) || "body" in (value as any)) && segments.includes("dataTransfer"))) {
-    const dt = lastKey === "dataTransfer" ? value : props?.dataTransfer;
-    return {
-      primitive: "data_transfer",
-      exampleValue: stringifyExample(dt ?? value),
-    };
-  }
-
-  // 8. sessionKeys CSV.
-  if (lastKey === "sessionKeys" || props?.sessionKeys !== undefined) {
-    return {
-      primitive: "session_keys_clear",
-      exampleValue: stringifyExample(props?.sessionKeys ?? value),
-    };
-  }
-
-  // 9. isDynamicRouting + routeKey.
+/** 4. fetchFromSession + sessionPath. */
+const fetchFromSessionRule: PrimitiveRule = ({ props, lastKey }) => {
   if (
-    lastKey === "isDynamicRouting" ||
-    lastKey === "routeKey" ||
-    props?.isDynamicRouting === true
+    lastKey !== "fetchFromSession" &&
+    lastKey !== "sessionPath" &&
+    props.fetchFromSession === undefined
   ) {
-    return {
-      primitive: "dynamic_routing",
-      exampleValue: stringifyExample({
-        isDynamicRouting: props?.isDynamicRouting ?? true,
-        routeKey: props?.routeKey,
-      }),
-    };
+    return null;
   }
+  return {
+    primitive: "fetch_from_session",
+    exampleValue: stringifyExample({
+      fetchFromSession: props.fetchFromSession,
+      sessionPath: props.sessionPath,
+    }),
+  };
+};
 
-  // 10. visibilityConditions.parentNames containing "${session...}" tokens.
-  if (lastKey === "parentNames" || lastKey === "visibilityConditions") {
-    const parentNames =
-      lastKey === "parentNames"
-        ? value
-        : (value as any)?.parentNames ?? props?.visibilityConditions?.parentNames;
-    if (Array.isArray(parentNames) && parentNames.some((p) => containsInterpolation(p))) {
-      return {
-        primitive: "conditional_visibility_session",
-        exampleValue: stringifyExample({ parentNames }),
-      };
-    }
+/** Builds a rule for a primitive keyed on one prop that falls back to the op value. */
+function propOrValueRule(primitive: string, key: string): PrimitiveRule {
+  return ({ props, value, lastKey }) => {
+    if (lastKey !== key && props[key] === undefined) return null;
+    return { primitive, exampleValue: stringifyExample(props[key] ?? value) };
+  };
+}
+
+function isDataTransferPayload(value: unknown, segments: string[]): boolean {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    ("name" in (value as any) || "body" in (value as any)) &&
+    segments.includes("dataTransfer")
+  );
+}
+
+/** 7. dataTransfer: { name, body }. */
+const dataTransferRule: PrimitiveRule = ({
+  props,
+  value,
+  segments,
+  lastKey,
+}) => {
+  if (lastKey !== "dataTransfer" && !isDataTransferPayload(value, segments)) {
+    return null;
   }
+  const dt = lastKey === "dataTransfer" ? value : props.dataTransfer;
+  return {
+    primitive: "data_transfer",
+    exampleValue: stringifyExample(dt ?? value),
+  };
+};
 
+/** 9. isDynamicRouting + routeKey. */
+const dynamicRoutingRule: PrimitiveRule = ({ props, lastKey }) => {
   if (
-    lastKey === "routingType" ||
-    lastKey === "routePage" ||
-    lastKey === "navigateWithoutDataTransfer" ||
-    (lastKey === "actionType" && value === "routing") ||
-    props?.routingType !== undefined ||
-    props?.routePage !== undefined ||
-    (props?.actionType === "routing" && props?.routePage !== undefined)
+    lastKey !== "isDynamicRouting" &&
+    lastKey !== "routeKey" &&
+    props.isDynamicRouting !== true
   ) {
-    return {
-      primitive: "routing_action",
-      exampleValue: stringifyExample({
-        actionType: props?.actionType,
-        routingType: props?.routingType,
-        routePage: props?.routePage ?? (lastKey === "routePage" ? value : undefined),
-        navigateWithoutDataTransfer: props?.navigateWithoutDataTransfer,
-      }),
-    };
+    return null;
   }
+  return {
+    primitive: "dynamic_routing",
+    exampleValue: stringifyExample({
+      isDynamicRouting: props.isDynamicRouting ?? true,
+      routeKey: props.routeKey,
+    }),
+  };
+};
 
+/** 10. visibilityConditions.parentNames containing "${session...}" tokens. */
+const conditionalVisibilityRule: PrimitiveRule = ({
+  props,
+  value,
+  lastKey,
+}) => {
+  if (lastKey !== "parentNames" && lastKey !== "visibilityConditions") {
+    return null;
+  }
+  const parentNames =
+    lastKey === "parentNames"
+      ? value
+      : ((value as any)?.parentNames ??
+        props.visibilityConditions?.parentNames);
+  if (!Array.isArray(parentNames) || !parentNames.some(containsInterpolation)) {
+    return null;
+  }
+  return {
+    primitive: "conditional_visibility_session",
+    exampleValue: stringifyExample({ parentNames }),
+  };
+};
+
+const ROUTING_ACTION_KEYS = new Set([
+  "routingType",
+  "routePage",
+  "navigateWithoutDataTransfer",
+]);
+
+const routingActionRule: PrimitiveRule = ({ props, value, lastKey }) => {
   if (
-    lastKey === "showAsPopup" ||
-    lastKey === "panePosition" ||
-    lastKey === "popupWidth" ||
-    lastKey === "closeOnBackdropClick" ||
-    props?.showAsPopup === true
+    !ROUTING_ACTION_KEYS.has(lastKey) &&
+    !(lastKey === "actionType" && value === "routing") &&
+    props.routingType === undefined &&
+    props.routePage === undefined
   ) {
-    return {
-      primitive: "popup_page",
-      exampleValue: stringifyExample({
-        showAsPopup: props?.showAsPopup ?? (lastKey === "showAsPopup" ? value : true),
-        panePosition: props?.panePosition,
-        popupWidth: props?.popupWidth,
-        closeOnBackdropClick: props?.closeOnBackdropClick,
-      }),
-    };
+    return null;
   }
+  return {
+    primitive: "routing_action",
+    exampleValue: stringifyExample({
+      actionType: props.actionType,
+      routingType: props.routingType,
+      routePage:
+        props.routePage ?? (lastKey === "routePage" ? value : undefined),
+      navigateWithoutDataTransfer: props.navigateWithoutDataTransfer,
+    }),
+  };
+};
 
-  if (lastKey === "pageCode") {
-    return {
-      primitive: "tab_page_link",
-      exampleValue: stringifyExample(value),
-    };
-  }
+const POPUP_PAGE_KEYS = new Set([
+  "showAsPopup",
+  "panePosition",
+  "popupWidth",
+  "closeOnBackdropClick",
+]);
 
-  // 1 / 11. Plain ${...} interpolation fallback — catches anything else.
-  if (containsInterpolation(value)) {
-    return {
-      primitive: "session_interpolation",
-      exampleValue: value,
-    };
-  }
+const popupPageRule: PrimitiveRule = ({ props, value, lastKey }) => {
+  if (!POPUP_PAGE_KEYS.has(lastKey) && props.showAsPopup !== true) return null;
+  return {
+    primitive: "popup_page",
+    exampleValue: stringifyExample({
+      showAsPopup:
+        props.showAsPopup ?? (lastKey === "showAsPopup" ? value : true),
+      panePosition: props.panePosition,
+      popupWidth: props.popupWidth,
+      closeOnBackdropClick: props.closeOnBackdropClick,
+    }),
+  };
+};
 
+const tabPageLinkRule: PrimitiveRule = ({ value, lastKey }) =>
+  lastKey === "pageCode"
+    ? { primitive: "tab_page_link", exampleValue: stringifyExample(value) }
+    : null;
+
+/** 1 / 11. Plain ${...} interpolation fallback — catches anything else. */
+const sessionInterpolationRule: PrimitiveRule = ({ value }) =>
+  containsInterpolation(value)
+    ? { primitive: "session_interpolation", exampleValue: value }
+    : null;
+
+const componentConfigRule: PrimitiveRule = ({
+  op,
+  value,
+  segments,
+  lastKey,
+}) => {
   if (
     (op.op === "add" || op.op === "replace") &&
     segments.includes("properties") &&
@@ -336,7 +377,50 @@ function classifyPrimitive(
       exampleValue: stringifyExample(value),
     };
   }
+  return null;
+};
 
+/** Ordered most-specific first; the first matching rule wins. */
+const PRIMITIVE_RULES: PrimitiveRule[] = [
+  tableBindingRule,
+  formPrefillRule,
+  fetchFromSessionRule,
+  propOrValueRule("store_input_api_in_session", "storeInputApiInSession"),
+  propOrValueRule("store_selected_in_session", "storeSelectedInSession"),
+  dataTransferRule,
+  propOrValueRule("session_keys_clear", "sessionKeys"),
+  dynamicRoutingRule,
+  conditionalVisibilityRule,
+  routingActionRule,
+  popupPageRule,
+  tabPageLinkRule,
+  sessionInterpolationRule,
+  componentConfigRule,
+];
+
+/**
+ * Classify a single (op, resolved value, enclosing component properties)
+ * triple against the session-data-binding primitives. Returns the FIRST
+ * primitive that matches (most specific checks first), or null if none
+ * recognized.
+ */
+function classifyPrimitive(
+  op: Operation,
+  value: unknown,
+  props: Record<string, any>,
+  segments: string[],
+): Classification | null {
+  const ctx: ClassifyCtx = {
+    op,
+    value,
+    props,
+    segments,
+    lastKey: segments[segments.length - 1],
+  };
+  for (const rule of PRIMITIVE_RULES) {
+    const result = rule(ctx);
+    if (result) return result;
+  }
   return null;
 }
 

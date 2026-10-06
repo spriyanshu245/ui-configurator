@@ -9,10 +9,6 @@ let idCounter = 0;
 
 function matches(row: FakeDoc, filter: FakeDoc): boolean {
   return Object.entries(filter).every(([key, value]) => {
-    if (value && typeof value === "object" && "$exists" in value) {
-      const exists = Object.hasOwn(row, key);
-      return exists === value.$exists;
-    }
     return row[key] === value;
   });
 }
@@ -91,36 +87,22 @@ describe("userPreferences", () => {
     expect(all.some((p) => p.userId === "user2")).toBe(false);
   });
 
-  describe("migrateGlobalPrefs", () => {
-    it("migrates legacy rows (no userId) to userId/micrositeId = __global__", async () => {
-      rows.push({ _id: "legacy-1", key: "legacy_key", value: "legacy_value", updatedAt: "2020-01-01" });
+  it("get() returns undefined when the preference does not exist", async () => {
+    await expect(userPreferences.get("user1", "microsite1", "missing")).resolves.toBeUndefined();
+  });
 
-      const result = await userPreferences.migrateGlobalPrefs();
-      expect(result.migrated).toBe(1);
+  it("set() overwrites an existing value instead of duplicating the row", async () => {
+    await userPreferences.set("user1", "microsite1", "theme", "dark");
+    await userPreferences.set("user1", "microsite1", "theme", "light");
 
-      const migrated = rows.find((r) => r._id === "legacy-1");
-      expect(migrated?.userId).toBe(GLOBAL_SCOPE);
-      expect(migrated?.micrositeId).toBe(GLOBAL_SCOPE);
-    });
+    expect(rows).toHaveLength(1);
+    expect((await userPreferences.get("user1", "microsite1", "theme"))?.value).toBe("light");
+  });
 
-    it("is idempotent — running twice migrates 0 the second time", async () => {
-      rows.push({ _id: "legacy-2", key: "legacy_key2", value: "v", updatedAt: "2020-01-01" });
+  it("set() stamps updatedAt as an ISO string", async () => {
+    await userPreferences.set("user1", "microsite1", "theme", "dark");
 
-      const first = await userPreferences.migrateGlobalPrefs();
-      expect(first.migrated).toBe(1);
-
-      const second = await userPreferences.migrateGlobalPrefs();
-      expect(second.migrated).toBe(0);
-    });
-
-    it("does not touch rows that already have a userId", async () => {
-      await userPreferences.set("user1", "microsite1", "theme", "dark");
-
-      const result = await userPreferences.migrateGlobalPrefs();
-      expect(result.migrated).toBe(0);
-
-      const row = await userPreferences.get("user1", "microsite1", "theme");
-      expect(row?.userId).toBe("user1");
-    });
+    const row = await userPreferences.get("user1", "microsite1", "theme");
+    expect(new Date(row!.updatedAt).toISOString()).toBe(row!.updatedAt);
   });
 });

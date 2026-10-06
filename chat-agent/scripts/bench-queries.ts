@@ -64,7 +64,7 @@ export async function runBench(): Promise<BenchRow[]> {
 
   // temp_dsl findOne by toolCallId
   record(
-    "temp_dsl.getDsl findOne({toolCallId})",
+    "temp_dsl.getDslPath findOne({toolCallId})",
     await db
       .collection("temp_dsl")
       .find({ toolCallId: "bench-tool-call-id" })

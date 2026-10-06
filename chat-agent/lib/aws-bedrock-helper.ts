@@ -31,58 +31,83 @@ export function toBedrockContentBlocks(content: unknown): any[] {
   const blocks: any[] = [];
   const usedDocNames = new Set<string>();
   content.forEach((part, index) => {
-    if (!part) return;
-    if (typeof part === "string") {
-      if (part) blocks.push({ text: part });
-      return;
-    }
-    if (part.type === "text" && typeof part.text === "string") {
-      if (part.text) blocks.push({ text: part.text });
-    } else if (part.type === "image" && typeof part.dataBase64 === "string") {
-      const format = String(part.format || "png").toLowerCase();
-      if (!SUPPORTED_IMAGE_FORMATS.has(format)) {
-        logger.warn("Skipping image with unsupported format", { format });
-        return;
-      }
-      blocks.push({
-        image: {
-          format,
-          source: { bytes: Buffer.from(part.dataBase64, "base64") },
-        },
-      });
-    } else if (
-      part.type === "document" &&
-      typeof part.dataBase64 === "string"
-    ) {
-      const format = String(part.format || "").toLowerCase();
-      if (!SUPPORTED_DOC_FORMATS.has(format)) {
-        logger.warn("Skipping document with unsupported format", { format });
-        return;
-      }
-      let name = sanitizeDocName(part.name, index);
-      let n = 2;
-      while (usedDocNames.has(name)) {
-        name = sanitizeDocName(`${part.name} ${n}`, index);
-        n++;
-      }
-      usedDocNames.add(name);
-      blocks.push({
-        document: {
-          format,
-          name,
-          source: { bytes: Buffer.from(part.dataBase64, "base64") },
-        },
-      });
-    }
+    const block = partToBlock(part, index, usedDocNames);
+    if (block) blocks.push(block);
   });
   return blocks;
 }
 
-export async function callBedrockWithTools(
-  client: BedrockRuntimeClient,
-  finalMessages: any[],
-) {
-  const tools = DSL_TOOLS.map((t: any) => ({
+function imagePartToBlock(part: any): any | null {
+  const format = String(part.format || "png").toLowerCase();
+  if (!SUPPORTED_IMAGE_FORMATS.has(format)) {
+    logger.warn("Skipping image with unsupported format", { format });
+    return null;
+  }
+  return {
+    image: {
+      format,
+      source: { bytes: Buffer.from(part.dataBase64, "base64") },
+    },
+  };
+}
+
+function documentPartToBlock(
+  part: any,
+  index: number,
+  usedDocNames: Set<string>,
+): any | null {
+  const format = String(part.format || "").toLowerCase();
+  if (!SUPPORTED_DOC_FORMATS.has(format)) {
+    logger.warn("Skipping document with unsupported format", { format });
+    return null;
+  }
+  let name = sanitizeDocName(part.name, index);
+  let n = 2;
+  while (usedDocNames.has(name)) {
+    name = sanitizeDocName(`${part.name} ${n}`, index);
+    n++;
+  }
+  usedDocNames.add(name);
+  return {
+    document: {
+      format,
+      name,
+      source: { bytes: Buffer.from(part.dataBase64, "base64") },
+    },
+  };
+}
+
+function partToBlock(
+  part: any,
+  index: number,
+  usedDocNames: Set<string>,
+): any | null {
+  if (!part) return null;
+  if (typeof part === "string") return { text: part };
+  if (part.type === "text" && typeof part.text === "string") {
+    return part.text ? { text: part.text } : null;
+  }
+  if (part.type === "image" && typeof part.dataBase64 === "string") {
+    return imagePartToBlock(part);
+  }
+  if (part.type === "document" && typeof part.dataBase64 === "string") {
+    return documentPartToBlock(part, index, usedDocNames);
+  }
+  return null;
+}
+
+function syntheticToolError(toolUseId: string, message: string) {
+  return {
+    toolResult: {
+      toolUseId,
+      content: [{ text: JSON.stringify({ error: message }) }],
+      status: "error",
+    },
+  };
+}
+
+function buildToolSpecs() {
+  return DSL_TOOLS.map((t: any) => ({
     toolSpec: {
       name: t.function.name,
       description: t.function.description,
@@ -91,131 +116,123 @@ export async function callBedrockWithTools(
       },
     },
   }));
+}
+
+function assistantBlocks(msg: any, pendingToolUseIds: string[]): any[] {
+  const blocks: any[] = [];
+  if (msg.content) blocks.push({ text: msg.content });
+  for (const tc of msg.tool_calls ?? []) {
+    blocks.push({
+      toolUse: {
+        toolUseId: tc.id,
+        name: tc.function.name,
+        input:
+          typeof tc.function.arguments === "string"
+            ? JSON.parse(tc.function.arguments)
+            : tc.function.arguments,
+      },
+    });
+    pendingToolUseIds.push(tc.id);
+  }
+  return blocks;
+}
+
+/** Returns blocks for a tool message and removes its id from `pending` when matched. */
+function toolBlocks(msg: any, pending: string[]): any[] {
+  // Provide stringified content to the text field to entirely bypass Bedrock JSON validation
+  const textContent =
+    typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+
+  const idx = pending.indexOf(msg.tool_call_id);
+  if (idx === -1) {
+    // Bedrock strictly forbids duplicate toolUseIds. If the system injected a preliminary tool result
+    // (like "Patch queued for approval") and then later injected the final result ("Patch approved"),
+    // the second one is a duplicate and will crash Bedrock. We convert duplicates to normal text.
+    return [{ text: `[Update for tool ${msg.tool_call_id}]: ${textContent}` }];
+  }
+  const remaining = pending.filter((id) => id !== msg.tool_call_id);
+  pending.length = 0;
+  pending.push(...remaining);
+  return [
+    {
+      toolResult: {
+        toolUseId: msg.tool_call_id,
+        content: [{ text: textContent }],
+      },
+    },
+  ];
+}
+
+function userBlocks(msg: any, pending: string[]): any[] {
+  // If there are pending tool uses that were ignored by the user's text message,
+  // we MUST append synthetic toolResults for them to satisfy Bedrock validation.
+  const blocks = pending.map((tId) =>
+    syntheticToolError(tId, "User ignored or interrupted this tool call."),
+  );
+  pending.length = 0;
+  blocks.push(...toBedrockContentBlocks(msg.content));
+  return blocks;
+}
+
+function blocksForMessage(msg: any, pending: string[]): any[] {
+  if (msg.role === "user") return userBlocks(msg, pending);
+  if (msg.role === "assistant") return assistantBlocks(msg, pending);
+  if (msg.role === "tool") return toolBlocks(msg, pending);
+  return [];
+}
+
+/** Bedrock strictly requires alternating turns. Merge adjacent identical roles. */
+function pushMerged(messages: any[], role: string, blocks: any[]) {
+  const last = messages[messages.length - 1];
+  if (last && last.role === role) {
+    last.content.push(...blocks);
+  } else {
+    messages.push({ role, content: blocks });
+  }
+}
+
+function resolveModelId(): string | undefined {
+  return TOOL_CAPABLE_MODEL && TOOL_CAPABLE_MODEL !== "auto"
+    ? TOOL_CAPABLE_MODEL
+    : undefined;
+}
+
+export async function callBedrockWithTools(
+  client: BedrockRuntimeClient,
+  finalMessages: any[],
+) {
+  const tools = buildToolSpecs();
 
   let systemPrompt = "";
   const bedrockMessages: any[] = [];
-  let pendingToolUseIds: string[] = [];
+  const pendingToolUseIds: string[] = [];
 
   for (const msg of finalMessages) {
     if (msg.role === "system") {
-      systemPrompt += msg.content + "\n";
+      systemPrompt += `${msg.content}\n`;
       continue;
     }
-
-    let role = msg.role === "tool" ? "user" : msg.role;
-    let contentBlocks: any[] = [];
-
-    if (msg.role === "user") {
-      // If there are pending tool uses that were ignored by the user's text message,
-      // we MUST append synthetic toolResults for them to satisfy Bedrock validation.
-      for (const tId of pendingToolUseIds) {
-        contentBlocks.push({
-          toolResult: {
-            toolUseId: tId,
-            content: [
-              {
-                text: JSON.stringify({
-                  error: "User ignored or interrupted this tool call.",
-                }),
-              },
-            ],
-            status: "error",
-          },
-        });
-      }
-      pendingToolUseIds = [];
-      contentBlocks.push(...toBedrockContentBlocks(msg.content));
-    } else if (msg.role === "assistant") {
-      if (msg.content) {
-        contentBlocks.push({ text: msg.content });
-      }
-      if (msg.tool_calls) {
-        for (const tc of msg.tool_calls) {
-          contentBlocks.push({
-            toolUse: {
-              toolUseId: tc.id,
-              name: tc.function.name,
-              input:
-                typeof tc.function.arguments === "string"
-                  ? JSON.parse(tc.function.arguments)
-                  : tc.function.arguments,
-            },
-          });
-          pendingToolUseIds.push(tc.id);
-        }
-      }
-    } else if (msg.role === "tool") {
-      // Provide stringified content to the text field to entirely bypass Bedrock JSON validation
-      let textContent =
-        typeof msg.content === "string"
-          ? msg.content
-          : JSON.stringify(msg.content);
-
-      if (!pendingToolUseIds.includes(msg.tool_call_id)) {
-        // Bedrock strictly forbids duplicate toolUseIds. If the system injected a preliminary tool result
-        // (like "Patch queued for approval") and then later injected the final result ("Patch approved"),
-        // the second one is a duplicate and will crash Bedrock. We convert duplicates to normal text.
-        contentBlocks.push({
-          text: `[Update for tool ${msg.tool_call_id}]: ${textContent}`,
-        });
-      } else {
-        contentBlocks.push({
-          toolResult: {
-            toolUseId: msg.tool_call_id,
-            content: [{ text: textContent }],
-          },
-        });
-        // Remove from pending
-        pendingToolUseIds = pendingToolUseIds.filter(
-          (id) => id !== msg.tool_call_id,
-        );
-      }
-    }
-
+    const role = msg.role === "tool" ? "user" : msg.role;
+    const contentBlocks = blocksForMessage(msg, pendingToolUseIds);
     if (contentBlocks.length === 0) continue;
-
-    // Bedrock strictly requires alternating turns. Merge adjacent identical roles.
-    const lastMsg = bedrockMessages[bedrockMessages.length - 1];
-    if (lastMsg && lastMsg.role === role) {
-      lastMsg.content.push(...contentBlocks);
-    } else {
-      bedrockMessages.push({ role, content: contentBlocks });
-    }
+    pushMerged(bedrockMessages, role, contentBlocks);
   }
 
   // Close pending tool calls before asking Bedrock to generate a new assistant response.
   if (pendingToolUseIds.length > 0) {
-    const forcedBlocks = pendingToolUseIds.map((tId) => ({
-      toolResult: {
-        toolUseId: tId,
-        content: [
-          {
-            text: JSON.stringify({
-              error: "User ignored this tool call. Please proceed.",
-            }),
-          },
-        ],
-        status: "error",
-      },
-    }));
-
-    const lastMsg = bedrockMessages[bedrockMessages.length - 1];
-    if (lastMsg && lastMsg.role === "user") {
-      lastMsg.content.push(...forcedBlocks);
-    } else {
-      bedrockMessages.push({ role: "user", content: forcedBlocks });
-    }
+    pushMerged(
+      bedrockMessages,
+      "user",
+      pendingToolUseIds.map((tId) =>
+        syntheticToolError(tId, "User ignored this tool call. Please proceed."),
+      ),
+    );
   }
 
   const system = systemPrompt ? [{ text: systemPrompt }] : undefined;
 
-  let modelId;
-  if (TOOL_CAPABLE_MODEL && TOOL_CAPABLE_MODEL !== "auto") {
-    modelId = TOOL_CAPABLE_MODEL;
-  }
-
   const command = new ConverseCommand({
-    modelId,
+    modelId: resolveModelId(),
     messages: bedrockMessages,
     system,
     toolConfig: {
@@ -224,6 +241,5 @@ export async function callBedrockWithTools(
     },
   });
 
-  const response = await client.send(command);
-  return response;
+  return client.send(command);
 }

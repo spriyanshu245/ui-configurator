@@ -76,3 +76,71 @@ describe("sessionsOps.resolve", () => {
     expect(update.$addToSet).toBeUndefined();
   });
 });
+
+describe("sessionsOps.resolve edge cases", () => {
+  beforeEach(() => {
+    store = null;
+    findOneAndUpdateMock.mockClear();
+    updateOneMock.mockClear();
+  });
+
+  it("unwraps the {value} result shape and applies defaults for missing fields", async () => {
+    findOneAndUpdateMock.mockResolvedValueOnce({ value: { id: "s1", userId: "u", micrositeId: "m" } } as any);
+
+    const session = await sessionsOps.resolve("u", "m");
+
+    expect(session).toMatchObject({
+      id: "s1",
+      activePageCode: null,
+      clientSessionIds: [],
+      taskContext: {},
+      historyRefs: [],
+    });
+  });
+
+  it("trims clientSessionIds to the last 10 with a follow-up $slice update", async () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `c${i}`);
+    findOneAndUpdateMock.mockResolvedValueOnce({ id: "s1", userId: "u", micrositeId: "m", clientSessionIds: ids } as any);
+
+    const session = await sessionsOps.resolve("u", "m", "c11");
+
+    expect(updateOneMock).toHaveBeenCalledWith(
+      { userId: "u", micrositeId: "m" },
+      { $push: { clientSessionIds: { $each: [], $slice: -10 } } },
+    );
+    expect(session.clientSessionIds).toEqual(ids.slice(-10));
+  });
+
+  it("does not run the trim update at exactly 10 ids", async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `c${i}`);
+    findOneAndUpdateMock.mockResolvedValueOnce({ id: "s1", userId: "u", micrositeId: "m", clientSessionIds: ids } as any);
+
+    await sessionsOps.resolve("u", "m", "c9");
+
+    expect(updateOneMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("sessionsOps.appendHistoryRef / setActivePage", () => {
+  beforeEach(() => updateOneMock.mockClear());
+
+  it("appendHistoryRef pushes the ref, keeping the last 20", async () => {
+    const ref = { historyId: "h", patchId: "p", pagePath: "/a", createdAt: "t" };
+
+    await sessionsOps.appendHistoryRef("u", "m", ref);
+
+    const [filter, update, opts] = updateOneMock.mock.calls[0];
+    expect(filter).toEqual({ userId: "u", micrositeId: "m" });
+    expect(update.$push).toEqual({ historyRefs: { $each: [ref], $slice: -20 } });
+    expect(opts).toEqual({ upsert: true });
+  });
+
+  it.each([["page-1"], [null]])("setActivePage stores %p", async (code) => {
+    await sessionsOps.setActivePage("u", "m", code);
+
+    const [filter, update, opts] = updateOneMock.mock.calls[0];
+    expect(filter).toEqual({ userId: "u", micrositeId: "m" });
+    expect(update.$set.activePageCode).toBe(code);
+    expect(opts).toEqual({ upsert: true });
+  });
+});

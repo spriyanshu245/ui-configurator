@@ -105,7 +105,6 @@ export async function runSkillReflection(operation: SkillReflectionOperation): P
       logger.warn("Skill reflection LLM summarization failed, falling back to deterministic template", {
         error: (e as Error).message,
       });
-      drafts = null;
     }
 
     const entries: SkillEntryDraft[] =

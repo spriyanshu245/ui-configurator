@@ -23,9 +23,7 @@ class RenderErrorBoundary extends React.Component<
   static getDerivedStateFromError() {
     return { hasError: true };
   }
-  componentDidCatch() {
-    /* swallow — the fallback (structured view) is shown instead */
-  }
+  // The structured-view fallback is shown instead of the failed live render.
   render() {
     return this.state.hasError ? this.props.fallback : this.props.children;
   }

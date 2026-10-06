@@ -15,64 +15,64 @@ try {
   console.warn("Could not load component-registry.json", e);
 }
 
-export function validateAndAssignIds(dsl: any) {
-  if (!dsl || !Array.isArray(dsl.components)) return;
+function assertRegisteredType(node: any) {
+  const availableComp = availableComponents.find((c: any) => c.type === node.type);
+  const registryComp = componentRegistry ? componentRegistry[node.type] : null;
 
-  function traverse(node: any, currentFormNameKeyIds: string[] = []) {
-    if (!node) return;
+  if (!availableComp && !registryComp && node.type !== "root") {
+    throw new Error(`Component type "${node.type}" is not registered.`);
+  }
 
-    if (node.type) {
-      // 1. Assign missing IDs
-      if (!node.id || node.id === "") {
-        node.id = uuidv4();
-      }
-
-      // 2. Validate against availableComponents or componentRegistry
-      const availableComp = availableComponents.find((c: any) => c.type === node.type);
-      const registryComp = componentRegistry ? componentRegistry[node.type] : null;
-
-      if (!availableComp && !registryComp && node.type !== "root") {
-        throw new Error(`Component type "${node.type}" is not registered.`);
-      }
-
-      // Validate props if registry exists
-      if (registryComp && registryComp.props) {
-        for (const [propName, propDef] of Object.entries(registryComp.props)) {
-          const req = (propDef as any).required;
-          if (req && (!node.properties || node.properties[propName] === undefined)) {
-            throw new Error(`Component "${node.type}" is missing required property: ${propName}`);
-          }
-        }
-      }
-
-      // 3. Form Component Mapping Rules
-      let formNameKeyIds = [...currentFormNameKeyIds];
-      if (node.type === "form" && node.properties?.nameKeyIds) {
-        const ids = Array.isArray(node.properties.nameKeyIds) ? node.properties.nameKeyIds : [node.properties.nameKeyIds];
-        formNameKeyIds.push(...ids.map(String));
-      }
-
-      // If it's an Input and it is inside a form, enforce nameKeyId linkage
-      if (["Input", "Select", "CheckboxGroup"].includes(node.type) && formNameKeyIds.length > 0) {
-        const hasMatchingName = formNameKeyIds.includes(node.properties?.name);
-        if (!hasMatchingName) {
-          throw new Error(`Input component "${node.properties?.name || node.type}" must reference the Form's nameKeyId (Expected one of: ${formNameKeyIds.join(", ")})`);
-        }
-      }
-
-      if (Array.isArray(node.components)) {
-        for (const child of node.components) {
-          traverse(child, formNameKeyIds);
-        }
-      }
-    } else if (Array.isArray(node)) {
-      for (const child of node) {
-        traverse(child, currentFormNameKeyIds);
+  // Validate props if registry exists
+  if (registryComp?.props) {
+    for (const [propName, propDef] of Object.entries(registryComp.props)) {
+      const req = (propDef as any).required;
+      if (req && (!node.properties || node.properties[propName] === undefined)) {
+        throw new Error(`Component "${node.type}" is missing required property: ${propName}`);
       }
     }
   }
+}
 
-  traverse(dsl);
+function formNameKeyIdsFor(node: any, inherited: string[]): string[] {
+  const formNameKeyIds = [...inherited];
+  if (node.type === "form" && node.properties?.nameKeyIds) {
+    const ids = Array.isArray(node.properties.nameKeyIds) ? node.properties.nameKeyIds : [node.properties.nameKeyIds];
+    formNameKeyIds.push(...ids.map(String));
+  }
+  return formNameKeyIds;
+}
+
+// An Input/Select/CheckboxGroup inside a form must reference one of its nameKeyIds.
+function assertFormFieldLinkage(node: any, formNameKeyIds: string[]) {
+  if (!["Input", "Select", "CheckboxGroup"].includes(node.type) || formNameKeyIds.length === 0) return;
+  if (!formNameKeyIds.includes(node.properties?.name)) {
+    throw new Error(`Input component "${node.properties?.name || node.type}" must reference the Form's nameKeyId (Expected one of: ${formNameKeyIds.join(", ")})`);
+  }
+}
+
+function validateNode(node: any, currentFormNameKeyIds: string[] = []) {
+  if (!node) return;
+
+  if (node.type) {
+    // Assign missing IDs
+    if (!node.id) node.id = uuidv4();
+
+    assertRegisteredType(node);
+    const formNameKeyIds = formNameKeyIdsFor(node, currentFormNameKeyIds);
+    assertFormFieldLinkage(node, formNameKeyIds);
+
+    if (Array.isArray(node.components)) {
+      for (const child of node.components) validateNode(child, formNameKeyIds);
+    }
+  } else if (Array.isArray(node)) {
+    for (const child of node) validateNode(child, currentFormNameKeyIds);
+  }
+}
+
+export function validateAndAssignIds(dsl: any) {
+  if (!dsl || !Array.isArray(dsl.components)) return;
+  validateNode(dsl);
 }
 
 /**

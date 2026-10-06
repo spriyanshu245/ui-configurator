@@ -1,6 +1,9 @@
 /**
  * @jest-environment node
  */
+const warn = jest.fn();
+jest.mock("../../lib/logger", () => ({ logger: { info: jest.fn(), warn: (...a: any[]) => warn(...a), error: jest.fn() } }));
+
 import { ensureIndexes, ensureTempDslTtl } from "../ensure-indexes";
 
 type MockCollection = {
@@ -128,6 +131,17 @@ describe("ensureIndexes", () => {
     await expect(ensureIndexes()).rejects.toThrow(/expireAfterSeconds/i);
   });
 
+  it("logs a warning and keeps going when one index fails to build (Error or non-Error reasons)", async () => {
+    collections["sessions"].createIndex.mockRejectedValue(new Error("spec conflict"));
+    collections["page_ops"].createIndex.mockRejectedValue("plain string failure");
+
+    await expect(ensureIndexes()).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledWith("Failed to ensure MongoDB index", { index: "sessions_lookup", error: "spec conflict" });
+    expect(warn).toHaveBeenCalledWith("Failed to ensure MongoDB index", { index: "page_ops_lookup", error: "plain string failure" });
+    expect(collections["pending_patches"].createIndex).toHaveBeenCalled();
+  });
+
   it("does not throw when dsl_history indexes have no expireAfterSeconds", async () => {
     collections["dsl_history"].listIndexes = jest.fn().mockReturnValue({
       toArray: jest.fn().mockResolvedValue([
@@ -188,6 +202,23 @@ describe("ensureTempDslTtl", () => {
     });
     await ensureTempDslTtl();
     expect(col.dropIndex).toHaveBeenCalledWith("temp_dsl_ttl");
+  });
+
+  it("leaves unrelated and compound indexes alone", async () => {
+    const col: any = collections["temp_dsl"];
+    col.listIndexes = jest.fn().mockReturnValue({
+      toArray: jest.fn().mockResolvedValue([
+        { name: "_id_", key: { _id: 1 } },
+        { name: "compound", key: { createdAt: 1, toolCallId: 1 } },
+        { name: "desc", key: { createdAt: -1 } },
+        { name: "no_key" },
+      ]),
+    });
+
+    await ensureTempDslTtl();
+
+    expect(col.dropIndex).not.toHaveBeenCalled();
+    expect(col.createIndex).toHaveBeenCalledTimes(1);
   });
 
   it("works when the collection does not exist yet", async () => {

@@ -8,7 +8,6 @@ import {
   resolvePointer,
   getParentPointer,
   isPointerWithin,
-  lastToken,
 } from "../json-pointer-utils";
 
 describe("parsePointer", () => {
@@ -21,25 +20,15 @@ describe("parsePointer", () => {
     ]);
   });
 
-  it("returns [] for the root pointer (empty string)", () => {
-    expect(parsePointer("")).toEqual([]);
-  });
-
-  it("returns [] for a bare slash", () => {
-    expect(parsePointer("/")).toEqual([""]);
-  });
-
-  it("unescapes ~1 to / within a token", () => {
-    expect(parsePointer("/a~1b/c")).toEqual(["a/b", "c"]);
-  });
-
-  it("unescapes ~0 to ~ within a token", () => {
-    expect(parsePointer("/a~0b/c")).toEqual(["a~b", "c"]);
-  });
-
-  it("unescapes combined ~01 correctly (~0 then literal 1, not ~1)", () => {
-    // Per RFC-6901, ~01 must decode to "~1" (literal tilde + one), not "/".
-    expect(parsePointer("/a~01")).toEqual(["a~1"]);
+  it.each([
+    ["the root pointer (empty string)", "", []],
+    ["a bare slash (one empty token)", "/", [""]],
+    ["~1 escaped slash", "/a~1b/c", ["a/b", "c"]],
+    ["~0 escaped tilde", "/a~0b/c", ["a~b", "c"]],
+    ["~01 (decodes to ~1 per RFC-6901, not /)", "/a~01", ["a~1"]],
+    ["a pointer without a leading slash", "components/2", ["components", "2"]],
+  ])("parses %s", (_name, pointer, tokens) => {
+    expect(parsePointer(pointer)).toEqual(tokens);
   });
 
   it("handles single-token pointers", () => {
@@ -107,20 +96,13 @@ describe("resolvePointer", () => {
     expect(resolvePointer(doc, "")).toBe(doc);
   });
 
-  it("returns undefined for a missing object key", () => {
-    expect(resolvePointer(doc, "/components/0/properties/missingKey")).toBeUndefined();
-  });
-
-  it("returns undefined for an out-of-range array index", () => {
-    expect(resolvePointer(doc, "/components/99")).toBeUndefined();
-  });
-
-  it("returns undefined for the '-' append token", () => {
-    expect(resolvePointer(doc, "/components/-")).toBeUndefined();
-  });
-
-  it("returns undefined when walking through a missing intermediate path", () => {
-    expect(resolvePointer(doc, "/does/not/exist")).toBeUndefined();
+  it.each([
+    ["a missing object key", "/components/0/properties/missingKey"],
+    ["an out-of-range array index", "/components/99"],
+    ["the '-' append token", "/components/-"],
+    ["a missing intermediate path", "/does/not/exist"],
+  ])("returns undefined for %s", (_name, pointer) => {
+    expect(resolvePointer(doc, pointer)).toBeUndefined();
   });
 
   it("returns undefined when the doc itself is null/undefined", () => {
@@ -130,22 +112,13 @@ describe("resolvePointer", () => {
 });
 
 describe("getParentPointer", () => {
-  it("returns the pointer to the parent for a nested path", () => {
-    expect(getParentPointer("/components/2/properties/apiUrl")).toBe(
-      "/components/2/properties",
-    );
-  });
-
-  it("returns the pointer to a parent array for an index path", () => {
-    expect(getParentPointer("/components/2")).toBe("/components");
-  });
-
-  it("returns '' for a single-segment path", () => {
-    expect(getParentPointer("/components")).toBe("");
-  });
-
-  it("returns '' for the root pointer", () => {
-    expect(getParentPointer("")).toBe("");
+  it.each([
+    ["a nested path", "/components/2/properties/apiUrl", "/components/2/properties"],
+    ["an index path (parent array)", "/components/2", "/components"],
+    ["a single-segment path", "/components", ""],
+    ["the root pointer", "", ""],
+  ])("handles %s", (_name, pointer, parent) => {
+    expect(getParentPointer(pointer)).toBe(parent);
   });
 });
 
@@ -175,12 +148,9 @@ describe("isPointerWithin", () => {
   });
 });
 
-describe("lastToken", () => {
-  it("returns the final segment of a pointer", () => {
-    expect(lastToken("/components/2/properties/apiUrl")).toBe("apiUrl");
-  });
-
-  it("returns '' for the root pointer", () => {
-    expect(lastToken("")).toBe("");
+describe("resolvePointer through primitives", () => {
+  it("resolvePointer stops at a primitive in the middle of the path", () => {
+    expect(resolvePointer({ a: "text" }, "/a/b")).toBeUndefined();
+    expect(resolvePointer({ a: 5 }, "/a/b/c")).toBeUndefined();
   });
 });

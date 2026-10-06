@@ -10,21 +10,25 @@
  *                    ("components.0") or bracket ("components[0]") paths.
  */
 
+function compactArray(value: unknown[]): unknown[] | undefined {
+  const items = value.map((v) => compactDsl(v)).filter((v) => v !== undefined);
+  return items.length ? items : undefined;
+}
+
+function compactObject(value: Record<string, unknown>): Record<string, unknown> | undefined {
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) {
+    const c = compactDsl(v);
+    if (c !== undefined) out[key] = c;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function compactDsl<T = unknown>(value: T): T | undefined {
   if (value === null || value === undefined) return undefined;
   if (typeof value === "string") return (value === "" ? undefined : value) as any;
-  if (Array.isArray(value)) {
-    const items = value.map((v) => compactDsl(v)).filter((v) => v !== undefined);
-    return (items.length ? items : undefined) as any;
-  }
-  if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      const c = compactDsl(v);
-      if (c !== undefined) out[key] = c;
-    }
-    return (Object.keys(out).length ? out : undefined) as any;
-  }
+  if (Array.isArray(value)) return compactArray(value) as any;
+  if (typeof value === "object") return compactObject(value as Record<string, unknown>) as any;
   return value;
 }
 
@@ -80,7 +84,7 @@ function short(value: unknown): string {
   return s.length > MAX_INLINE_CHARS ? `${s.slice(0, MAX_INLINE_CHARS)}…` : s;
 }
 
-export function isNode(v: unknown): v is Record<string, any> {
+function isNode(v: unknown): v is Record<string, any> {
   return !!v && typeof v === "object" && !Array.isArray(v) && typeof (v as any).type === "string";
 }
 
@@ -89,7 +93,7 @@ export function nodeLabel(node: Record<string, any>): string | undefined {
   return LABEL_KEYS.map((k) => props[k]).find((v) => typeof v === "string" && v.trim());
 }
 
-export function describeNode(node: Record<string, any>): string {
+function describeNode(node: Record<string, any>): string {
   const props = (node.properties ?? {}) as Record<string, any>;
   const parts: string[] = [node.type];
   if (typeof node.id === "string") parts.push(`#${node.id.slice(0, 8)}`);
@@ -111,11 +115,28 @@ export interface WalkedNode {
 }
 
 /**
+ * Child values of a container with the path suffix leading to each. Objects
+ * list their own keys first, then the nodes nested inside `properties`.
+ */
+function childSlots(value: object): Array<[string[], unknown]> {
+  if (Array.isArray(value)) return value.map((v, i) => [[String(i)], v]);
+  const record = value as Record<string, unknown>;
+  const slots: Array<[string[], unknown]> = Object.entries(record)
+    .filter(([k]) => k !== "properties")
+    .map(([k, v]) => [[k], v]);
+  const props = record.properties;
+  if (props && typeof props === "object") {
+    slots.push(...Object.entries(props).map(([k, v]): [string[], unknown] => [["properties", k], v]));
+  }
+  return slots;
+}
+
+/**
  * Visit every component node (any object with a string `type`) in document
  * order. Walks all keys (components, tabs, …) and nodes nested inside
  * `properties` (table columns, multipleActions, …).
  */
-export function walkNodes(
+function walkNodes(
   root: unknown,
   visit: (n: WalkedNode) => void,
   basePath: string[] = [],
@@ -126,16 +147,8 @@ export function walkNodes(
       visit({ node: value, segments, pointer: toPointer(segments) || "/", depth });
       depth++;
     }
-    const entries = Array.isArray(value)
-      ? value.map((v, i) => [String(i), v] as const)
-      : Object.entries(value as Record<string, unknown>).filter(([k]) => k !== "properties");
-    for (const [key, child] of entries) {
-      if (child && typeof child === "object") walk(child, [...segments, key], depth);
-    }
-    if (!Array.isArray(value) && (value as any).properties && typeof (value as any).properties === "object") {
-      for (const [key, child] of Object.entries((value as any).properties)) {
-        if (child && typeof child === "object") walk(child, [...segments, "properties", key], depth);
-      }
+    for (const [suffix, child] of childSlots(value)) {
+      if (child && typeof child === "object") walk(child, [...segments, ...suffix], depth);
     }
   };
   walk(root, basePath, 0);

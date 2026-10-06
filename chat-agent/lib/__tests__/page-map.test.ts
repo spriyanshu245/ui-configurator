@@ -6,6 +6,8 @@ jest.mock("../microsite-loader", () => ({
   fetchPageDsl: jest.fn(),
 }));
 
+jest.mock("../logger", () => ({ logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn() } }));
+
 import { buildPageMap } from "../page-map";
 import { fetchMicrositePages, fetchPageDsl } from "../microsite-loader";
 
@@ -77,5 +79,83 @@ describe("buildPageMap", () => {
     expect(map.nodes.length).toBe(1);
     expect(map.nodes[0].pageCode).toBe("m1_home");
     expect(map.edges).toEqual([]);
+  });
+});
+
+describe("buildPageMap edge cases", () => {
+  beforeEach(() => jest.resetAllMocks());
+
+  const dsl = (components: any[], properties: any = {}) => ({ type: "page", properties, components });
+
+  it("falls back to the first page when the microsite has no firstPageCode (dslJson-wrapped)", async () => {
+    fetchPagesMock.mockResolvedValue({ dslJson: { pages: [{ pageCode: "a" }, { pageCode: "b" }] } } as any);
+    fetchDslMock.mockResolvedValue(dsl([]) as any);
+
+    const map = await buildPageMap("m");
+
+    expect(map.firstPageCode).toBe("a");
+    expect(map.nodes.map((n) => [n.pageCode, n.isFirst])).toEqual([["a", true], ["b", false]]);
+    expect(fetchDslMock).toHaveBeenCalledWith("a", 1); // missing pageVersion defaults to 1
+  });
+
+  it("returns an empty map when the microsite has no page list", async () => {
+    fetchPagesMock.mockResolvedValue({ pages: "oops" } as any);
+    expect(await buildPageMap("m")).toEqual({ firstPageCode: null, nodes: [], edges: [], unknownTargets: [] });
+    fetchPagesMock.mockResolvedValue(null as any);
+    expect((await buildPageMap("m")).nodes).toEqual([]);
+  });
+
+  it("reads popup state from a dslJson-wrapped page DSL", async () => {
+    fetchPagesMock.mockResolvedValue({ pages: [{ pageCode: "a", pageVersion: 2 }] } as any);
+    fetchDslMock.mockResolvedValue({ dslJson: dsl([], { showAsPopup: true }) } as any);
+    const map = await buildPageMap("m");
+    expect(map.nodes[0].isPopup).toBe(true);
+    expect(fetchDslMock).toHaveBeenCalledWith("a", 2);
+  });
+
+  it("ignores self references, blank refs and non-string values; dedupes repeated edges", async () => {
+    fetchPagesMock.mockResolvedValue({ pages: [{ pageCode: "a" }, { pageCode: "b" }] } as any);
+    fetchDslMock.mockImplementation(async (code: string) =>
+      (code === "a"
+        ? dsl([
+            { routePage: "a" }, // self
+            { routePage: "   " }, // blank
+            { routePage: 5 }, // not a string
+            { routePage: " b " }, // trimmed
+            { routePage: "b" }, // duplicate edge
+            { pageCode: "b" }, // same target via a tab -> separate edge
+            { nested: [{ routePage: "ghost" }, { routePage: "ghost" }] },
+          ])
+        : dsl([])) as any,
+    );
+
+    const map = await buildPageMap("m");
+
+    expect(map.edges).toEqual([
+      { from: "a", to: "b", via: "route" },
+      { from: "a", to: "b", via: "tab" },
+    ]);
+    expect(map.unknownTargets).toEqual(["ghost"]);
+  });
+
+  it("does not loop on shared or circular DSL references", async () => {
+    const shared = { routePage: "b" };
+    const root: any = dsl([shared, shared]);
+    root.components.push(root);
+    fetchPagesMock.mockResolvedValue({ pages: [{ pageCode: "a" }, { pageCode: "b" }] } as any);
+    fetchDslMock.mockImplementation(async (code: string) => (code === "a" ? root : dsl([])));
+
+    const map = await buildPageMap("m");
+
+    expect(map.edges).toEqual([{ from: "a", to: "b", via: "route" }]);
+  });
+
+  it("only inspects the first 60 pages", async () => {
+    const pages = Array.from({ length: 75 }, (_, i) => ({ pageCode: `p${i}` }));
+    fetchPagesMock.mockResolvedValue({ pages } as any);
+    fetchDslMock.mockResolvedValue(dsl([]) as any);
+    const map = await buildPageMap("m");
+    expect(map.nodes).toHaveLength(60);
+    expect(fetchDslMock).toHaveBeenCalledTimes(60);
   });
 });

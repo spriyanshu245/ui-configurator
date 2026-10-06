@@ -5,7 +5,6 @@ import {
   resolvePointer,
   getParentPointer,
   isPointerWithin,
-  lastToken,
 } from "./json-pointer-utils";
 
 export interface DiffChunk {
@@ -168,6 +167,44 @@ function shallowDiffers(a: unknown, b: unknown): boolean {
   }
 }
 
+type Group = { anchorPath: string; ops: Operation[] };
+
+const anchorsOverlap = (a: string, b: string) => isPointerWithin(a, b) || isPointerWithin(b, a);
+
+/**
+ * Add `anchorPath`/`ops` to the first overlapping group (promoting that
+ * group's anchor to the shallower ancestor so a chunk always covers the full
+ * subtree of every op in it), or start a new group.
+ */
+function addToGroups(groups: Group[], anchorPath: string, ops: Operation[]) {
+  const target = groups.find((g) => anchorsOverlap(anchorPath, g.anchorPath));
+  if (!target) {
+    groups.push({ anchorPath, ops: [...ops] });
+    return;
+  }
+  if (isPointerWithin(target.anchorPath, anchorPath)) target.anchorPath = anchorPath;
+  target.ops.push(...ops);
+}
+
+/**
+ * Group ops whose anchors are equal or nested. A second pass merges groups
+ * that became nested/equal as a result of anchor promotion in the first.
+ */
+function groupOpsByAnchor(
+  patch: Operation[],
+  currentDsl: unknown,
+  patchedDsl: unknown,
+  contextDepth: number,
+): Group[] {
+  const groups: Group[] = [];
+  for (const op of patch) {
+    addToGroups(groups, computeAnchorPath(op, currentDsl, patchedDsl, contextDepth), [op]);
+  }
+  const merged: Group[] = [];
+  for (const group of groups) addToGroups(merged, group.anchorPath, group.ops);
+  return merged;
+}
+
 /**
  * Scope a whole-document diff down to a set of small, per-component chunks
  * derived from the RFC-6902 patch that produced `patchedDsl` from
@@ -196,50 +233,7 @@ export function scopeDiffToPatch(
     return [];
   }
 
-  // Compute an anchor path per op, then group ops whose anchors are equal or
-  // nested within one another. When two anchors are nested, the group's
-  // effective anchor is the shallower (ancestor) of the two, so a chunk
-  // always covers the full subtree of every op assigned to it.
-  type Group = { anchorPath: string; ops: Operation[] };
-  const groups: Group[] = [];
-
-  for (const op of patch) {
-    const anchorPath = computeAnchorPath(op, currentDsl, patchedDsl, contextDepth);
-
-    let target = groups.find(
-      (g) => isPointerWithin(anchorPath, g.anchorPath) || isPointerWithin(g.anchorPath, anchorPath),
-    );
-
-    if (target) {
-      // If this op's anchor is shallower (an ancestor of the group's current
-      // anchor), promote the group's anchor to it.
-      if (isPointerWithin(target.anchorPath, anchorPath) && anchorPath !== target.anchorPath) {
-        target.anchorPath = anchorPath;
-      }
-      target.ops.push(op);
-    } else {
-      groups.push({ anchorPath, ops: [op] });
-    }
-  }
-
-  // A second pass merges any groups that became nested/equal as a result of
-  // anchor promotion above (e.g. group A promoted to an ancestor of group B).
-  const merged: Group[] = [];
-  for (const group of groups) {
-    const existing = merged.find(
-      (g) =>
-        isPointerWithin(group.anchorPath, g.anchorPath) ||
-        isPointerWithin(g.anchorPath, group.anchorPath),
-    );
-    if (existing) {
-      if (isPointerWithin(existing.anchorPath, group.anchorPath) && group.anchorPath !== existing.anchorPath) {
-        existing.anchorPath = group.anchorPath;
-      }
-      existing.ops.push(...group.ops);
-    } else {
-      merged.push(group);
-    }
-  }
+  const merged = groupOpsByAnchor(patch, currentDsl, patchedDsl, contextDepth);
 
   const chunks: DiffChunk[] = merged.map((group) => {
     const before = resolvePointer(currentDsl, group.anchorPath);
@@ -273,6 +267,11 @@ export function scopeDiffToPatch(
   return chunks;
 }
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v);
+
+const asRecord = (v: unknown): Record<string, unknown> => (isPlainObject(v) ? v : {});
+
 /**
  * Return top-level keys (of currentDsl/patchedDsl, treated as plain objects)
  * whose values differ and are not already covered by an existing chunk's
@@ -283,39 +282,20 @@ function findResidualTopLevelKeys(
   patchedDsl: unknown,
   chunks: DiffChunk[],
 ): string[] {
-  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-    !!v && typeof v === "object" && !Array.isArray(v);
+  // Neither side is a keyed object (e.g. both are arrays, or one/both missing):
+  // every op already produced a chunk, so there is nothing residual to report.
+  if (!isPlainObject(currentDsl) && !isPlainObject(patchedDsl)) return [];
 
-  if (!isPlainObject(currentDsl) && !isPlainObject(patchedDsl)) {
-    // Neither side is a keyed object (e.g. both are arrays, or one/both
-    // missing) — fall back to a single whole-document comparison.
-    return shallowDiffers(currentDsl, patchedDsl) && chunks.length === 0 ? ["__root__"] : [];
-  }
+  const before = asRecord(currentDsl);
+  const after = asRecord(patchedDsl);
+  const keys = new Set<string>([...Object.keys(before), ...Object.keys(after)]);
 
-  const keys = new Set<string>([
-    ...Object.keys(currentDsl && isPlainObject(currentDsl) ? currentDsl : {}),
-    ...Object.keys(patchedDsl && isPlainObject(patchedDsl) ? patchedDsl : {}),
-  ]);
-
-  const residual: string[] = [];
-  for (const key of keys) {
+  const isCovered = (key: string) => {
     const anchorForKey = toPointer([key]);
     // Covered if some chunk's anchor is at or within this top-level key's
     // subtree (or is the whole-document root "").
-    const alreadyCovered = chunks.some(
-      (c) => c.anchorPath === "" || isPointerWithin(c.anchorPath, anchorForKey),
-    );
-    if (alreadyCovered) continue;
+    return chunks.some((c) => c.anchorPath === "" || isPointerWithin(c.anchorPath, anchorForKey));
+  };
 
-    const beforeVal = isPlainObject(currentDsl) ? (currentDsl as any)[key] : undefined;
-    const afterVal = isPlainObject(patchedDsl) ? (patchedDsl as any)[key] : undefined;
-    if (shallowDiffers(beforeVal, afterVal)) {
-      residual.push(key);
-    }
-  }
-  return residual;
+  return [...keys].filter((key) => !isCovered(key) && shallowDiffers(before[key], after[key]));
 }
-
-// Re-exported for consumers that only need the leaf-descriptor convention
-// (e.g. tests asserting label formatting) without pulling in the whole module.
-export { lastToken };
