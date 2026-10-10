@@ -125,7 +125,7 @@ export const DSL_TOOLS = [
         - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
         - Always include a clear human-readable description and preview_hint.
         - Validate all JSON Pointer paths (RFC 6901) before proposing.
-        - For NEW components, omit "id" — the server assigns UUIDs. Keep ids of existing ones.
+        - Give every NEW component, and every new nested item that carries an id (e.g. multipleActions, actions, nameKeyIds entries), a fresh UUID "id". Keep ids of existing ones unchanged.
         - Prefer property-level ops (e.g. replace /components/2/properties/label) over replacing whole components.`,
       parameters: {
         type: "object",
@@ -198,7 +198,7 @@ export const DSL_TOOLS = [
         - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
         - Always include a clear human-readable description and preview_hint per page.
         - Validate all JSON Pointer paths (RFC 6901) before proposing.
-        - For NEW components, omit "id" — the server assigns UUIDs. Keep ids of existing ones.
+        - Give every NEW component, and every new nested item that carries an id (e.g. multipleActions, actions, nameKeyIds entries), a fresh UUID "id". Keep ids of existing ones unchanged.
         - Prefer property-level ops (e.g. replace /components/2/properties/label) over replacing whole components.
         - Set navigate_to if, after approval, the user should land on a specific page
           (e.g. the last page touched by the batch).`,

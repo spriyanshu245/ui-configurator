@@ -70,8 +70,26 @@ function validateNode(node: any, currentFormNameKeyIds: string[] = []) {
   }
 }
 
+/**
+ * Give every component node (any object with a string `type`) an id if it has
+ * none — anywhere in the tree, including nodes nested inside `properties`
+ * (table columns, multipleActions, …) that validateNode doesn't descend into.
+ */
+export function assignMissingIds(value: any): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) assignMissingIds(item);
+    return;
+  }
+  if (typeof value.type === "string" && !value.id) value.id = uuidv4();
+  for (const child of Object.values(value)) {
+    if (child && typeof child === "object") assignMissingIds(child);
+  }
+}
+
 export function validateAndAssignIds(dsl: any) {
   if (!dsl || !Array.isArray(dsl.components)) return;
+  assignMissingIds(dsl);
   validateNode(dsl);
 }
 

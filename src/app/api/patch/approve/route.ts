@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as jsonpatch from "fast-json-patch";
-import { applyPatch } from "../../../../../chat-agent/lib/dsl-patcher";
+import { applyPatch, assignMissingIds } from "../../../../../chat-agent/lib/dsl-patcher";
 import { dslHistory, sessionOps } from "../../../../../chat-agent/db/queries/dsl-history";
 import { pendingPatchesDB } from "../../../../../chat-agent/db/queries/pending-patches";
 import { sessionsOps } from "../../../../../chat-agent/db/queries/sessions";
@@ -37,7 +37,12 @@ export async function POST(req: Request) {
     }
 
     const wasEdited = !!editedDsl;
-    const patchedDsl = editedDsl || applyPatch(pending.currentDsl, pending.patch);
+    // Prefer the DSL prepared at queue time: it already has server-assigned ids.
+    // Re-applying the raw patch would drop them. Whatever is saved, fill any
+    // component that still lacks an id.
+    const patchedDsl =
+      editedDsl || pending.patchedDsl || applyPatch(pending.currentDsl, pending.patch);
+    assignMissingIds(patchedDsl);
 
     // When the user hand-edited the proposed DSL, the patch that was originally
     // proposed no longer reflects what actually got applied. Recompute the real

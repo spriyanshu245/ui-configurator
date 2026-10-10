@@ -107,6 +107,49 @@ describe("POST /api/patch/approve — integrity fix", () => {
     expect(snapshotArg.wasEdited).toBe(false);
   });
 
+  it("saves the queue-time patchedDsl (with server-assigned ids), not a re-applied raw patch", async () => {
+    const currentDsl = { id: "root", type: "page", components: [] };
+    // The model omitted the id; queuePatch assigned "assigned-id" in patchedDsl.
+    const rawPatch = [{ op: "add", path: "/components/-", value: { type: "spacer", properties: {} } }];
+    const patchedDsl = {
+      id: "root",
+      type: "page",
+      components: [{ id: "assigned-id", type: "spacer", properties: {} }],
+    };
+    getMock.mockResolvedValue({
+      id: "patch-ids",
+      micrositeId: "m1",
+      pagePath: "/home",
+      patch: rawPatch,
+      currentDsl,
+      patchedDsl,
+      description: "Add spacer",
+      sessionId: "s1",
+    });
+
+    const res = await POST(makeReq({ patchId: "patch-ids" }));
+    expect(res.status).toBe(200);
+    const savedDsl = putPageDslMock.mock.calls[0][1];
+    expect(savedDsl.components[0].id).toBe("assigned-id");
+  });
+
+  it("fills a missing component id even on the raw-patch fallback", async () => {
+    getMock.mockResolvedValue({
+      id: "patch-fallback",
+      micrositeId: "m1",
+      pagePath: "/home",
+      patch: [{ op: "add", path: "/components/-", value: { type: "spacer", properties: {} } }],
+      currentDsl: { id: "root", type: "page", components: [] },
+      description: "Add spacer",
+      sessionId: "s1",
+    });
+
+    const res = await POST(makeReq({ patchId: "patch-fallback" }));
+    expect(res.status).toBe(200);
+    const savedDsl = putPageDslMock.mock.calls[0][1];
+    expect(savedDsl.components[0].id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it("recomputes patchApplied via jsonpatch.compare(current, edited) and sets wasEdited:true when editedDsl is hand-edited", async () => {
     const currentDsl = {
       id: "root",
