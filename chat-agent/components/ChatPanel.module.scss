@@ -619,3 +619,93 @@
   0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
 }
+
+/* ─── Draggable / pinnable launcher ─── */
+// The wrapper carries the on-screen position (inline left/top); the button and
+// greeting bubble are laid out relative to it.
+.launcherWrapper {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  z-index: 9999;
+}
+
+.logoButtonPlaced {
+  position: absolute;
+  inset: 0;
+  bottom: auto;
+  right: auto;
+}
+
+.logoButtonDraggable {
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.logoButtonDragging {
+  cursor: grabbing;
+  transition: none;
+  opacity: 0.9;
+}
+
+// Vertically centred on the 60px button with a fixed offset (the slide-in
+// animation owns `transform`, so translate-based centring would jump).
+.floatingBubbleLeft,
+.floatingBubbleRight {
+  position: absolute;
+  top: 12px;
+  bottom: auto;
+  white-space: nowrap;
+}
+
+.floatingBubbleLeft {
+  right: 72px;
+  left: auto;
+}
+
+.floatingBubbleRight {
+  left: 72px;
+  right: auto;
+
+  .bubbleArrow {
+    right: auto;
+    left: -6px;
+  }
+}
+
+.launcherPin {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--background-4, #e5e7eb);
+  background: var(--background, #ffffff);
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+
+  &:hover {
+    color: var(--text, #0f172a);
+  }
+}
+
+.launcherPinActive {
+  color: var(--white, #ffffff);
+  background: var(--primary, #00a79d);
+  border-color: var(--primary, #00a79d);
+
+  &:hover {
+    color: var(--white, #ffffff);
+  }
+}

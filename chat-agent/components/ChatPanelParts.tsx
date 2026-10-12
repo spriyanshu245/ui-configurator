@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X, Send, Bot, Loader2, Paperclip, FileText, Square } from "lucide-react";
+import { X, Send, Bot, Loader2, Paperclip, FileText, Square, Pin, PinOff } from "lucide-react";
 import { SuggestionPills } from "./SuggestionPills";
 import { formatBytes, MAX_ATTACHMENTS } from "../lib/attachments";
 import type { ChatSuggestion } from "../types/types";
@@ -8,17 +8,114 @@ import {
   STARTER_SUGGESTIONS,
   type AttachedFile,
 } from "./chatPanelUtils";
+import {
+  DEFAULT_LAUNCHER,
+  DRAG_THRESHOLD,
+  bubbleSide,
+  clampLauncher,
+  launcherTopLeft,
+  loadLauncher,
+  saveLauncher,
+  type LauncherState,
+} from "../lib/launcher-position";
 import styles from "./ChatPanel.module.scss";
 
-/** Collapsed floating launcher button with a hover greeting. */
+/**
+ * Collapsed floating launcher button with a hover greeting. Drag it anywhere on
+ * screen; the pin badge (shown on hover) locks it in place. Position and pin
+ * state persist per browser. A drag never counts as a click.
+ */
 export function ChatLauncher({ onOpen }: Readonly<{ onOpen: () => void }>) {
   const [isHovered, setIsHovered] = useState(false);
+  const [state, setState] = useState<LauncherState>(DEFAULT_LAUNCHER);
+  const [viewport, setViewport] = useState({ w: 1440, h: 900 });
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const dragRef = React.useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickRef = React.useRef(false);
+  const loadedRef = React.useRef(false);
+
+  useEffect(() => {
+    const read = () => ({ w: window.innerWidth, h: window.innerHeight });
+    setViewport(read());
+    setState(loadLauncher(typeof localStorage === "undefined" ? undefined : localStorage));
+    loadedRef.current = true;
+    const onResize = () => setViewport(read());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (loadedRef.current) {
+      saveLauncher(typeof localStorage === "undefined" ? undefined : localStorage, state);
+    }
+  }, [state]);
+
+  const topLeft = dragPos ?? launcherTopLeft(state, viewport);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (state.pinned || e.button !== 0) return;
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: topLeft.x,
+      originY: topLeft.y,
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+    drag.moved = true;
+    setDragPos(clampLauncher({ x: drag.originX + dx, y: drag.originY + dy }, viewport));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (drag?.moved && dragPos) {
+      suppressClickRef.current = true;
+      setState((s) => ({ ...s, pos: dragPos }));
+    }
+    setDragPos(null);
+  };
+
+  const handleClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    onOpen();
+  };
+
+  const side = bubbleSide(topLeft.x, viewport);
+  const dragging = dragPos !== null;
 
   return (
-    <>
+    <div
+      className={styles.launcherWrapper}
+      style={{ left: topLeft.x, top: topLeft.y }}
+      data-testid="chat-launcher"
+      data-pinned={state.pinned}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Floating Greeting Bubble */}
-      {isHovered && (
-        <div className={styles.floatingBubble}>
+      {isHovered && !dragging && (
+        <div
+          className={`${styles.floatingBubble} ${side === "right" ? styles.floatingBubbleRight : styles.floatingBubbleLeft}`}
+        >
           <span className={styles.onlineIndicator} />
           Ask LayoutX
           <div className={styles.bubbleArrow} />
@@ -26,15 +123,20 @@ export function ChatLauncher({ onOpen }: Readonly<{ onOpen: () => void }>) {
       )}
 
       <button
-        onClick={onOpen}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={styles.logoButton}
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        className={`${styles.logoButton} ${styles.logoButtonPlaced} ${
+          state.pinned ? "" : styles.logoButtonDraggable
+        } ${dragging ? styles.logoButtonDragging : ""}`}
+        aria-label="Open LayoutX chat"
+        title={state.pinned ? "Ask LayoutX" : "Ask LayoutX — drag to move"}
         style={{
           boxShadow: isHovered
             ? "0 12px 28px -4px rgba(99, 102, 241, 0.5), 0 8px 16px -4px rgba(217, 70, 239, 0.3)"
             : "0 4px 16px 0 rgba(37, 99, 235, 0.25)",
-          transform: isHovered ? "scale(1.1) rotate(5deg)" : "scale(1)",
+          transform: isHovered && !dragging ? "scale(1.1) rotate(5deg)" : "scale(1)",
         }}
       >
         {/* Dual Pulse Rings */}
@@ -45,7 +147,20 @@ export function ChatLauncher({ onOpen }: Readonly<{ onOpen: () => void }>) {
           <span className={styles.iconOnlineIndicator} />
         </div>
       </button>
-    </>
+
+      {(isHovered || state.pinned) && !dragging && (
+        <button
+          type="button"
+          className={`${styles.launcherPin} ${state.pinned ? styles.launcherPinActive : ""}`}
+          onClick={() => setState((s) => ({ ...s, pinned: !s.pinned }))}
+          aria-label={state.pinned ? "Unpin chat button" : "Pin chat button"}
+          aria-pressed={state.pinned}
+          title={state.pinned ? "Unpin (allow moving)" : "Pin here"}
+        >
+          {state.pinned ? <Pin size={11} /> : <PinOff size={11} />}
+        </button>
+      )}
+    </div>
   );
 }
 
