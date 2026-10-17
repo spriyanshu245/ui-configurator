@@ -14,6 +14,14 @@ import { getUserId } from "../../../../chat-agent/lib/getUserId";
 import { sessionsOps } from "../../../../chat-agent/db/queries/sessions";
 import { sessionOps } from "../../../../chat-agent/db/queries/dsl-history";
 import { callBedrockWithTools } from "../../../../chat-agent/lib/aws-bedrock-helper";
+import {
+  TRACE_NAMES,
+  bedrockUsageDetails,
+  traceChatTurn,
+  traceGeneration,
+  traceTool,
+  type ChatTurnHandle,
+} from "../../../../chat-agent/lib/tracing";
 
 type ChatRouteMessage = {
   role?: string;
@@ -22,6 +30,115 @@ type ChatRouteMessage = {
   tool_call_id?: string;
   tool_calls?: unknown[];
 };
+
+type ModelTurn = {
+  content: string;
+  toolCalls: any[];
+  usage?: Record<string, number>;
+  stopReason?: string;
+};
+
+type ModelTurnIo = {
+  send: (event: object) => void;
+  isAborted: () => boolean;
+};
+
+async function runBedrockTurn(
+  finalMessages: any[],
+  io: ModelTurnIo,
+): Promise<ModelTurn> {
+  logger.debug("Calling Bedrock Native API");
+  const bedrockResponse = await callBedrockWithTools(freeLLMClient, finalMessages);
+  let content = "";
+  const toolCalls: any[] = [];
+  for (const block of bedrockResponse.output?.message?.content ?? []) {
+    if (io.isAborted()) {
+      logger.warn("Bedrock generation aborted mid-stream");
+      break;
+    }
+    if (block.text) {
+      content += block.text;
+      logger.debug("Bedrock text chunk received", { length: block.text.length });
+      io.send({ type: "text_chunk", content: block.text });
+    }
+    if (block.toolUse) {
+      const call = block.toolUse;
+      logger.debug("Bedrock tool use", { toolName: call.name });
+      toolCalls.push({
+        id: call.toolUseId,
+        type: "function",
+        function: { name: call.name, arguments: JSON.stringify(call.input) },
+      });
+    }
+  }
+  return {
+    content,
+    toolCalls,
+    usage: bedrockUsageDetails(bedrockResponse.usage),
+    stopReason: bedrockResponse.stopReason,
+  };
+}
+
+function mergeToolCallDeltas(toolCalls: any[], calls: any[]) {
+  for (let i = 0; i < calls.length; i++) {
+    const call = calls[i];
+    const idx = typeof call.index === "number" ? call.index : i;
+    if (!toolCalls[idx]) {
+      toolCalls[idx] = {
+        id: call.id,
+        type: call.type,
+        function: { name: call.function?.name || "", arguments: "" },
+      };
+    }
+    if (call.function?.arguments) {
+      toolCalls[idx].function.arguments += call.function.arguments;
+    }
+  }
+}
+
+async function runOpenAiTurn(
+  finalMessages: any[],
+  io: ModelTurnIo,
+): Promise<ModelTurn> {
+  const response = await (freeLLMClient as any).chat.completions.create({
+    model: TOOL_CAPABLE_MODEL,
+    messages: finalMessages,
+    tools: DSL_TOOLS as any,
+    tool_choice: "auto",
+    stream: true,
+  });
+
+  logger.debug("Stream opened, reading chunks");
+  let content = "";
+  const toolCalls: any[] = [];
+  for await (const chunk of response) {
+    if (io.isAborted()) {
+      logger.warn("OpenAI generation aborted mid-stream");
+      break;
+    }
+    const delta = chunk.choices[0]?.delta;
+    if (delta?.content) {
+      content += delta.content;
+      logger.debug("Content chunk received", { length: delta.content.length });
+      io.send({ type: "text_chunk", content: delta.content });
+    }
+    if (delta?.tool_calls) {
+      logger.debug("Tool calls in chunk", { count: delta.tool_calls.length });
+      mergeToolCallDeltas(toolCalls, delta.tool_calls);
+    }
+  }
+  return { content, toolCalls };
+}
+
+function buildAssistantMessage(content: string, toolCalls: any[]) {
+  const message: {
+    role: string;
+    content: string | null;
+    tool_calls?: unknown[];
+  } = { role: "assistant", content: content || null };
+  if (toolCalls.length > 0) message.tool_calls = toolCalls;
+  return message;
+}
 
 /**
  * Fresh recap of earlier turns for the system prompt: the saved task context
@@ -175,6 +292,7 @@ export async function POST(req: Request) {
     .slice()
     .reverse()
     .find((m) => m.role === "user");
+  let lastUserText = "";
   if (lastUserMsg) {
     try {
       const textContent = Array.isArray(lastUserMsg.content)
@@ -183,6 +301,7 @@ export async function POST(req: Request) {
             .map((p) => p.text)
             .join("\n")
         : lastUserMsg.content;
+      lastUserText = typeof textContent === "string" ? textContent : "";
       await sessionOps.saveMessage(userId, micrositeId, {
         ...lastUserMsg,
         content: textContent,
@@ -192,8 +311,10 @@ export async function POST(req: Request) {
     }
   }
 
-  const stream = new ReadableStream({
-    async start(controller) {
+  const runChatTurn = async (
+    controller: ReadableStreamDefaultController,
+    turn: ChatTurnHandle,
+  ) => {
       let isAborted = false;
       req.signal.addEventListener("abort", () => {
         logger.warn("Client aborted connection");
@@ -207,6 +328,14 @@ export async function POST(req: Request) {
         } catch (e) {
           logger.error("Failed to enqueue data", { error: (e as Error).message });
         }
+      };
+      const runTool = (name: string, toolArgs: unknown) =>
+        traceTool(name, toolArgs, () =>
+          executeTool(name, toolArgs as any, { userId, micrositeId }),
+        );
+      const modelIo = {
+        send,
+        isAborted: () => isAborted || req.signal.aborted,
       };
 
       // Earlier turns are NOT sent to the model: only the current prompt and
@@ -252,88 +381,33 @@ export async function POST(req: Request) {
             toolsCount: DSL_TOOLS?.length,
           });
 
-          let content = "";
-          const toolCalls: any[] = [];
-
-          if (freeLLMClient.constructor.name === "BedrockRuntimeClient") {
-            logger.debug("Calling Bedrock Native API");
-            const bedrockResponse = await callBedrockWithTools(
-              freeLLMClient,
-              finalMessages,
-            );
-            const messageOutput = bedrockResponse.output?.message?.content;
-            if (messageOutput) {
-              for (const block of messageOutput) {
-                if (isAborted || req.signal.aborted) {
-                  logger.warn("Bedrock generation aborted mid-stream");
-                  break;
-                }
-                if (block.text) {
-                  content += block.text;
-                  logger.debug("Bedrock text chunk received", { length: block.text.length });
-                  send({ type: "text_chunk", content: block.text });
-                }
-                if (block.toolUse) {
-                  const call = block.toolUse;
-                  logger.debug("Bedrock tool use", { toolName: call.name });
-                  toolCalls.push({
-                    id: call.toolUseId,
-                    type: "function",
-                    function: {
-                      name: call.name,
-                      arguments: JSON.stringify(call.input),
-                    },
-                  });
-                }
-              }
-            }
-          } else {
-            const response = await (
-              freeLLMClient as any
-            ).chat.completions.create({
+          const isBedrock = freeLLMClient.constructor.name === "BedrockRuntimeClient";
+          const modelTurn = await traceGeneration(
+            TRACE_NAMES.generateResponse,
+            {
               model: TOOL_CAPABLE_MODEL,
-              messages: finalMessages,
-              tools: DSL_TOOLS as any,
-              tool_choice: "auto",
-              stream: true,
-            });
-
-            logger.debug("Stream opened, reading chunks");
-            for await (const chunk of response) {
-              if (isAborted || req.signal.aborted) {
-                logger.warn("OpenAI generation aborted mid-stream");
-                break;
-              }
-              if (chunk.choices[0]?.delta?.content) {
-                const chunkContent = chunk.choices[0].delta.content;
-                content += chunkContent;
-                logger.debug("Content chunk received", { length: chunkContent.length });
-                send({ type: "text_chunk", content: chunkContent });
-              }
-              if (chunk.choices[0]?.delta?.tool_calls) {
-                const calls = chunk.choices[0].delta.tool_calls;
-                logger.debug("Tool calls in chunk", { count: calls.length });
-                for (let i = 0; i < calls.length; i++) {
-                  const call = calls[i];
-                  const idx = typeof call.index === "number" ? call.index : i;
-                  if (!toolCalls[idx]) {
-                    toolCalls[idx] = {
-                      id: call.id,
-                      type: call.type,
-                      function: {
-                        name: call.function?.name || "",
-                        arguments: "",
-                      },
-                    };
-                  }
-                  if (call.function?.arguments) {
-                    toolCalls[idx].function.arguments +=
-                      call.function.arguments;
-                  }
-                }
-              }
-            }
-          }
+              input: finalMessages,
+              metadata: {
+                provider: isBedrock ? "bedrock" : "openai-compatible",
+                agentLoopIteration: loopCount,
+              },
+            },
+            async (generation) => {
+              const result = isBedrock
+                ? await runBedrockTurn(finalMessages, modelIo)
+                : await runOpenAiTurn(finalMessages, modelIo);
+              generation.update({
+                output: buildAssistantMessage(
+                  result.content,
+                  result.toolCalls.filter(Boolean),
+                ),
+                usageDetails: result.usage,
+                metadata: { stopReason: result.stopReason },
+              });
+              return result;
+            },
+          );
+          const { content, toolCalls } = modelTurn;
 
           const validToolCalls = toolCalls.filter(Boolean);
           logger.debug("Stream finished", {
@@ -341,17 +415,7 @@ export async function POST(req: Request) {
             toolCallsCount: validToolCalls.length,
           });
 
-          const assistantMsg: {
-            role: string;
-            content: string | null;
-            tool_calls?: unknown[];
-          } = {
-            role: "assistant",
-            content: content || null,
-          };
-          if (validToolCalls.length > 0) {
-            assistantMsg.tool_calls = validToolCalls;
-          }
+          const assistantMsg = buildAssistantMessage(content, validToolCalls);
 
           if (!validToolCalls.length) {
             send({
@@ -359,6 +423,7 @@ export async function POST(req: Request) {
               messages: [...priorMessages, ...currentMessages, assistantMsg],
             });
             send({ type: "done" });
+            turn.setOutput(assistantMsg.content);
             break;
           }
 
@@ -381,7 +446,7 @@ export async function POST(req: Request) {
             }
             prefetched.set(
               toolCall.id,
-              executeTool(toolCall.function.name, parsedArgs, { userId, micrositeId }).then(
+              runTool(toolCall.function.name, parsedArgs).then(
                 (result) => ({ ok: true as const, result }),
                 (error) => ({ ok: false as const, error }),
               ),
@@ -401,7 +466,9 @@ export async function POST(req: Request) {
             }
 
             if (toolCall.function.name === "propose_dsl_patch") {
-              const pending = await queuePatch(args, effectiveSessionId);
+              const pending = await traceTool("propose_dsl_patch", args, () =>
+                queuePatch(args, effectiveSessionId),
+              );
               if (pending.error) {
                 toolResults.push({
                   tool_call_id: toolCall.id,
@@ -441,11 +508,14 @@ export async function POST(req: Request) {
                   tool_call_id: toolCall.id,
                 });
                 send({ type: "awaiting_approval" });
+                turn.setOutput({ status: "awaiting_approval", proposal: "dsl_patch", patchId: pending.id });
                 controller.close();
                 return;
               }
             } else if (toolCall.function.name === "propose_dsl_batch") {
-              const pending = await queueBatch(args, effectiveSessionId);
+              const pending = await traceTool("propose_dsl_batch", args, () =>
+                queueBatch(args, effectiveSessionId),
+              );
               if ("error" in pending) {
                 toolResults.push({
                   tool_call_id: toolCall.id,
@@ -485,10 +555,16 @@ export async function POST(req: Request) {
                   tool_call_id: toolCall.id,
                 });
                 send({ type: "awaiting_approval" });
+                turn.setOutput({ status: "awaiting_approval", proposal: "dsl_batch", batchId: pending.id });
                 controller.close();
                 return;
               }
             } else if (toolCall.function.name === "propose_create_page") {
+              await traceTool("propose_create_page", args, async () => ({
+                status: "card_shown",
+                micrositeId: args.microsite_id ?? micrositeId,
+                suggestedName: args.suggested_name ?? null,
+              }));
               // Open the Create-Page input card (name + "Open as popup" checkbox)
               // on the client; the client submits to /api/page/create.
               send({
@@ -513,6 +589,7 @@ export async function POST(req: Request) {
                 tool_call_id: toolCall.id,
               });
               send({ type: "awaiting_approval" });
+              turn.setOutput({ status: "awaiting_approval", proposal: "create_page", suggestedName: args.suggested_name ?? null });
               controller.close();
               return;
             } else {
@@ -527,10 +604,7 @@ export async function POST(req: Request) {
                 if (!outcome.ok) throw outcome.error;
                 result = outcome.result;
               } else {
-                result = await executeTool(toolCall.function.name, args, {
-                  userId,
-                  micrositeId,
-                });
+                result = await runTool(toolCall.function.name, args);
               }
               logger.debug("Tool execution completed", {
                 toolName: toolCall.function.name,
@@ -620,11 +694,29 @@ export async function POST(req: Request) {
           }
 
           send({ type: "error", message: errorMessage });
+          turn.setError(errorMessage);
+          turn.setOutput({ status: "error", message: errorMessage });
           break;
         }
       }
       controller.close();
-    },
+  };
+
+  const stream = new ReadableStream({
+    start: (controller) =>
+      traceChatTurn(
+        {
+          userId,
+          sessionId: effectiveSessionId,
+          input: lastUserText,
+          metadata: {
+            micrositeId,
+            pageCode,
+            attachmentCount: String(safeAttachments.length),
+          },
+        },
+        (turn) => runChatTurn(controller, turn),
+      ),
   });
 
   return new Response(stream, {
