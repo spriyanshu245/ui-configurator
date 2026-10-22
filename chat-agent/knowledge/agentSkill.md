@@ -18,6 +18,7 @@
 - **Table**: Displays tabular data, requires columns definition.
 - **Form**: Wrapper component to group inputs, handles prefill/submission APIs.
 - **SubSection**: Visually groupings inside forms/stacks.
+- **InputTable** (`input-table`): Editable rows inside a form; columns in `inputColumns`, keys in its own `nameKeyIds`, optional `interceptors` (see Interceptors).
 
 ## Component Patterns
 
@@ -218,3 +219,26 @@ You have two tools for making future sessions smarter — use them judiciously, 
   }
   ```
 - **Form Linking**: Inside a form, conditionals often watch the ID (`nameKeyId`) of another input component. If watching another input component, use its UUID in the `parentNames` array. If watching a session variable, use the `${...}` syntax.
+
+## Interceptors (form & input-table)
+
+Interceptors are JS validations/calculations stored in `properties.interceptors[]` of a `form` or an `input-table`. A value that does not resolve does NOT error at runtime — the interceptor silently never fires — so every binding below must match the CURRENT page exactly.
+
+- **Shape** (all fields required unless noted):
+  ```json
+  { "id": "<uuid>", "label": "short name", "interceptorType": "validation",
+    "jsObject": "const validate = () => {\n  let isValid = true;\n  ...\n  return isValid;\n}",
+    "eventType": "onChange", "eventObject": ["<key>"], "messageObject": ["<key>"],
+    "message": "text shown when invalid", "messageType": "error", "messageTimeout": 0,
+    "componentType": "input-table", "tableName": "<table key>" }
+  ```
+- **Enums**: `interceptorType` validation | calculation. `eventType` for validation: onSubmit | onChange | onKeyDown; for calculation: onChange | onLoad | onKeyDown (there is no onBlur). `messageType` error | info. `componentType` = the host type (form | input-table). `messageTimeout` seconds (0 = stays).
+- **input-table bindings**:
+  - `tableName` = the LABEL of the parent form's `nameKeyIds` entry whose `id` equals the table's `properties.name` (e.g. form nameKeyIds `{label:"loanAccountMorats", id:<table.name>}` → `tableName: "loanAccountMorats"`). Two forms on one page (e.g. ADD and EDIT) can use different labels for similar tables — always resolve per table.
+  - `eventObject` / `messageObject` entries = labels from the table's OWN `nameKeyIds` (a column's `properties.name` is the id of one of them), e.g. `["moratTenure"]`.
+  - Row keys inside `jsObject` use the same labels: `$allRows?.[$rowIndex]?.["moratTenure"]`.
+- **form bindings**: `eventObject` / `messageObject` entries are `"<form.properties.name>.<nameKeyIds label>"` (e.g. `"loanAccountDetails.loanAmount"`). No `tableName`.
+- **Variables in jsObject**: `$newValue` (value being entered), `$rowIndex`, `$allRows` (all rows of the table), `$currentRow` (input-table only). Any other `$name` reads the field labelled `name` from the enclosing form (e.g. `$loanTenure`). The snippet must return `isValid` (true = OK).
+- **Calculation** interceptors write back instead of validating, e.g. `setNestedValueViaFieldPath(formsDataStoreV2["<form name>"], "<tableName>", data)`; their `message` may be empty and `messageType` "info".
+- **The server enforces this** on every patch: it sets `tableName` and `componentType`, replaces missing/duplicate ids, and rejects a patch whose `eventObject` / `messageObject` / jsObject keys are not this page's labels.
+- **Copying from another page or an attached dev-env JSON**: call `map_interceptors` (source = the att-… handle or pageCode), check the table matches and key map, then `propose_interceptor_copy` with the same arguments (add `pairs` / `column_map_overrides` to fix anything unmatched). It produces ONE patch for every table and form — never hand-copy interceptor JSON and never reuse the source's ids, tableName or column keys.

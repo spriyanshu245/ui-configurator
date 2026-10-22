@@ -8,6 +8,7 @@ import { logger } from '../lib/logger';
  * the same name, which is the desired fail-fast behavior).
  */
 const TEMP_DSL_TTL_SECONDS = 900;
+const CHAT_ATTACHMENT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /**
  * temp_dsl may carry a legacy NON-TTL index on {createdAt: 1} (e.g. "createdAt_1").
@@ -165,6 +166,33 @@ export async function ensureIndexes(): Promise<void> {
     {
       name: 'temp_dsl_ttl',
       build: ensureTempDslTtl,
+    },
+
+    // Chat attachments are looked up by their content-derived handle and listed
+    // per session; they expire after a week.
+    {
+      name: 'chat_attachments_handle',
+      build: () =>
+        db.collection('chat_attachments').createIndex(
+          { handle: 1 },
+          { name: 'chat_attachments_handle', unique: true }
+        ),
+    },
+    {
+      name: 'chat_attachments_session',
+      build: () =>
+        db.collection('chat_attachments').createIndex(
+          { sessionId: 1, createdAt: 1 },
+          { name: 'chat_attachments_session' }
+        ),
+    },
+    {
+      name: 'chat_attachments_ttl',
+      build: () =>
+        db.collection('chat_attachments').createIndex(
+          { lastUsedAt: 1 },
+          { name: 'chat_attachments_ttl', expireAfterSeconds: CHAT_ATTACHMENT_TTL_SECONDS }
+        ),
     },
   ];
 

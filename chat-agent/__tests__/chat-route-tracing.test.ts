@@ -21,12 +21,37 @@ jest.mock("../lib/freellm-client", () => ({
   freeLLMClient: new (class BedrockRuntimeClient {})(),
 }));
 
+// Fixtures below are Converse-shaped responses; the factory turns them into
+// streamBedrockTurn results (text, OpenAI-style tool calls, raw usage).
 const callBedrockWithTools = jest.fn();
 jest.mock("../lib/aws-bedrock-helper", () => ({
-  callBedrockWithTools: (...a: any[]) => callBedrockWithTools(...a),
+  streamBedrockTurn: async (...a: any[]) => {
+    const res: any = await callBedrockWithTools(...a);
+    const blocks: any[] = res?.output?.message?.content ?? [];
+    return {
+      content: blocks.filter((b) => b.text).map((b) => b.text).join(""),
+      toolCalls: blocks
+        .filter((b) => b.toolUse)
+        .map((b) => ({
+          id: b.toolUse.toolUseId,
+          type: "function",
+          function: { name: b.toolUse.name, arguments: JSON.stringify(b.toolUse.input) },
+        })),
+      bedrockContent: [],
+      usage: res?.usage,
+      stopReason: res?.stopReason,
+    };
+  },
 }));
 jest.mock("../lib/prompt-builder", () => ({
-  buildSystemPrompt: jest.fn().mockResolvedValue("SYSTEM"),
+  buildSystemPromptParts: jest.fn().mockResolvedValue({ staticText: "SYSTEM", dynamicText: "" }),
+}));
+jest.mock("../db/queries/chat-attachments", () => ({
+  chatAttachmentsOps: {
+    save: jest.fn().mockResolvedValue(undefined),
+    listForSession: jest.fn().mockResolvedValue([]),
+    getByHandle: jest.fn(),
+  },
 }));
 const executeTool = jest.fn();
 jest.mock("../lib/tool-executor", () => ({

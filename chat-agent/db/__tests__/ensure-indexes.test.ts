@@ -32,6 +32,7 @@ const COLLECTION_NAMES = [
   "skill_entries",
   "user_preferences",
   "temp_dsl",
+  "chat_attachments",
 ];
 
 jest.mock("../client", () => {
@@ -70,6 +71,9 @@ describe("ensureIndexes", () => {
       { collection: "user_preferences", name: "user_preferences_key" },
       { collection: "temp_dsl", name: "temp_dsl_lookup" },
       { collection: "temp_dsl", name: "temp_dsl_ttl" },
+      { collection: "chat_attachments", name: "chat_attachments_handle" },
+      { collection: "chat_attachments", name: "chat_attachments_session" },
+      { collection: "chat_attachments", name: "chat_attachments_ttl" },
     ];
 
     for (const { collection, name } of expected) {

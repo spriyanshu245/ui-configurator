@@ -24,7 +24,7 @@ jest.mock("../logger", () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-import { buildSystemPrompt } from "../prompt-builder";
+import { buildSystemPrompt, buildSystemPromptParts, renderRegistry } from "../prompt-builder";
 import { logger } from "../logger";
 
 /** Virtual knowledge dir: file-name suffix -> contents (missing = does not exist). */
@@ -59,7 +59,7 @@ describe("buildSystemPrompt — knowledge sources", () => {
     expect(prompt).toContain("═══ LEARNED FROM PAST SESSIONS ═══");
     expect(prompt).toContain("learned pattern one\n");
     expect(prompt).not.toContain("  learned pattern one  ");
-    expect(prompt).toContain('{"button":{}}');
+    expect(prompt).toContain("button: (no props)");
   });
 
   it("uses the placeholder when agentSkill.md is absent", async () => {
@@ -91,9 +91,9 @@ describe("buildSystemPrompt — knowledge sources", () => {
 
   it("defaults the component registry to {} when missing, and logs when reading it fails", async () => {
     delete files["knowledge/component-registry.json"];
-    expect(await buildSystemPrompt({})).toContain("Match props exactly. Never invent props.\n{}\n");
+    expect(await buildSystemPrompt({})).toContain("(* = required, [] = array, {} = object)\n\n");
 
-    files["knowledge/component-registry.json"] = "[]";
+    files["knowledge/component-registry.json"] = "{}";
     readFileSyncMock.mockImplementation((p: string) => {
       if (String(p).includes("component-registry")) throw new Error("bad registry");
       return fileFor(p);
@@ -149,9 +149,8 @@ describe("buildSystemPrompt — microsite pages and context", () => {
     });
     const prompt = await buildSystemPrompt({ micrositeId: "m1", pageCode: "home", id: "p-1" });
     expect(fetchPagesMock).toHaveBeenCalledWith("m1");
-    expect(prompt).toContain("Total pages: 2\nPage paths: home, detail");
-    expect(prompt).toContain("--- PAGE: home ---");
-    expect(prompt).toContain("--- PAGE: detail ---");
+    expect(prompt).toContain("Pages (2): home, detail");
+    expect(prompt).not.toContain("--- PAGE:");
     expect(prompt).toContain("Microsite ID: m1");
     expect(prompt).toContain("Active Page Code: home");
     expect(prompt).toContain("Active Page ID: p-1");
@@ -159,7 +158,7 @@ describe("buildSystemPrompt — microsite pages and context", () => {
 
   it("treats a response without pages as an empty microsite", async () => {
     fetchPagesMock.mockResolvedValue(null);
-    expect(await buildSystemPrompt({ micrositeId: "m1" })).toContain("Total pages: 0");
+    expect(await buildSystemPrompt({ micrositeId: "m1" })).toContain("Pages (0): ");
   });
 
   it("logs and continues when the microsite fetch fails", async () => {
@@ -169,7 +168,7 @@ describe("buildSystemPrompt — microsite pages and context", () => {
       "Failed to fetch initial microsite data for system prompt",
       { error: "404" },
     );
-    expect(prompt).not.toContain("Total pages");
+    expect(prompt).not.toContain("Pages (");
   });
 
   it("renders task context, pending patch flag and page history", async () => {
@@ -202,5 +201,69 @@ describe("buildSystemPrompt — microsite pages and context", () => {
     const prompt = await buildSystemPrompt({});
     expect(prompt).not.toContain("═══ REFERENCE DSLs ═══");
     expect(prompt).not.toContain("═══ SESSION DATA ═══");
+  });
+});
+
+describe("buildSystemPromptParts — caching layout", () => {
+  it("keeps the static part identical across turns, users and microsites", async () => {
+    fetchPagesMock.mockResolvedValue({ pages: [{ pageCode: "a", pageVersion: 2 }] });
+    toArrayMock.mockResolvedValue([{ key: "k", value: "v" }]);
+    const one = await buildSystemPromptParts({ micrositeId: "m1", userId: "u1", taskContext: { intent: "x" } });
+    const two = await buildSystemPromptParts({ micrositeId: "m2", userId: "u2", pageOps: { p: [1] } });
+    expect(one.staticText).toBe(two.staticText);
+    expect(one.dynamicText).not.toBe(two.dynamicText);
+    expect(one.dynamicText).toContain("Pages (1): a@v2");
+    expect(one.staticText).not.toContain("Microsite ID");
+  });
+
+  it("puts learned skills (without the compile timestamp) in the dynamic part", async () => {
+    files["knowledge/learnedSkills.md"] = [
+      "# Learned",
+      "",
+      "_Compiled on 2026-10-15T12:03:53.384Z from 150 entries_",
+      "",
+      "entry body",
+    ].join("\n");
+    const parts = await buildSystemPromptParts({});
+    expect(parts.staticText).not.toContain("LEARNED FROM PAST SESSIONS");
+    expect(parts.dynamicText).toContain("LEARNED FROM PAST SESSIONS");
+    expect(parts.dynamicText).not.toContain("Compiled on");
+    expect(parts.dynamicText).toContain("entry body");
+  });
+
+  it("asks for one proposal per request and points attachments at their tools", async () => {
+    const { staticText } = await buildSystemPromptParts({});
+    expect(staticText).not.toContain("Break multi-section changes into sequential proposals");
+    expect(staticText).toContain("ONE user request = ONE proposal");
+    expect(staticText).toContain("att-");
+  });
+
+  it("lists this chat's attachments", async () => {
+    const { dynamicText } = await buildSystemPromptParts({
+      attachments: [{ handle: "att-0123456789", name: "dev.json", kind: "dsl", summary: "page DSL JSON, 3 components" }],
+    });
+    expect(dynamicText).toContain("═══ ATTACHMENTS IN THIS CHAT ═══");
+    expect(dynamicText).toContain('- att-0123456789 "dev.json": page DSL JSON, 3 components');
+  });
+});
+
+describe("renderRegistry", () => {
+  it("renders one compact block per type with markers, children and compact example", () => {
+    const text = renderRegistry({
+      form: {
+        props: { name: { type: "string", required: true }, nameKeyIds: { type: "array" }, cfg: { type: "object" } },
+        children: ["sub-section"],
+        notes: "n",
+        example: { id: "1", type: "form", properties: { name: "f", empty: "", list: [] } },
+      },
+      spacer: {},
+    });
+    expect(text.split("\n")).toEqual([
+      "form: name*, nameKeyIds[], cfg{}",
+      "  children: sub-section",
+      "  notes: n",
+      '  example: {"id":"1","type":"form","properties":{"name":"f"}}',
+      "spacer: (no props)",
+    ]);
   });
 });

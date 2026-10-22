@@ -132,3 +132,25 @@ describe("compileAgentSkill", () => {
     expect(logger.error).toHaveBeenCalledWith("Failed to mark skill entries as used", { error: "db" });
   });
 });
+
+describe("compileAgentSkill — cache-friendly output", () => {
+  it("has no timestamp and drops near-duplicate titles, keeping the best-ranked one", async () => {
+    findAllMock.mockResolvedValue([
+      entry({ id: "a", category: "dsl_rule", title: "Popup Page Required Properties", confidence: 0.9 }),
+      entry({ id: "b", category: "dsl_rule", title: "Popup Page Required Properties Bundle", confidence: 0.85 }),
+      entry({ id: "c", category: "dsl_rule", title: "Creating a Popup Page Configuration", confidence: 0.95 }),
+      entry({ id: "d", category: "dsl_rule", title: "Popup Page Configuration Pattern", confidence: 0.8 }),
+      entry({ id: "e", category: "dsl_rule", title: "Session Interpolation for URLs", confidence: 0.7 }),
+    ]);
+    await compileAgentSkill();
+    const md = written();
+    expect(md).not.toMatch(/Compiled on/);
+    expect(md).toContain("_Compiled from 5 entries_");
+    expect(md).toContain("### Popup Page Required Properties (");
+    expect(md).not.toContain("Properties Bundle");
+    expect(md).toContain("### Creating a Popup Page Configuration");
+    expect(md).not.toContain("Popup Page Configuration Pattern");
+    expect(md).toContain("Session Interpolation");
+    expect(markUsedMock).toHaveBeenCalledWith(["c", "a", "e"]);
+  });
+});

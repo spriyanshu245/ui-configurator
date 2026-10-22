@@ -70,10 +70,14 @@ function validateNode(node: any, currentFormNameKeyIds: string[] = []) {
   }
 }
 
+// `type` values that name an event ({ type: "onChange" }), not a component.
+const EVENT_TYPE_RE = /^on[A-Z]/;
+
 /**
  * Give every component node (any object with a string `type`) an id if it has
  * none — anywhere in the tree, including nodes nested inside `properties`
  * (table columns, multipleActions, …) that validateNode doesn't descend into.
+ * Event descriptors such as { type: "onChange" } are not components.
  */
 export function assignMissingIds(value: any): void {
   if (!value || typeof value !== "object") return;
@@ -81,7 +85,9 @@ export function assignMissingIds(value: any): void {
     for (const item of value) assignMissingIds(item);
     return;
   }
-  if (typeof value.type === "string" && !value.id) value.id = uuidv4();
+  if (typeof value.type === "string" && !value.id && !EVENT_TYPE_RE.test(value.type)) {
+    value.id = uuidv4();
+  }
   for (const child of Object.values(value)) {
     if (child && typeof child === "object") assignMissingIds(child);
   }
@@ -215,6 +221,8 @@ async function loadCurrentDsl(
   return { dsl, pageVersion };
 }
 
+const ATTACHMENT_RE = /^att-[0-9a-f]{6,}$/;
+
 export async function queuePatch(args: any, sessionId: string) {
   const {
     microsite_id,
@@ -224,6 +232,10 @@ export async function queuePatch(args: any, sessionId: string) {
     preview_hint,
     affected_components,
   } = args;
+
+  if (ATTACHMENT_RE.test(String(page_path))) {
+    return { error: `"${page_path}" is an uploaded attachment (read-only). Patch a page of the microsite instead.` };
+  }
 
   let currentDsl: any;
   let pageVersion: number;
@@ -254,7 +266,7 @@ export async function queuePatch(args: any, sessionId: string) {
     pagePath: page_path,
     pageVersion,
     patch,
-    description,
+    description: description ?? "",
     previewHint: preview_hint,
     affectedComponents: affected_components,
     proposedAt: new Date().toISOString(),
@@ -350,6 +362,10 @@ export async function queueBatch(
       return { error: `Validation failed on page "${page_path}": ${err.message}` };
     }
 
+    if (ATTACHMENT_RE.test(String(page_path))) {
+      return { error: `Validation failed on page "${page_path}": attachments are read-only.` };
+    }
+
     try {
       validateAndAssignIds(patchedDsl);
     } catch (err: any) {
@@ -359,7 +375,7 @@ export async function queueBatch(
     validated.push({
       pagePath: page_path,
       pageVersion,
-      description,
+      description: description ?? "",
       previewHint: preview_hint,
       affectedComponents: affected_components,
       currentDsl,

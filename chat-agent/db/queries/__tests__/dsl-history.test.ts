@@ -153,7 +153,7 @@ describe("sessionOps", () => {
 
     const [filter, update, opts] = updateOne.mock.calls[0];
     expect(filter).toEqual({ userId: "u1", micrositeId: "m1" });
-    expect(update.$push).toEqual({ messages: { $each: [msg], $slice: -30 } });
+    expect(update.$push).toEqual({ messages: { $each: [msg], $slice: -200 } });
     expect(update.$set.updatedAt).toEqual(expect.any(String));
     expect(opts).toEqual({ upsert: true });
   });

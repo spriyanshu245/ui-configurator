@@ -142,6 +142,8 @@ export function traceTool<T>(
   name: string,
   input: unknown,
   fn: () => Promise<T>,
+  /** What to record as the observation output (default: the whole result). */
+  toOutput: (result: T) => unknown = (result) => result,
 ): Promise<T> {
   return startActiveObservation(
     name,
@@ -149,7 +151,7 @@ export function traceTool<T>(
       tool.update({ input: sanitizeForTrace(input) });
       try {
         const result = await fn();
-        tool.update({ output: sanitizeForTrace(result) });
+        tool.update({ output: sanitizeForTrace(toOutput(result)) });
         return result;
       } catch (error) {
         tool.update({ level: "ERROR", statusMessage: errorMessage(error) });
