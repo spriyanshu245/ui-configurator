@@ -5,6 +5,11 @@ import { skillEntries } from "../db/queries/skill-entries";
 import { compileAgentSkill } from "./skill-compiler";
 import { logger } from "./logger";
 import {
+  TRACE_NAMES,
+  bedrockUsageDetails,
+  traceGeneration,
+} from "./tracing";
+import {
   mineSessionBindingCandidates,
   candidateToSkillEntry,
   type SessionBindingCandidate,
@@ -57,15 +62,35 @@ Respond ONLY with a JSON array, no prose, no markdown fences:
   }
 ]`;
 
-  const command = new ConverseCommand({
-    modelId: TOOL_CAPABLE_MODEL && TOOL_CAPABLE_MODEL !== "auto"
+  const modelId =
+    TOOL_CAPABLE_MODEL && TOOL_CAPABLE_MODEL !== "auto"
       ? TOOL_CAPABLE_MODEL
-      : "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      : "anthropic.claude-3-5-sonnet-20240620-v1:0";
+  const command = new ConverseCommand({
+    modelId,
     messages: [{ role: "user", content: [{ text: prompt }] }],
     inferenceConfig: { maxTokens: 500, temperature: 0.2 },
   });
 
-  const response = await (freeLLMClient as any).send(command);
+  // Runs fire-and-forget after patch approval, so this generation is its own
+  // trace (no chat-turn parent) — filterable by name in Langfuse.
+  const response = await traceGeneration(
+    TRACE_NAMES.summarizeSkillCandidates,
+    {
+      model: modelId,
+      input: [{ role: "user", content: prompt }],
+      metadata: { candidateCount: candidates.length },
+    },
+    async (generation) => {
+      const result = await (freeLLMClient as any).send(command);
+      generation.update({
+        output: result?.output?.message?.content,
+        usageDetails: bedrockUsageDetails(result?.usage),
+        metadata: { stopReason: result?.stopReason },
+      });
+      return result;
+    },
+  );
   const textBlock = response?.output?.message?.content?.find((c: any) => typeof c?.text === "string");
   const raw = textBlock?.text;
   if (!raw || typeof raw !== "string") return null;

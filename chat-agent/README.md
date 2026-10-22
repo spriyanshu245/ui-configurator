@@ -43,6 +43,28 @@ This directory contains a self-contained chat agent overlay for the Next.js UI C
 - **Agent Knowledge Updates**: The agent periodically runs reflection logic on completed tasks and compiles knowledge into `agentSkill.md` to be injected into the prompt, continuously improving its capabilities.
 - **Rollback Foundation**: It preserves history on every change approved to easily manage rolling back state. Use the `SkillDebugPanel` component directly if debugging prompts in a dev environment.
 
+## Observability (Langfuse)
+
+Tracing is opt-in. Set `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `LANGFUSE_BASE_URL`
+(see `.env.example`); without keys every tracing call is a no-op. Bootstrap lives in
+`src/instrumentation.ts` / `src/instrumentation.node.ts`, helpers in `lib/tracing.ts`.
+
+One trace per chat turn, one Langfuse session per conversation (`clientSessionId`):
+
+```
+chat-turn (agent)            input = user message, output = final reply or approval status
+├─ generate-response (generation)   model, OpenAI-format input/output, token usage (incl. cache)
+├─ <tool name> (tool)               e.g. get_page_dsl, propose_dsl_patch — sibling of the generation
+└─ generate-response (generation)
+```
+
+- `skill-updater` reflection is its own `summarize-skill-candidates` generation trace.
+- Attachment bytes (`dataBase64`) are replaced by a size descriptor before export; the span
+  processor also masks bearer tokens / AWS and Langfuse keys and caps each field at 200k chars.
+- Observation names are stable and low-cardinality on purpose (evaluators and dashboards key on
+  them) — put run-specific values in metadata, not names.
+- Set `LANGFUSE_TRACING_ENVIRONMENT` so dev/staging traces stay out of production dashboards.
+
 ## Known Limitations & Future Work
 
 - Rollbacks UI is stubbed. A full integration where the inverse patch is verified and sent to backend is ready but gated.
