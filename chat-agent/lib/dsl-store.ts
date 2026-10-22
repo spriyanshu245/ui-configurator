@@ -4,6 +4,10 @@ import { getCachedDsl, primeDslCache, onDslCacheUpdate } from "./dsl-patcher";
 import { buildNodeIndex, type NodeIndex } from "./dsl-compact";
 import { logger } from "./logger";
 
+// Uploaded page DSLs (see attachment-store) are addressed by handle. The store
+// module is loaded lazily so plain page reads never touch the attachments DB.
+const isAttachmentHandle = (code: string) => /^att-[0-9a-f]{6,}$/.test(code);
+
 /**
  * Read-through store for page DSL used by the agent's read tools.
  *
@@ -56,7 +60,7 @@ export interface LoadedPage {
   pageVersion: number;
   dsl: any;
   tempDslId: string;
-  source: "memory" | "mongo" | "backend";
+  source: "memory" | "mongo" | "backend" | "attachment";
 }
 
 export interface LoadPagesResult {
@@ -168,6 +172,21 @@ async function loadFromBackend(
     .catch((e) => logger.warn("temp_dsl store failed", { error: (e as Error).message }));
 }
 
+async function loadAttachments(ctx: LoadContext, handles: string[], errors: LoadPagesResult["errors"]) {
+  await Promise.all(
+    handles.map(async (handle) => {
+      try {
+        const { loadAttachmentDsl } = await import("./attachment-store");
+        const dsl = await loadAttachmentDsl(handle, ctx.micrositeId);
+        if (dsl === undefined) throw new Error(`Attachment "${handle}" is not a page DSL (or has expired).`);
+        ctx.found.set(handle, toLoadedPage(ctx, { pageCode: handle, pageVersion: 0, dsl }, "attachment"));
+      } catch (e) {
+        errors.push({ pageCode: handle, error: (e as Error).message });
+      }
+    }),
+  );
+}
+
 /**
  * Load several pages through L1 → L2 → L3. Results keep the requested order.
  * `refresh: true` skips L1/L2 and reloads from the backend.
@@ -182,7 +201,11 @@ export async function loadPages(
   const ctx: LoadContext = { micrositeId, now: Date.now(), found: new Map() };
   const errors: LoadPagesResult["errors"] = [];
 
-  let pending = pageCodes;
+  // Uploaded page DSLs (att-… handles) are read-only and never hit the backend.
+  const attachmentCodes = pageCodes.filter(isAttachmentHandle);
+  if (attachmentCodes.length) await loadAttachments(ctx, attachmentCodes, errors);
+
+  let pending = pageCodes.filter((p) => !isAttachmentHandle(p));
   if (!opts.refresh) {
     pending = loadFromMemory(ctx, pageCodes);
     if (pending.length) pending = await loadFromMongo(ctx, pending);

@@ -3,8 +3,8 @@ export const DSL_TOOLS = [
     type: "function",
     function: {
       name: "get_microsite_pages",
-      description: `Fetch all pages and their complete DSL JSON for a given microsite.
-        Call this at the start of every session. Returns every page path and its DSL.`,
+      description: `List a microsite's pages (pageCode + pageVersion) and its first page code.
+        Use get_page_dsl to read a page.`,
       parameters: {
         type: "object",
         properties: {
@@ -36,7 +36,8 @@ export const DSL_TOOLS = [
         served from memory (instant); request several pages together with page_paths in ONE call.
         page_paths ["*"] returns only the page LIST (no outlines) — then request just the pages you need.
         After an approved change the stored copy is updated automatically; pass refresh: true only if
-        the page may have been edited outside the chat. Then use query_dsl_path / find_components.`,
+        the page may have been edited outside the chat. Then use query_dsl_path / find_components.
+        An attached page DSL is read the same way: use its handle (att-…) as the pageCode.`,
       parameters: {
         type: "object",
         properties: {
@@ -121,7 +122,9 @@ export const DSL_TOOLS = [
         CRITICAL RULES:
         - NEVER modify DSL directly in text. Always use this tool.
         - This does NOT apply the patch. The user must approve first.
-        - One logical change per proposal. Break complex changes into steps.
+        - ONE proposal per user request: include EVERY op for EVERY affected component of the page in
+          this single call (queuing it ends your turn, so a "next proposal" never happens). State the
+          coverage in the description (e.g. "6/6 input-tables").
         - Use 'replace' for edits, 'add' for new components, 'remove' for deletions.
         - Always include a clear human-readable description and preview_hint.
         - Validate all JSON Pointer paths (RFC 6901) before proposing.
@@ -488,6 +491,24 @@ export const DSL_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "read_attachment",
+      description: `Read a file the user attached earlier in this chat, by its handle (att-…).
+        Text/JSON files come back in pages of 50k characters (pass offset = nextOffset for more).
+        For an attached page DSL use get_page_dsl / query_dsl_path / find_components with
+        page_path set to the handle instead.`,
+      parameters: {
+        type: "object",
+        properties: {
+          handle: { type: "string", description: "Attachment handle, e.g. att-3f9a1c2e4b." },
+          offset: { type: "number", description: "Character offset to continue from." },
+        },
+        required: ["handle"],
+      },
+    },
+  },
 ];
 
 /**
@@ -503,4 +524,5 @@ export const READ_ONLY_TOOLS = new Set<string>([
   "list_microsites",
   "get_dsl_history",
   "show_page_map",
+  "read_attachment",
 ]);

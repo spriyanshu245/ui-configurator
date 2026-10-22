@@ -120,13 +120,17 @@ export const dslHistory = {
   }
 };
 
+// Text-only messages (tool results are clipped by the chat route), so a long
+// chat fits comfortably; the model sees all of it as collapsed history.
+const MAX_STORED_MESSAGES = 200;
+
 export const sessionOps = {
   saveMessage: async (userId: string, micrositeId: string, msg: any) => {
     const col = db.collection('conversations');
     await col.updateOne(
       { userId, micrositeId },
       { 
-        $push: { messages: { $each: [msg], $slice: -30 } } as any,
+        $push: { messages: { $each: [msg], $slice: -MAX_STORED_MESSAGES } } as any,
         $set: { updatedAt: new Date().toISOString() }
       },
       { upsert: true }

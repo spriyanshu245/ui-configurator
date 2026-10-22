@@ -100,11 +100,13 @@ export type ChatPanelMessage = ChatMessageType & {
   _retryMessages?: ChatPanelMessage[];
   _changeStatus?: "proposed" | "applied" | "reverted";
   _attachedImageNames?: string[];
+  /** Server-side handles of this message's files (att-…), resent so later turns can still use them. */
+  _attachments?: { handle: string; name: string; kind?: string }[];
 };
 
 type RouteMessage = Pick<
   ChatPanelMessage,
-  "role" | "content" | "name" | "tool_call_id" | "tool_calls"
+  "role" | "content" | "name" | "tool_call_id" | "tool_calls" | "_attachments"
 >;
 
 export type PreviewData = {
@@ -210,6 +212,12 @@ const normalizeIncomingMessage = (
     name: message.name,
     tool_call_id: message.tool_call_id,
     tool_calls: message.tool_calls,
+    ...(message._attachments?.length
+      ? {
+          _attachments: message._attachments,
+          _attachedImageNames: message._attachments.map((a) => a.name),
+        }
+      : {}),
   });
 
 const replaceAssistantMessage = (
@@ -233,12 +241,13 @@ const replaceAssistantMessage = (
 };
 
 export const toRouteMessages = (messages: ChatPanelMessage[]): RouteMessage[] =>
-  messages.map(({ role, content, name, tool_call_id, tool_calls }) => ({
+  messages.map(({ role, content, name, tool_call_id, tool_calls, _attachments }) => ({
     role,
     content,
     name,
     tool_call_id,
     tool_calls,
+    ...(_attachments?.length ? { _attachments } : {}),
   }));
 
 export const buildChatRequestBody = (args: {

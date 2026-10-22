@@ -334,6 +334,9 @@ async function proposeRollback(args: ToolArgs) {
 }
 
 const TOOL_HANDLERS: Record<string, ToolHandler> = {
+  // Loaded on first use: these pull in the attachments collection.
+  read_attachment: async (args, ctx) =>
+    (await import("./attachment-store")).readAttachment(args, ctx.micrositeId),
   get_microsite_pages: getMicrositePages,
   list_microsites: listMicrosites,
   navigate_to_page: navigateToPage,

@@ -42,7 +42,9 @@
         "required": false
       }
     },
-    "children": ["button-v2"],
+    "children": [
+      "button-v2"
+    ],
     "example": {
       "id": "09967724-4d5e-4345-93b3-75c12ba96192",
       "type": "stack",
@@ -51,11 +53,16 @@
         "columnGap": 10,
         "repeatRows": false,
         "hasFixedColumns": false,
-        "columnWidths": [50, 50],
+        "columnWidths": [
+          50,
+          50
+        ],
         "justification": "flex-end",
         "isConditionalComponent": true,
         "visibilityConditions": {
-          "parentNames": ["${session.key.to.watch}"],
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
           "conditions": {
             "!null": true,
             "EXPECTED_VALUE": true
@@ -145,7 +152,9 @@
         "label": "",
         "showLabel": false,
         "actionType": "routing",
-        "columnWidths": [100],
+        "columnWidths": [
+          100
+        ],
         "align": "right",
         "buttonType": "tertiary",
         "routingType": "Internal",
@@ -156,7 +165,9 @@
         "isIconButton": true,
         "isConditionalComponent": true,
         "visibilityConditions": {
-          "parentNames": ["${session.key.to.watch}"],
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
           "conditions": {
             "!null": true,
             "EXPECTED_VALUE": true
@@ -194,9 +205,16 @@
       "nameKeyIds": {
         "type": "array",
         "required": false
+      },
+      "interceptors": {
+        "type": "array",
+        "required": false
       }
     },
-    "children": ["sub-section", "spacer"],
+    "children": [
+      "sub-section",
+      "spacer"
+    ],
     "example": {
       "id": "077c0ef3-c2fd-4b82-93b2-2e858c5d50d4",
       "type": "form",
@@ -224,7 +242,8 @@
           "type": "sub-section"
         }
       ]
-    }
+    },
+    "notes": "name is the form key used by interceptors (\"<name>.<label>\"); every bound field/table registers {label,id} in nameKeyIds. interceptors[] — see the Interceptors section."
   },
   "sub-section": {
     "props": {
@@ -285,7 +304,10 @@
         "required": false
       }
     },
-    "children": ["data-grid", "table"],
+    "children": [
+      "data-grid",
+      "table"
+    ],
     "example": {
       "id": "1108cd12-4ba0-439e-9f71-b119f49a5e69",
       "type": "sub-section",
@@ -297,10 +319,14 @@
         "borderStyle": "solid",
         "borderColor": "#E6E5E5",
         "borderRadius": "05",
-        "columnWidths": [100],
+        "columnWidths": [
+          100
+        ],
         "isConditionalComponent": true,
         "visibilityConditions": {
-          "parentNames": ["${session.key.to.watch}"],
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
           "conditions": {
             "!null": true,
             "EXPECTED_VALUE": true
@@ -550,7 +576,13 @@
         "method": "",
         "apiHeaders": "{}",
         "name": "92f55e2c-7870-4968-9402-422f909922f2",
-        "columnWidths": [20, 20, 20, 20, 20]
+        "columnWidths": [
+          20,
+          20,
+          20,
+          20,
+          20
+        ]
       }
     }
   },
@@ -722,7 +754,9 @@
               "columnInputType": "fetchDisplayValueFromApi",
               "showLabel": true,
               "inputType": "fetchDisplayValueFromApi",
-              "columnWidths": [100],
+              "columnWidths": [
+                100
+              ],
               "fetchDisplayValueApiUrl": "/api/v3/masters/RATETYPE/$roiTypeLcode",
               "fetchDisplayValueApiKey": "displayValue",
               "fetchDisplayValueApiHeaders": "{\"Content-Type\":\"application/json\"}",
@@ -807,7 +841,9 @@
               "width": 0,
               "textAlign": "left",
               "inputType": "number",
-              "columnWidths": [100]
+              "columnWidths": [
+                100
+              ]
             }
           },
           {
@@ -828,7 +864,9 @@
               "width": 0,
               "textAlign": "left",
               "inputType": "number",
-              "columnWidths": [100]
+              "columnWidths": [
+                100
+              ]
             }
           },
           {
@@ -849,10 +887,14 @@
               "width": 0,
               "textAlign": "left",
               "inputType": "text",
-              "columnWidths": [100],
+              "columnWidths": [
+                100
+              ],
               "isConditionalComponent": false,
               "visibilityConditions": {
-                "parentNames": ["804df8a6-536f-4d28-a09c-c77515147b3b"],
+                "parentNames": [
+                  "804df8a6-536f-4d28-a09c-c77515147b3b"
+                ],
                 "conditions": {
                   "FIXED": false
                 }
@@ -919,10 +961,14 @@
             "id": "155b1128-1745-4ab7-9b15-50e982af5b12"
           }
         ],
-        "columnWidths": [100],
+        "columnWidths": [
+          100
+        ],
         "isConditionalComponent": true,
         "visibilityConditions": {
-          "parentNames": ["${session.key.to.watch}"],
+          "parentNames": [
+            "${session.key.to.watch}"
+          ],
           "conditions": {
             "!null": true,
             "EXPECTED_VALUE": true
@@ -930,5 +976,299 @@
         }
       }
     }
+  },
+  "input-table": {
+    "props": {
+      "name": {
+        "type": "string",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "nameKeyIds": {
+        "type": "array",
+        "required": false
+      },
+      "inputColumns": {
+        "type": "array",
+        "required": false
+      },
+      "interceptors": {
+        "type": "array",
+        "required": false
+      },
+      "fixedRows": {
+        "type": "boolean",
+        "required": false
+      },
+      "showInputFooterRow": {
+        "type": "boolean",
+        "required": false
+      },
+      "minimumTableRow": {
+        "type": "number",
+        "required": false
+      },
+      "maximumTableRow": {
+        "type": "number",
+        "required": false
+      },
+      "transpose": {
+        "type": "boolean",
+        "required": false
+      },
+      "fetchFromRoot": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibleOnApiSuccess": {
+        "type": "boolean",
+        "required": false
+      },
+      "linkedForm": {
+        "type": "string",
+        "required": false
+      },
+      "width": {
+        "type": "number",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      },
+      "isConditionalComponent": {
+        "type": "boolean",
+        "required": false
+      },
+      "visibilityConditions": {
+        "type": "object",
+        "required": false
+      }
+    },
+    "children": [],
+    "notes": "Lives inside a form. properties.name = the id of the parent form nameKeyIds entry whose label is the payload key (and the interceptor tableName). Columns live in properties.inputColumns (type input-table-column), each column.properties.name = the id of an entry in THIS table's nameKeyIds; that entry's label is the row key used by eventObject/messageObject and $allRows[i][\"<label>\"].",
+    "example": {
+      "id": "1eab3583-5870-41d4-a3fb-dbbf3fdcb3f1",
+      "type": "input-table",
+      "category": "form",
+      "properties": {
+        "label": "Balloon",
+        "showLabel": true,
+        "name": "307e239d-daf1-4abc-aec6-14c87b718da7",
+        "width": 45,
+        "columnWidths": [
+          100
+        ],
+        "nameKeyIds": [
+          {
+            "label": "balloonAmt",
+            "id": "66bb7ed8-7b96-4c76-a83d-693351aa6ced"
+          },
+          {
+            "label": "balloonInstallmentNumber",
+            "id": "090f097a-aa90-429b-b9bb-a4476d6388d6"
+          }
+        ],
+        "inputColumns": [
+          {
+            "id": "a1f90bee-b2aa-4747-ad59-b4c0b3863e3e",
+            "type": "input-table-column",
+            "properties": {
+              "name": "66bb7ed8-7b96-4c76-a83d-693351aa6ced",
+              "label": "Balloon Amount",
+              "showLabel": true,
+              "columnDataType": "input",
+              "columnInputType": "number",
+              "inputType": "number",
+              "required": true,
+              "minValue": "0"
+            }
+          },
+          {
+            "id": "107a0c9b-be69-4c6c-9616-b957240d9d55",
+            "type": "input-table-column",
+            "properties": {
+              "name": "090f097a-aa90-429b-b9bb-a4476d6388d6",
+              "label": "Balloon Installment Number",
+              "showLabel": true,
+              "columnDataType": "input",
+              "columnInputType": "number",
+              "inputType": "number",
+              "required": true,
+              "minValue": "0"
+            }
+          }
+        ],
+        "interceptors": [
+          {
+            "id": "dc8de283-464e-4a7e-8d42-c487a4916222",
+            "label": "Balloon amount should be greater than zero",
+            "interceptorType": "validation",
+            "jsObject": "const validate = () => {\n  let isValid = true;\n  if ($newValue !== null) {\n    isValid = $newValue > 0\n  }\n  return isValid;\n}",
+            "eventType": "onChange",
+            "eventObject": [
+              "balloonAmt"
+            ],
+            "messageObject": [
+              "balloonAmt"
+            ],
+            "message": "Balloon amount should be greater than zero",
+            "messageType": "error",
+            "messageTimeout": 0,
+            "componentType": "input-table",
+            "tableName": "loanAccountBalloons"
+          }
+        ]
+      }
+    }
+  },
+  "input-table-column": {
+    "props": {
+      "name": {
+        "type": "string",
+        "required": true
+      },
+      "label": {
+        "type": "string",
+        "required": false
+      },
+      "showLabel": {
+        "type": "boolean",
+        "required": false
+      },
+      "columnDataType": {
+        "type": "string",
+        "required": false
+      },
+      "columnInputType": {
+        "type": "string",
+        "required": false
+      },
+      "inputType": {
+        "type": "string",
+        "required": false
+      },
+      "placeholder": {
+        "type": "string",
+        "required": false
+      },
+      "defaultValue": {
+        "type": "string",
+        "required": false
+      },
+      "required": {
+        "type": "boolean",
+        "required": false
+      },
+      "disabled": {
+        "type": "boolean",
+        "required": false
+      },
+      "allowNegative": {
+        "type": "boolean",
+        "required": false
+      },
+      "decimalPrecision": {
+        "type": "number",
+        "required": false
+      },
+      "minValue": {
+        "type": "string",
+        "required": false
+      },
+      "maxValue": {
+        "type": "string",
+        "required": false
+      },
+      "minLength": {
+        "type": "number",
+        "required": false
+      },
+      "maxLength": {
+        "type": "number",
+        "required": false
+      },
+      "options": {
+        "type": "array",
+        "required": false
+      },
+      "isFetchingFromApi": {
+        "type": "boolean",
+        "required": false
+      },
+      "isMultiSelect": {
+        "type": "boolean",
+        "required": false
+      },
+      "optionsApiUrl": {
+        "type": "string",
+        "required": false
+      },
+      "optionsApiHeaders": {
+        "type": "string",
+        "required": false
+      },
+      "optionsApiName": {
+        "type": "string",
+        "required": false
+      },
+      "optionsApiKeyForLabel": {
+        "type": "string",
+        "required": false
+      },
+      "optionsApiKeyForValue": {
+        "type": "string",
+        "required": false
+      },
+      "optionsApiKeyForOptions": {
+        "type": "string",
+        "required": false
+      },
+      "isCurrency": {
+        "type": "boolean",
+        "required": false
+      },
+      "currencyName": {
+        "type": "string",
+        "required": false
+      },
+      "showHelperText": {
+        "type": "boolean",
+        "required": false
+      },
+      "helperText": {
+        "type": "string",
+        "required": false
+      },
+      "helperTextPosition": {
+        "type": "string",
+        "required": false
+      },
+      "isCalculated": {
+        "type": "boolean",
+        "required": false
+      },
+      "formula": {
+        "type": "string",
+        "required": false
+      },
+      "align": {
+        "type": "string",
+        "required": false
+      },
+      "columnWidths": {
+        "type": "array",
+        "required": false
+      }
+    },
+    "children": [],
+    "notes": "Only inside input-table.properties.inputColumns."
   }
 }
